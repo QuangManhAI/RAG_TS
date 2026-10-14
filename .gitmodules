@@ -1,0 +1,6 @@
+[submodule "backend_rag"]
+	path = backend_rag
+	url = https://github.com/QuangManhAI/backend_rag.git
+[submodule "frontend_rag"]
+	path = frontend_rag
+	url = https://github.com/QuangManhAI/frontend_rag.git
