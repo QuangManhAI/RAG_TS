@@ -1,2 +1,12 @@
-/data 
-/model 
+# Data and models
+/data
+/model
+/models
+*.gguf
+
+# Environment & Dependencies
+.env
+node_modules/
+dist/
+coverage/
+.DS_Store
