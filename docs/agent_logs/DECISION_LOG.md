@@ -17,6 +17,8 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 | D-003 | Rerank retrieval as 0.85 × similarity + 0.15 × authority | agent-default | proposed |
 | D-004 | Work only on feature branches in FE, BE and root; prefix branches with `vuong` | human | proposed |
 | D-005 | FE theme: dark and light modes with a switch, built with taste-skill | human | proposed |
+| D-006 | Hold PR #1 for multi-session and non-blocking input | human | accepted |
+| D-007 | Query 913k vectors exclusively over Cloudflare R2 S3 storage | human | accepted |
 
 ---
 
@@ -76,3 +78,26 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 - **Rejected:** not recorded
 - **Touches:** `frontend_rag` (theme/styling)
 - **Evidence:** not verified
+
+### D-006 — Hold PR #1 for multi-session and non-blocking input
+- **Status:** accepted
+- **When:** 2026-10-16T15:47:00+07:00
+- **Decided by:** human
+- **Trigger:** "Request changes on PR #1 (e.g. support multiple chat threads/sessions, don't disable input during load)"
+- **Decision:** PR #1 is held for updates rather than merged; persistence must support multi-session chat threads and non-blocking textarea input, with clear action placed in top navbar.
+- **Why:** Single-session overwrites previous scientific discussions; blocking input creates UI lockup.
+- **Rejected:** merge PR #1 as-is; reject persistence entirely
+- **Touches:** `frontend_rag` (PR #1, ChatPanel, chatStorage)
+- **Evidence:** code review and git diff inspection of PR #1 commit `6579a8f`
+
+### D-007 — Query 913k vectors exclusively over Cloudflare R2 S3 storage
+- **Status:** accepted
+- **When:** 2026-10-16T16:31:18+07:00
+- **Decided by:** human
+- **Trigger:** "no, we dont want local database, fetch R2 for me, also R2 total embedded text chunks are 900k"
+- **Decision:** Uploaded the 913,205-vector consolidated table to Cloudflare R2 and enabled `FORCE_REMOTE_LANCEDB=true` in `.env` to query `s3://uth-scientific-lakehouse/gold/lancedb`.
+- **Why:** Centralize vector storage in the R2 Lakehouse cloud rather than relying on local machine disk copies.
+- **Rejected:** keep local filesystem LanceDB table as default primary retriever
+- **Touches:** `.env`, `backend_rag` (VectorStoreService, inspect-r2.ts)
+- **Evidence:** VectorStoreService search via R2 returned 20 chunks against 913,205 vectors in 12,479 ms
+
