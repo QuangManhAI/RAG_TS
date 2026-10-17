@@ -1,7 +1,7 @@
 # Decision Log Convention
 
 Rules for recording **why the code is the way it is** during AI-assisted (vibe) coding.
-Applies to every AI agent working in this repository. Log file: `docs/DECISION_LOG.md`.
+Applies to every AI agent working in this repository. Log file: `docs/agent_logs/Vuong_DECISION_LOG.md`.
 
 > If `MD_CONVENTION.md` requires a metadata header, put it above the title of the log
 > file. This convention adds no header fields of its own.
@@ -43,7 +43,7 @@ Write an entry when at least one is true:
 1. **During work:** the agent notes candidate decisions silently. It does not interrupt for logging.
 2. **End of each task, before the final summary:** the agent drafts entries with `Status: proposed`.
 3. **Confirmation step (mandatory):** the agent shows the drafts in chat in compact form and asks the human, per entry, to **confirm / edit / drop**. Entries marked `agent-default` are listed **first** and called out explicitly.
-4. **Only after explicit confirmation** does the agent set `Status: accepted` and write the final text to `docs/DECISION_LOG.md`.
+4. **Only after explicit confirmation** does the agent set `Status: accepted` and write the final text to `docs/agent_logs/Vuong_DECISION_LOG.md`.
 5. If the human does not answer, entries stay `proposed`. The agent never promotes them on its own. Silence is not approval.
 6. Code work and commits are not blocked by an unconfirmed log. Unconfirmed entries are simply visible as `proposed`.
 
@@ -110,7 +110,7 @@ Copy this block. One decision per entry. **Maximum 12 lines.**
 
 ## 8. Index
 
-The top of `docs/DECISION_LOG.md` has a table: `ID | Title | Decided by | Status`.
+The top of `docs/agent_logs/Vuong_DECISION_LOG.md` has a table: `ID | Title | Decided by | Status`.
 Update it in the same edit as the entry.
 
 ## 9. Milestone review (for the human)

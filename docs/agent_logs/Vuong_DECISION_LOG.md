@@ -6,24 +6,25 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 > **D-001 to D-005 are backfilled** from the exported session `4db53373-1ab6-43ef-a7e9-7bb3fed98130`
 > (2026-10-14). They contain only what that export actually shows. Alternatives and
 > rationales that were never written down are marked `not recorded`, not guessed.
-> All remain `proposed` until confirmed by the human.
+> Confirmed and accepted by the human on 2026-10-17.
 
 ## Index
 
-| ID | Title | Decided by | Status |
-|---|---|---|---|
-| D-001 | Build BE in TypeScript; serve Qwen2.5-7B Q4_K_M locally via node-llama-cpp | human | proposed |
-| D-002 | Run all DL models on GPU with CUDA / Metal auto-detection | human | proposed |
-| D-003 | Rerank retrieval as 0.85 × similarity + 0.15 × authority | agent-default | proposed |
-| D-004 | Work only on feature branches in FE, BE and root; prefix branches with `vuong` | human | proposed |
-| D-005 | FE theme: dark and light modes with a switch, built with taste-skill | human | proposed |
-| D-006 | Hold PR #1 for multi-session and non-blocking input | human | accepted |
-| D-007 | Query 913k vectors exclusively over Cloudflare R2 S3 storage | human | accepted |
+| ID    | Title                                                                            | Decided by    | Status    |
+| ----- | -------------------------------------------------------------------------------- | ------------- | --------- |
+| D-001 | Build BE in TypeScript; serve Qwen2.5-7B Q4_K_M locally via node-llama-cpp       | human         | accepted  |
+| D-002 | Run all DL models on GPU with CUDA / Metal auto-detection                        | human         | accepted  |
+| D-003 | Rerank retrieval as 0.85 × similarity + 0.15 × authority                       | agent-default | accepted  |
+| D-004 | Work only on feature branches in FE, BE and root; prefix branches with `vuong` | human         | accepted  |
+| D-005 | FE theme: dark and light modes with a switch, built with taste-skill             | human         | accepted  |
+| D-006 | Hold PR #1 for multi-session and non-blocking input                              | human         | accepted  |
+| D-007 | Query 913k vectors exclusively over Cloudflare R2 S3 storage                     | human         | accepted  |
 
 ---
 
 ### D-001 — Build BE in TypeScript; serve Qwen2.5-7B Q4_K_M locally via node-llama-cpp
-- **Status:** proposed
+
+- **Status:** accepted
 - **When:** 2026-10-14T15:36:21+07:00
 - **Decided by:** human
 - **Trigger:** "USE TYPESCRIPTS as this is a TS course" and "use model qwen2.5-7b-instruct-q4_k_m for LLM" (Turn 1)
@@ -34,7 +35,8 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 - **Evidence:** not verified (see D-002 for the live run)
 
 ### D-002 — Run all DL models on GPU with CUDA / Metal auto-detection
-- **Status:** proposed
+
+- **Status:** accepted
 - **When:** 2026-10-14T16:09:41+07:00
 - **Decided by:** human (layer count is `agent-default`)
 - **Trigger:** "run everything DL model on GPU, check for gpu on both mps, apple and window nvidia" (Turn 3)
@@ -46,7 +48,8 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 - **Revisit if:** 99 layers causes out-of-memory on smaller GPUs.
 
 ### D-003 — Rerank retrieval as 0.85 × similarity + 0.15 × authority
-- **Status:** proposed
+
+- **Status:** accepted
 - **When:** 2026-10-14 (reported in the 16:57+07:00 summary)
 - **Decided by:** agent-default
 - **Trigger:** none found in the log. Check whether `docs/prompt.md` specifies it.
@@ -58,7 +61,8 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 - **Revisit if:** a retrieval-quality benchmark shows different weights perform better.
 
 ### D-004 — Work only on feature branches in FE, BE and root; prefix branches with `vuong`
-- **Status:** proposed
+
+- **Status:** accepted
 - **When:** 2026-10-14T17:34:40+07:00 (refined in Turns 12–15)
 - **Decided by:** human
 - **Trigger:** "i have permission in BE and TS main to push directly but dont want to do that, in FE, i dont have permission therefore branch out" (Turn 11)
@@ -69,7 +73,8 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 - **Evidence:** not verified (final branch names not checked here)
 
 ### D-005 — FE theme: dark and light modes with a switch, built with taste-skill
-- **Status:** proposed
+
+- **Status:** accepted
 - **When:** 2026-10-14T18:08:23+07:00
 - **Decided by:** human
 - **Trigger:** "we want the general theme to be dark orianted and white orianted (can switch theme between those 2 )" (Turn 17); "use the skill to update our FE Leonxlnx/taste-skill" (Turn 18)
@@ -80,6 +85,7 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 - **Evidence:** not verified
 
 ### D-006 — Hold PR #1 for multi-session and non-blocking input
+
 - **Status:** accepted
 - **When:** 2026-10-16T15:47:00+07:00
 - **Decided by:** human
@@ -91,6 +97,7 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 - **Evidence:** code review and git diff inspection of PR #1 commit `6579a8f`
 
 ### D-007 — Query 913k vectors exclusively over Cloudflare R2 S3 storage
+
 - **Status:** accepted
 - **When:** 2026-10-16T16:31:18+07:00
 - **Decided by:** human
@@ -100,4 +107,3 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 - **Rejected:** keep local filesystem LanceDB table as default primary retriever
 - **Touches:** `.env`, `backend_rag` (VectorStoreService, inspect-r2.ts)
 - **Evidence:** VectorStoreService search via R2 returned 20 chunks against 913,205 vectors in 12,479 ms
-
