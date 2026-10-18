@@ -1,0 +1,26 @@
+services:
+  backend-rag:
+    build: ./backend-rag
+    ports:
+      - "8000:8000"
+    environment:
+      - QDRANT_URL=
+      - QDRANT_API_KEY=
+      - MINIO_ENDPOINT=
+      - MINIO_ACCESS_KEY=
+      - MINIO_SECRET_KEY=
+
+  # Container cho NginX (Web Server & Reverse Proxy)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      # Ánh xạ file cấu hình dành riêng cho dev
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf 
+      - ./frontend-rag/dist:/usr/share/nginx/html
+      - ./dev-logs:/var/log/nginx
+    depends_on:
+      - backend-rag
+
+            

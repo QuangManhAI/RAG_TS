@@ -1,0 +1,24 @@
+services:
+  backend-rag:
+    build: ./backend-rag
+    ports:
+      - "8000:8000"
+    environment:
+      - QDRANT_URL=
+      - QDRANT_API_KEY=
+      - MINIO_ENDPOINT=
+      - MINIO_ACCESS_KEY=
+      - MINIO_SECRET_KEY=
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Ánh xạ file cấu hình production (có chứa tên miền thật)
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf 
+      - ./ssl:/etc/nginx/ssl
+      - ./frontend-rag/dist:/usr/share/nginx/html
+      - ./prod-logs:/var/log/nginx
+    depends_on:
+      - backend-rag
