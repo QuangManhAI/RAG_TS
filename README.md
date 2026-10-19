@@ -66,15 +66,15 @@ flowchart TD
 
 ## 📦 Repository Organization
 
-| Directory / Package | Description | Technology Stack |
-| :--- | :--- | :--- |
-| **[`backend_rag/`](backend_rag/)** | Backend RAG service providing vector retrieval, mining-based reranking, local GPU LLM generation, and Swagger UI. | NestJS 11, `@lancedb/lancedb`, `@xenova/transformers`, `node-llama-cpp`, `@nestjs/swagger` |
-| **[`frontend_rag/`](frontend_rag/)** | 3D Knowledge Tree interactive web client with spatial raycasting, SSE chat streaming, and citation inspection. | Vite 6, React 19, Three.js, React Three Fiber, Tailwind CSS v4, TypeScript |
-| **[`docs/`](docs/)** | Comprehensive architectural documentation, API specifications, and prompt contracts. | Markdown, Mermaid (`MD_CONVENTION.md`, `COMMIT_CONVENTION.md`) |
-| **[`docs/agent_logs/`](docs/agent_logs/)** | Decision audit trail and architectural records (`Vuong_DECISION_LOG.md`). | Markdown standard specifications |
-| **[`agents/rules/`](agents/rules/)** | Immutable documentation and commit standards (`MD_CONVENTION.md`, `COMMIT_CONVENTION.md`). | Markdown standard specifications |
-| **[`data/`](data/)** | Local lakehouse junction / Cloudflare R2 bucket connection (`gold/lancedb`, `gold/mining`). | LanceDB, Parquet, JSON |
-| **[`models/`](models/)** | Local quantized LLM weights (`qwen2.5-7b-instruct-q4_k_m.gguf`). | GGUF |
+| Directory / Package                               | Description                                                                                                       | Technology Stack                                                                                   |
+| :------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------- |
+| **[`backend_rag/`](backend_rag/)**         | Backend RAG service providing vector retrieval, mining-based reranking, local GPU LLM generation, and Swagger UI. | NestJS 11, `@lancedb/lancedb`, `@xenova/transformers`, `node-llama-cpp`, `@nestjs/swagger` |
+| **[`frontend_rag/`](frontend_rag/)**       | 3D Knowledge Tree interactive web client with spatial raycasting, SSE chat streaming, and citation inspection.    | Vite 6, React 19, Three.js, React Three Fiber, Tailwind CSS v4, TypeScript                         |
+| **[`docs/`](docs/)**                       | Comprehensive architectural documentation, API specifications, and prompt contracts.                              | Markdown, Mermaid (`MD_CONVENTION.md`, `COMMIT_CONVENTION.md`)                                 |
+| **[`docs/agent_logs/`](docs/agent_logs/)** | Decision audit trail and architectural records (`Vuong_DECISION_LOG.md`).                                       | Markdown standard specifications                                                                   |
+| **[`agents/rules/`](agents/rules/)**       | Immutable documentation and commit standards (`MD_CONVENTION.md`, `COMMIT_CONVENTION.md`).                    | Markdown standard specifications                                                                   |
+| **[`data/`](data/)**                       | Local lakehouse junction / Cloudflare R2 bucket connection (`gold/lancedb`, `gold/mining`).                   | LanceDB, Parquet, JSON                                                                             |
+| **[`models/`](models/)**                   | Local quantized LLM weights (`qwen2.5-7b-instruct-q4_k_m.gguf`).                                                | GGUF                                                                                               |
 
 ---
 
@@ -148,6 +148,7 @@ git submodule update --init --recursive
 ```
 
 Verify that you are on the correct active branches:
+
 * **Root repository**: `vuong/scientific-rag-fullstack`
 * **`backend_rag`**: `vuong/scientific-rag-backend`
 * **`frontend_rag`**: `vuong/vite_3d`
@@ -225,6 +226,7 @@ npm run start:prod
 ```
 
 #### Expected Backend Output:
+
 ```text
 [Bootstrap] Scientific RAG Backend server listening on port 8000
 [Bootstrap] Swagger UI Documentation: http://localhost:8000/api/docs
@@ -234,6 +236,7 @@ npm run start:prod
 ```
 
 Verify backend health in PowerShell:
+
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:8000/api/rag/health"
 ```
@@ -255,6 +258,7 @@ npm install
 Choose one of two running modes:
 
 #### Mode A: Live 3D Knowledge Tree (Connected to Backend on :8000)
+
 Connects directly to the NestJS backend API with live SSE stream decoding, vector retrieval, and citation exploration:
 
 ```powershell
@@ -263,6 +267,7 @@ npm run dev
 ```
 
 #### Mode B: Standalone Mock 3D Tree (Offline / No Backend Required)
+
 Runs on a deterministic, procedural mock scientific world. Perfect for UI development, testing, and machines without GPU/lakehouse access:
 
 ```powershell
@@ -282,7 +287,9 @@ Open this URL in Google Chrome, Microsoft Edge, or Firefox to explore the 3D pro
 Both repositories maintain strict automated test suites with **>90% code coverage**:
 
 ### Backend Tests (Jest)
+
 From `backend_rag/`:
+
 ```powershell
 cd backend_rag
 
@@ -294,7 +301,9 @@ npm run test:cov
 ```
 
 ### Frontend Tests (Vitest)
+
 From `frontend_rag/`:
+
 ```powershell
 cd frontend_rag
 
@@ -310,10 +319,12 @@ npx vitest run --coverage
 ## 🛠️ Windows Troubleshooting & Tips
 
 ### 1. `node-llama-cpp` or Native Compilation Errors
+
 * **Issue**: `error MSB8020: The build tools for v143 cannot be found` or CMake build errors during `npm install`.
 * **Fix**: Ensure Visual Studio Build Tools are installed with the **Desktop development with C++** workload. Open "Visual Studio Installer", check "Desktop development with C++", and install. Alternatively, restart PowerShell after installation.
 
 ### 2. PowerShell Script Execution Policy
+
 * **Issue**: `File ...\npm.ps1 cannot be loaded because running scripts is disabled on this system.`
 * **Fix**: Enable script execution for your user session:
   ```powershell
@@ -321,6 +332,7 @@ npx vitest run --coverage
   ```
 
 ### 3. Port Already in Use (8000 or 3000)
+
 * **Issue**: `Error: listen EADDRINUSE: address already in use :::8000`.
 * **Fix**: Find and kill the process holding the port:
   ```powershell
@@ -329,6 +341,7 @@ npx vitest run --coverage
   ```
 
 ### 4. Git Path Length Limit
+
 * **Issue**: `Filename too long` during `git checkout` or `git submodule update`.
 * **Fix**: Run PowerShell as Administrator and configure:
   ```powershell
@@ -346,6 +359,7 @@ npx vitest run --coverage
 - **RAG Live Streaming**: `POST http://localhost:8000/api/rag/chat/stream`
 
 #### Example RAG Request via PowerShell:
+
 ```powershell
 $body = @{
     query = "How does LoRA optimize large models?"

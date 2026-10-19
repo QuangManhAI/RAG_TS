@@ -17,8 +17,10 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 | D-003 | Rerank retrieval as 0.85 × similarity + 0.15 × authority                       | agent-default | accepted  |
 | D-004 | Work only on feature branches in FE, BE and root; prefix branches with `vuong` | human         | accepted  |
 | D-005 | FE theme: dark and light modes with a switch, built with taste-skill             | human         | accepted  |
-| D-006 | Hold PR #1 for multi-session and non-blocking input                              | human         | accepted  |
-| D-007 | Query 913k vectors exclusively over Cloudflare R2 S3 storage                     | human         | accepted  |
+| D-006 | Hold PR #1 for multi-session and non-blocking input                              | human                        | accepted  |
+| D-007 | Query 913k vectors exclusively over Cloudflare R2 S3 storage                     | human                        | accepted  |
+| D-008 | Enforce >90% test coverage threshold with zero regressions across FE & BE        | human (scope: agent-default) | accepted  |
+| D-009 | Switch primary frontend to Vite 3D Knowledge Tree (`vuong/vite_3d`)               | human (arch: agent-default)  | accepted  |
 
 ---
 
@@ -112,11 +114,24 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 
 - **Status:** accepted
 - **When:** 2026-10-19T22:20:00+07:00
-- **Decided by:** human
+- **Decided by:** human (test scope & mock strategy are agent-default)
 - **Trigger:** "check the current test coverage and increase it to >90%", "zero test-for-pass regressions", "switch to vite 3d and make test there"
 - **Decision:** Switch to `frontend_rag` branch `vuong/vite_3d`, create comprehensive test suites achieving >90% lines/statements/functions coverage (168 tests, 19 files, 96.91% statements, 92.85% functions), and enforce `coverage.thresholds: { lines: 90, statements: 90, functions: 90 }` in `vite.config.ts`. Expand `backend_rag` unit tests to 41 tests (10 test suites) with clean teardown hooks (`onModuleDestroy`) and fast ESM/GPU mocking.
 - **Why:** Ensure high production quality, verify all 3D-to-2D screen projection anchors and state stores without flaky Canvas WebGL regressions, and maintain zero test-for-pass regressions.
 - **Rejected:** Mocking or deleting existing tests to pass coverage artificially; testing pure WebGL Three.js render loops in Vitest (deferred to Playwright e2e).
 - **Touches:** `frontend_rag` (`vite.config.ts`, `src/**/*.test.{ts,tsx}`), `backend_rag` (`src/**/*.spec.ts`, `package.json`), `README.md`
 - **Evidence:** Frontend `vitest run --coverage` passes 19/19 files (168/168 tests) with 96.91% statements and 92.85% functions; Backend `jest` passes 10/10 suites (41/41 tests) in 10.9s.
+
+### D-009 — Switch primary frontend to Vite 3D Knowledge Tree (`vuong/vite_3d`)
+
+- **Status:** accepted
+- **When:** 2026-10-19T21:45:00+07:00
+- **Decided by:** human (dual live/mock architecture is agent-default)
+- **Trigger:** "switch to vite 3d and make test there"
+- **Decision:** The primary frontend client transitions from the initial flat Next.js UI to the 3D procedural Knowledge Tree (Vite 6, React 19, Three.js) on branch `vuong/vite_3d`, supporting live SSE backend queries and an offline deterministic mock world.
+- **Why:** Interactive 3D spatial clustering of 913k paper embeddings and author citation trees; decoupled mock world enables frontend testing without requiring local GPU or cloud lakehouse access.
+- **Rejected:** continuing development on 2D flat Next.js UI; requiring live backend connectivity for local UI development
+- **Touches:** `frontend_rag` (branch `vuong/vite_3d`, `vite.config.ts`), `README.md`, root submodule pointer
+- **Evidence:** `npm test` in `frontend_rag` passes 19 files (168 tests); `npm run dev` and `npm run dev:mock` operational on port 3000
+
 
