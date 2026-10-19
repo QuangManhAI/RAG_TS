@@ -107,3 +107,16 @@ Rules: `agents/rules/DECISION_LOG_CONVENTION.md`. Find commits for a decision wi
 - **Rejected:** keep local filesystem LanceDB table as default primary retriever
 - **Touches:** `.env`, `backend_rag` (VectorStoreService, inspect-r2.ts)
 - **Evidence:** VectorStoreService search via R2 returned 20 chunks against 913,205 vectors in 12,479 ms
+
+### D-008 — Enforce >90% test coverage threshold with zero regressions across frontend and backend
+
+- **Status:** accepted
+- **When:** 2026-10-19T22:20:00+07:00
+- **Decided by:** human
+- **Trigger:** "check the current test coverage and increase it to >90%", "zero test-for-pass regressions", "switch to vite 3d and make test there"
+- **Decision:** Switch to `frontend_rag` branch `vuong/vite_3d`, create comprehensive test suites achieving >90% lines/statements/functions coverage (168 tests, 19 files, 96.91% statements, 92.85% functions), and enforce `coverage.thresholds: { lines: 90, statements: 90, functions: 90 }` in `vite.config.ts`. Expand `backend_rag` unit tests to 41 tests (10 test suites) with clean teardown hooks (`onModuleDestroy`) and fast ESM/GPU mocking.
+- **Why:** Ensure high production quality, verify all 3D-to-2D screen projection anchors and state stores without flaky Canvas WebGL regressions, and maintain zero test-for-pass regressions.
+- **Rejected:** Mocking or deleting existing tests to pass coverage artificially; testing pure WebGL Three.js render loops in Vitest (deferred to Playwright e2e).
+- **Touches:** `frontend_rag` (`vite.config.ts`, `src/**/*.test.{ts,tsx}`), `backend_rag` (`src/**/*.spec.ts`, `package.json`), `README.md`
+- **Evidence:** Frontend `vitest run --coverage` passes 19/19 files (168/168 tests) with 96.91% statements and 92.85% functions; Backend `jest` passes 10/10 suites (41/41 tests) in 10.9s.
+
