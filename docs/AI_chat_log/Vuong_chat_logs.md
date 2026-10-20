@@ -27,6 +27,7 @@
 | D-009 | Maintain single merged mesh for tree trunk and branches                          | human                          | accepted |
 | D-010 | Alleviate GPU fill-rate bottleneck via DPR clamp and composer MSAA removal        | agent-proposed, human-approved | accepted |
 | D-011 | Optimize render pipeline for 100+ FPS high-refresh rate displays                  | human                          | accepted |
+| D-012 | Realtime PerfHUD with mean and standard deviation FPS monitoring                  | human                          | accepted |
 
 ---
 
@@ -161,3 +162,14 @@
 - **Rejected:** Completely removing bloom or fireflies — degraded key visual aesthetic.
 - **Touches:** `WorldCanvas.tsx`, `PostFX.tsx`, `AdaptiveQuality.tsx`, `VectorCanopy.tsx`, `canopyShader.ts`.
 - **Evidence:** `npx tsc --noEmit` passed with 0 errors; Vitest 201/201 tests passed.
+
+### D-012 — Realtime PerfHUD with mean and standard deviation FPS monitoring
+- **Status:** accepted
+- **When:** 2026-10-20T23:40:00+07:00
+- **Decided by:** human
+- **Trigger:** "update the scripst to monitor it in realtime, or logs, and make perf to display the means and deviation fps"
+- **Decision:** Built on-screen `PerfHUD.tsx` with live rolling mean FPS, standard deviation ($\sigma$), min/max, frame time jitter, tier toggles, and console streaming.
+- **Why:** Real-time visibility into statistical jitter and hardware bottlenecks during live user interaction and benchmarking.
+- **Rejected:** Heavy canvas-based third-party HUD (`r3f-perf`) — caused render overhead and lacked mean/deviation stats.
+- **Touches:** `PerfHUD.tsx`, `WorldCanvas.tsx`, `scripts/perf-chat-benchmark.cjs`.
+- **Evidence:** `npm run test:perf` logged realtime 1s stream and calculated `57.1 ± 1.2 FPS`, LongTasks = 0.
