@@ -26,6 +26,7 @@
 | D-008 | Enable Three.js frustum culling on all world and effect meshes                   | human                          | accepted |
 | D-009 | Maintain single merged mesh for tree trunk and branches                          | human                          | accepted |
 | D-010 | Alleviate GPU fill-rate bottleneck via DPR clamp and composer MSAA removal        | agent-proposed, human-approved | accepted |
+| D-011 | Optimize render pipeline for 100+ FPS high-refresh rate displays                  | human                          | accepted |
 
 ---
 
@@ -149,3 +150,14 @@
 - **Rejected:** Disabling bloom entirely — degraded visual aesthetics of the glowing knowledge tree.
 - **Touches:** `WorldCanvas.tsx`, `PostFX.tsx`, `AdaptiveQuality.tsx`, `VectorCanopy.tsx`.
 - **Evidence:** `npm run typecheck` passed (0 errors); Vitest 201/201 tests passed.
+
+### D-011 — Optimize render pipeline for 100+ FPS high-refresh rate displays
+- **Status:** accepted
+- **When:** 2026-10-20T23:05:00+07:00
+- **Decided by:** human
+- **Trigger:** "can you increase it to like 100fps? any other optimize?"
+- **Decision:** Set DPR to 1.15, disabled stencil buffer (`stencil: false`), reduced bloom resolutionScale to 0.35 with 4 levels, raised canopy `uAlphaCut` to 0.08, and optimized twinkle branch logic.
+- **Why:** 100+ FPS targets an 8–10ms frame budget requiring reduced fullscreen blur pass cost and tighter particle alpha discard.
+- **Rejected:** Completely removing bloom or fireflies — degraded key visual aesthetic.
+- **Touches:** `WorldCanvas.tsx`, `PostFX.tsx`, `AdaptiveQuality.tsx`, `VectorCanopy.tsx`, `canopyShader.ts`.
+- **Evidence:** `npx tsc --noEmit` passed with 0 errors; Vitest 201/201 tests passed.
