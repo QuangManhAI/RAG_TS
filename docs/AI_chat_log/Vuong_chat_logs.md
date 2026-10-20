@@ -14,21 +14,23 @@
 
 ## Index
 
-| ID | Title | Decided by | Status |
-|---|---|---|---|
-| D-001 | Work exclusively on dedicated performance branch `vuong/perf-benchmark` | human | accepted |
-| D-002 | Tunnel remote MongoDB via Cloudflare Access daemon on localhost:27018 | human | accepted |
-| D-003 | Remove deprecated compiler flag `--ignoreDeprecations 5.0` in backend tsconfig | agent-default | accepted |
-| D-004 | Auto-detect HTTPS port 443 for Qdrant client connection | agent-default | accepted |
-| D-005 | Defer streaming Markdown rendering to eliminate main-thread layout freezing | agent-proposed, human-approved | accepted |
-| D-006 | Batch Top-K Threads into single LineSegments draw call with vertex colors | human | accepted |
-| D-007 | Implement early frustum clipping on 150k canopy points vertex shader | human | accepted |
-| D-008 | Enable Three.js frustum culling on all world and effect meshes | human | accepted |
-| D-009 | Maintain single merged mesh for tree trunk and branches | human | accepted |
+| ID    | Title                                                                            | Decided by                     | Status   |
+| ----- | -------------------------------------------------------------------------------- | ------------------------------ | -------- |
+| D-001 | Work exclusively on dedicated performance branch `vuong/perf-benchmark`        | human                          | accepted |
+| D-002 | Tunnel remote MongoDB via Cloudflare Access daemon on localhost:27018            | human                          | accepted |
+| D-003 | Remove deprecated compiler flag `--ignoreDeprecations 5.0` in backend tsconfig | agent-default                  | accepted |
+| D-004 | Auto-detect HTTPS port 443 for Qdrant client connection                          | agent-default                  | accepted |
+| D-005 | Defer streaming Markdown rendering to eliminate main-thread layout freezing      | agent-proposed, human-approved | accepted |
+| D-006 | Batch Top-K Threads into single LineSegments draw call with vertex colors        | human                          | accepted |
+| D-007 | Implement early frustum clipping on 150k canopy points vertex shader             | human                          | accepted |
+| D-008 | Enable Three.js frustum culling on all world and effect meshes                   | human                          | accepted |
+| D-009 | Maintain single merged mesh for tree trunk and branches                          | human                          | accepted |
+| D-010 | Alleviate GPU fill-rate bottleneck via DPR clamp and composer MSAA removal        | agent-proposed, human-approved | accepted |
 
 ---
 
 ### D-001 — Work exclusively on dedicated performance branch `vuong/perf-benchmark`
+
 - **Status:** accepted
 - **When:** 2026-10-20T19:40:00+07:00
 - **Decided by:** human
@@ -41,6 +43,7 @@
 - **Revisit if:** Changes are verified, bench-tested, and ready for merge pull request.
 
 ### D-002 — Tunnel remote MongoDB via Cloudflare Access daemon on localhost:27018
+
 - **Status:** accepted
 - **When:** 2026-10-20T19:20:00+07:00
 - **Decided by:** human
@@ -53,6 +56,7 @@
 - **Revisit if:** MongoDB is migrated to a direct private subnet or cloud-native Atlas instance.
 
 ### D-003 — Remove deprecated compiler flag `--ignoreDeprecations 5.0` in backend tsconfig
+
 - **Status:** accepted
 - **When:** 2026-10-20T19:10:00+07:00
 - **Decided by:** agent-default
@@ -64,6 +68,7 @@
 - **Evidence:** `npm run start:dev` compiled with 0 errors.
 
 ### D-004 — Auto-detect HTTPS port 443 for Qdrant client connection
+
 - **Status:** accepted
 - **When:** 2026-10-20T19:25:00+07:00
 - **Decided by:** agent-default
@@ -75,6 +80,7 @@
 - **Evidence:** `curl http://localhost:3000/api/v1/health` returned `"qdrant": true`.
 
 ### D-005 — Defer streaming Markdown rendering to eliminate main-thread layout freezing
+
 - **Status:** accepted
 - **When:** 2026-10-20T20:10:00+07:00
 - **Decided by:** agent-proposed, human-approved
@@ -86,6 +92,7 @@
 - **Evidence:** Vitest 201/201 tests passed; frame median latency reduced to 0.8ms.
 
 ### D-006 — Batch Top-K Threads into single LineSegments draw call with vertex colors
+
 - **Status:** accepted
 - **When:** 2026-10-20T20:50:00+07:00
 - **Decided by:** human
@@ -97,6 +104,7 @@
 - **Evidence:** Vitest 201/201 tests passed; WebGL draw calls reduced during query flight.
 
 ### D-007 — Implement early frustum clipping on 150k canopy points vertex shader
+
 - **Status:** accepted
 - **When:** 2026-10-20T20:51:00+07:00
 - **Decided by:** human
@@ -108,6 +116,7 @@
 - **Evidence:** `npm test` passed 201/201 tests; benchmark frame time median reached 0.8ms (~1250 FPS).
 
 ### D-008 — Enable Three.js frustum culling on all world and effect meshes
+
 - **Status:** accepted
 - **When:** 2026-10-20T20:52:00+07:00
 - **Decided by:** human
@@ -119,6 +128,7 @@
 - **Evidence:** Full tree renders 140k triangles; camera zoom-in drops triangle count to 87k (53k terrain triangles culled).
 
 ### D-009 — Maintain single merged mesh for tree trunk and branches
+
 - **Status:** accepted
 - **When:** 2026-10-20T21:18:00+07:00
 - **Decided by:** human
@@ -128,3 +138,14 @@
 - **Rejected:** Hierarchical branch chunking into 8-10 draw calls — rejected by human constraint.
 - **Touches:** `frontend_rag/src/components/world/tree/Branches.tsx`.
 - **Evidence:** Draw calls remain at absolute minimum (1 draw call for entire tree).
+
+### D-010 — Alleviate GPU fill-rate bottleneck via DPR clamp and composer MSAA removal
+- **Status:** accepted
+- **When:** 2026-10-20T21:24:00+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "it still never get on 60fps... do we have any optimize to do? this web is not at all usable for normal user"
+- **Decision:** Clamped canvas `dpr` to `[1, 1.35]`, removed EffectComposer multisampling (`multisampling={0}`), reduced bloom mipmap blur levels to 5, set canvas `antialias: false`, and increased canopy shader `uAlphaCut` to 0.055.
+- **Why:** Full tree rendering at DPR 2.0 with 4x MSAA saturated GPU memory bandwidth with 33M sub-samples per frame and dense particle overdraw.
+- **Rejected:** Disabling bloom entirely — degraded visual aesthetics of the glowing knowledge tree.
+- **Touches:** `WorldCanvas.tsx`, `PostFX.tsx`, `AdaptiveQuality.tsx`, `VectorCanopy.tsx`.
+- **Evidence:** `npm run typecheck` passed (0 errors); Vitest 201/201 tests passed.
