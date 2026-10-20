@@ -28,6 +28,7 @@
 | D-010 | Alleviate GPU fill-rate bottleneck via DPR clamp and composer MSAA removal        | agent-proposed, human-approved | accepted |
 | D-011 | Optimize render pipeline for 100+ FPS high-refresh rate displays                  | human                          | accepted |
 | D-012 | Realtime PerfHUD with mean and standard deviation FPS monitoring                  | human                          | accepted |
+| D-013 | Decouple PerfSampler inside Canvas from PerfHUD outside Canvas                   | agent-proposed, human-approved | accepted |
 
 ---
 
@@ -173,3 +174,14 @@
 - **Rejected:** Heavy canvas-based third-party HUD (`r3f-perf`) — caused render overhead and lacked mean/deviation stats.
 - **Touches:** `PerfHUD.tsx`, `WorldCanvas.tsx`, `scripts/perf-chat-benchmark.cjs`.
 - **Evidence:** `npm run test:perf` logged realtime 1s stream and calculated `57.1 ± 1.2 FPS`, LongTasks = 0.
+
+### D-013 — Decouple PerfSampler inside Canvas from PerfHUD outside Canvas
+- **Status:** accepted
+- **When:** 2026-10-20T23:48:00+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "R3F: Span is not part of the THREE namespace! Did you forget to extend? at PerfHUD.tsx:156"
+- **Decision:** Split `PerfHUD.tsx` into `PerfSampler` (Three.js component running `useFrame`, returning `null`) inside `<Canvas>` and `PerfHUD` (pure HTML DOM overlay) outside `<Canvas>`.
+- **Why:** In React Three Fiber (R3F), children inside `<Canvas>` are processed by the custom Three.js reconciler. Rendering raw DOM nodes (`<span>`, `<div>`) directly inside `<Canvas>` causes a fatal crash.
+- **Rejected:** Wrapping inside `@react-three/drei` `<Html>` component — introduces CSS3D matrix transform calculations and unnecessary DOM synchronization overhead inside the WebGL loop.
+- **Touches:** `frontend_rag/src/components/world/overlay/PerfHUD.tsx`, `frontend_rag/src/components/world/WorldCanvas.tsx`.
+- **Evidence:** Zero console errors; live HUD rendering with instant/mean/stddev FPS; Vitest 201/201 passed; benchmark passed with 437.3 ± 159.6 FPS.
