@@ -6,11 +6,11 @@
 - **Detailed Plan**: §1 Hybrid Design Stance & Reconciliation Matrix; §2 Entity-Relationship Diagram; §3 Collection Specifications (`users`, `chat_sessions`, `chat_messages`); §4 Indexing, Sorting & TTL Retention Strategy; §5 Data Integrity & Lifecycle Rules; §6 Self-Review Checklist.
 - **References**: [`agents/rules/MD_CONVENTION.md`](../agents/rules/MD_CONVENTION.md), [`agents/rules/COMMIT_CONVENTION.md`](../agents/rules/COMMIT_CONVENTION.md), [`docs/CHAT_SESSIONS_SPECIFICATION.md`](CHAT_SESSIONS_SPECIFICATION.md), [`docs/DECISION_LOG.md`](DECISION_LOG.md), [`backend_rag/src/auth/schemas/user.schema.ts`](../backend_rag/src/auth/schemas/user.schema.ts), [`backend_rag/src/chat-sessions/schemas/chat-session.schema.ts`](../backend_rag/src/chat-sessions/schemas/chat-session.schema.ts), [`backend_rag/src/chat-sessions/schemas/chat-message.schema.ts`](../backend_rag/src/chat-sessions/schemas/chat-message.schema.ts), [`backend_rag/src/common/uuid.ts`](../backend_rag/src/common/uuid.ts), [`frontend_rag/src/components/auth/AuthOverlay.tsx`](../frontend_rag/src/components/auth/AuthOverlay.tsx).
 - **Created**: 2026-10-22T17:20:08+07:00
-- **Last Updated**: 2026-10-22T17:20:08+07:00
+- **Last Updated**: 2026-10-28T10:28:30+07:00
 
 ---
 
-[STATUS: DRAFT]
+[STATUS: ACTIVE]
 
 ## Table of Contents
 
@@ -63,8 +63,7 @@ erDiagram
     CHAT_SESSIONS {
         string _id PK "uuidv7 (exposed as id)"
         ObjectId user_id FK "References users._id"
-        string title "Session title (1-120 Unicode chars)"
-        boolean title_is_default "True until user renames or first question arrives"
+        string title "Session title (default: YY-MM-DD:HH-MM-SS in UTC+07)"
         int message_count "Total messages in session (default: 0)"
         Date last_message_at "Initialized to created_at; updated only on new message"
         Date created_at "Session creation timestamp"
@@ -115,8 +114,7 @@ Defined in [`backend_rag/src/chat-sessions/schemas/chat-session.schema.ts`](../b
 | :--- | :--- | :--- | :--- |
 | `_id` (`id`) | `uuidv7` (`string`) | Primary Key (`default: () => uuidv7()`) | Định danh phiên chat theo chuẩn `UUIDv7` sắp xếp theo thời gian ([`backend_rag/src/common/uuid.ts`](../backend_rag/src/common/uuid.ts)). |
 | `user_id` | `ObjectId` | `required: true`, Indexed | Khoá ngoại trỏ tới `users._id` xác định chủ sở hữu phiên chat (không dùng `device_id`). |
-| `title` | `string` | `required: true`, `1–120` Unicode chars | Tên phiên chat. |
-| `title_is_default` | `boolean` | `default: false` | Cờ nội bộ đánh dấu tiêu đề mặc định (`"New chat"`) để tự động lấy câu hỏi đầu tiên làm tiêu đề. |
+| `title` | `string` | `required: true`, `1–120` Unicode chars | Tên phiên chat (mặc định khởi tạo theo định dạng `YY-MM-DD:HH-MM-SS` múi giờ UTC+07 cho đến khi được đổi tên). |
 | `message_count` | `int` (`number`) | `default: 0` | Tổng số lượng tin nhắn trong phiên chat (Computed Pattern giúp tránh `$lookup` khi phân trang). |
 | `last_message_at` | `Date` | `default: () => new Date()`, Indexed | Thời điểm tin nhắn cuối cùng được gửi (khởi tạo bằng `created_at`). Dùng để sắp xếp vị trí hiển thị trên UI; **không thay đổi khi đổi tên phiên chat**. |
 | `created_at` | `Date` | Auto (`timestamps.createdAt`) | Thời điểm phiên chat lần đầu được tạo. |
@@ -173,7 +171,7 @@ Defined in [`backend_rag/src/chat-sessions/schemas/chat-message.schema.ts`](../b
 
 - [x] All 7 required header fields present (`Motivation/Background`, `Purpose`, `Overview Pipeline`, `Detailed Plan`, `References`, `Created`, `Last Updated`).
 - [x] `Created` and `Last Updated` timestamps formatted in strict ISO 8601 with `+07:00` timezone offset.
-- [x] Document lifecycle status (`[STATUS: DRAFT]`) declared beneath the header.
+- [x] Document lifecycle status (`[STATUS: ACTIVE]`) declared beneath the header.
 - [x] Table of Contents anchors resolve cleanly to all major sections.
 - [x] Every file and rule mention is formatted as an active relative link per [`agents/rules/MD_CONVENTION.md`](../agents/rules/MD_CONVENTION.md).
 
