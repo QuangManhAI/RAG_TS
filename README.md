@@ -2,12 +2,14 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-11.0-E0234E?style=flat&logo=nestjs&logoColor=white)](https://nestjs.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-16.4-black?style=flat&logo=next.js&logoColor=white)](https://nextjs.org/)
-[![LanceDB](https://img.shields.io/badge/LanceDB-0.40-black?style=flat)](https://lancedb.com/)
-[![OpenAPI / Swagger](https://img.shields.io/badge/Swagger-OpenAPI_3.0-85EA2D?style=flat&logo=swagger&logoColor=black)](http://localhost:8000/api/docs)
+[![React](https://img.shields.io/badge/React-19.0-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-6.4-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Three.js](https://img.shields.io/badge/Three.js-R3F-black?style=flat&logo=threedotjs&logoColor=white)](https://threejs.org/)
+[![Qdrant](https://img.shields.io/badge/Qdrant-Vector_DB-DC2626?style=flat&logo=qdrant&logoColor=white)](https://qdrant.tech/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7.0-47A248?style=flat&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![CUDA](https://img.shields.io/badge/Hardware-NVIDIA_CUDA_%26_Metal-76B900?style=flat&logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
 
-An end-to-end, high-performance Retrieval-Augmented Generation (RAG) platform implemented in **TypeScript / NestJS 11**. The system is built over an optimized Medallion Lakehouse comprising **913,205 dense 768-dimensional embeddings** across AI, Machine Learning, Computer Vision, and NLP, accelerated locally via **`node-llama-cpp`** on GPU.
+An end-to-end, high-performance Retrieval-Augmented Generation (RAG) platform implemented in **TypeScript / NestJS 11** with an interactive **3D Vector Knowledge Tree** frontend. The system performs dense semantic search over scientific papers in **Qdrant**, reranks candidates with **PageRank author authority**, accelerates LLM inference locally via **`node-llama-cpp` (CUDA/Metal)**, and provides **offline-first chat persistence via IndexedDB (Dexie.js)**.
 
 ---
 
@@ -15,127 +17,235 @@ An end-to-end, high-performance Retrieval-Augmented Generation (RAG) platform im
 
 ```mermaid
 flowchart TD
-    subgraph DATA_TIER["Medallion Lakehouse & Model Assets"]
-        GoldLance[("LanceDB Vector Store\n(913,205 768-D Chunks\nCompacted 10 Blocks)")]
-        GoldMining[("Mining Artifacts\n• PageRank Graph (40 Influencers)\n• FP-Growth Association Rules")]
-        ModelStore[("Local LLM Weights\nQwen2.5-7B Instruct GGUF\n(4.68 GB)")]
+    subgraph DATA_TIER["Storage & Data Tier"]
+        Mongo[("MongoDB (Auth, Users, Sessions)\nTunneled or Local")]
+        Qdrant[("Qdrant Vector Database\n(scientific_papers_gold)")]
+        MiningData[("Mining Artifacts\n• PageRank Graph\n• Association Rules")]
+        LLMWeights[("Quantized LLM Weights\nQwen2.5-7B Instruct GGUF\n(node-llama-cpp CUDA)")]
     end
 
-    subgraph BACKEND["Backend Service (backend_rag: NestJS 11)"]
-        Swagger["OpenAPI 3.0 / Swagger UI\n(/api/docs & /api/docs-json)"]
+    subgraph BACKEND["Backend Service (backend_rag: NestJS 11 :3000)"]
+        Swagger["OpenAPI 3.0 / Swagger UI\n(/api/v1/docs & /api/v1/docs-json)"]
         Embedder["Embedding Engine\n(Nomic v1.5 with 'search_query:')"]
-        Retriever["LanceDB Vector Retriever\n(Cosine Distance ANN)"]
+        Retriever["Qdrant Vector Retriever\n(Cosine Distance ANN)"]
         Reranker["Graph Hybrid Reranker\n(0.85 Sim + 0.15 PageRank Authority)"]
-        GpuDetector["Hardware Profiler\n(NVIDIA CUDA / Apple Metal)"]
-        LLMInference["LLM Runner & Grounding Engine\n(node-llama-cpp, 99 GPU Layers)"]
-        RagController["REST API (/api/rag/chat & /api/rag/health)"]
+        LLMInference["LLM Generator & Citation Grounding\n(node-llama-cpp, 99 GPU Layers)"]
+        AuthModule["Argon2id Auth & JWT Family Service\n(/api/v1/auth)"]
+        SessionModule["Chat Sessions Service\n(/api/v1/chat-sessions)"]
+        HealthModule["Health Telemetry (/api/v1/health)"]
 
-        RagController --> Embedder --> Retriever --> Reranker --> LLMInference --> RagController
-        Swagger -.-> RagController
-        GpuDetector -.-> LLMInference
+        AuthModule <--> Mongo
+        SessionModule <--> Mongo
+        Retriever <--> Qdrant
+        Reranker <--> MiningData
+        LLMInference <--> LLMWeights
     end
 
-    subgraph FRONTEND["Frontend Client (frontend_rag: Next.js 16)"]
-        ChatUI["Interactive Research Chat"]
-        CitationView["Citation & Provenance Inspector"]
-        PaperPreview["Full Paper & Metadata Viewer"]
+    subgraph FRONTEND["Frontend Client (frontend_rag: React 19 + Vite :5174)"]
+        WorldCanvas["3D Knowledge Tree Canvas\n(React Three Fiber / Three.js)"]
+        ChatUI["Interactive Research Chat\n(Markdown + KaTeX Math)"]
+        DexieDB[("Browser IndexedDB (Dexie.js)\nOffline-First Chat Cache")]
+        SessionDrawer["History Drawer\n(+ New Chat, Multi-Session, Trash Delete)"]
 
-        ChatUI <--> CitationView
+        ChatUI <--> DexieDB
+        SessionDrawer <--> DexieDB
     end
 
-    GoldLance <--> Retriever
-    GoldMining <--> Reranker
-    ModelStore <--> LLMInference
-    FRONTEND <-->|"HTTP JSON"| RagController
+    FRONTEND <-->|"REST & SSE Stream (/api/v1)"| BACKEND
 ```
 
 ---
 
 ## 📦 Repository Organization
 
-| Directory / Package                         | Description                                                                                                       | Technology Stack                                                                                   |
-| :------------------------------------------ | :---------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------- |
-| **[`backend_rag/`](backend_rag/)**   | Backend RAG service providing vector retrieval, mining-based reranking, local GPU LLM generation, and Swagger UI. | NestJS 11, `@lancedb/lancedb`, `@xenova/transformers`, `node-llama-cpp`, `@nestjs/swagger` |
-| **[`frontend_rag/`](frontend_rag/)** | Modern web client for querying the RAG pipeline and exploring cited papers.                                       | Next.js 16 (App Router), React 19, Tailwind CSS v4, TypeScript                                     |
-| **[`docs/`](docs/)**                 | Comprehensive architectural documentation, API specifications, and prompt contracts.                              | Markdown, Mermaid (`MD_CONVENTION.md`, `COMMIT_CONVENTION.md`)                                 |
-| **[`agents/rules/`](agents/rules/)** | Immutable documentation and commit standards (`MD_CONVENTION.md`, `COMMIT_CONVENTION.md`).                    | Markdown standard specifications                                                                   |
-| **[`data/`](data/)**                 | Local lakehouse junction / Cloudflare R2 bucket connection (`gold/lancedb`, `gold/mining`).                   | LanceDB, Parquet, JSON                                                                             |
-| **[`models/`](models/)**             | Local quantized LLM weights (`qwen2.5-7b-instruct-q4_k_m.gguf`).                                                | GGUF                                                                                               |
+| Directory / Package | Description | Technology Stack |
+| :--- | :--- | :--- |
+| **[`backend_rag/`](backend_rag/)** | Backend NestJS service providing vector retrieval, author reranking, local GPU LLM streaming, auth, and Swagger UI. | NestJS 11, `@qdrant/js-client-rest`, `node-llama-cpp`, `@huggingface/transformers`, Mongoose, Argon2 |
+| **[`frontend_rag/`](frontend_rag/)** | Interactive web client featuring 3D Knowledge Tree, streaming chat, and offline-first IndexedDB persistence. | React 19, Vite 6, `@react-three/fiber`, Three.js, Dexie.js, Tailwind CSS v4, Zustand |
+| **[`docs/`](docs/)** | Architecture documentation, API specifications, and benchmark guides (`RUN_GUIDE.md`, `API_DESIGN.md`). | Markdown, Mermaid |
+| **[`models/`](model/)** | Local quantized GGUF model weights for local LLM generation. | GGUF (Qwen2.5-7B Instruct Q4_K_M) |
+| **[`data/`](data/)** | Procedural 3D world exports (`tree.json`) and data mining artifacts (`gold/mining`). | JSON |
 
 ---
 
-## 📚 Key Technical Highlights
+## ⚡ Quick Start: Step-by-Step Startup Guide
 
-1. **Hardware Acceleration (NVIDIA CUDA & Apple Metal)**:
-   - Built-in automatic GPU detection via [`gpu.util.ts`](backend_rag/src/utils/gpu.util.ts) supporting Windows/Linux CUDA (`nvidia-smi`) and macOS Metal (`arm64`).
-   - Live hardware tested with **99 GPU layers offloaded** to NVIDIA GeForce RTX 4060 Laptop GPU (8,188 MiB VRAM).
-2. **Dense Vector Search (913,205 Chunks)**:
-   - Ingested and indexed via `@lancedb/lancedb` in 10 compacted data blocks (7.875 GB lakehouse footprint) with sub-second ANN cosine search.
-   - S3-compatible fallback for live Cloudflare R2 object storage.
-3. **Strict Asymmetric Query Embedding**:
-   - Uses `nomic-ai/nomic-embed-text-v1.5` via `@xenova/transformers`. Enforces `search_query: ` prefixing and L2 unit normalization.
-4. **Graph-Mining Boosted Reranking**:
-   - Incorporates PageRank co-authorship authority metrics (`graph_coauthorship.json`) and FP-Growth association rules (`association_rules.json`).
-   - Blended ranking formula: $S_{\text{final}} = 0.85 \times S_{\text{sim}} + 0.15 \times A_{\text{author}}$.
-5. **Zero-Hallucination Academic Grounding**:
-   - Enforces strict system instructions requiring citations in the format `[Paper: {paper_id}]`.
-   - Automated regex extraction of cited paper IDs returned alongside grounded chunks.
-6. **Interactive OpenAPI 3.0 / Swagger UI**:
-   - Fully documented interactive UI served at `/api/docs` and machine-parseable schema at `/api/docs-json`.
-
----
-
-## ⚡ Quick Start
+Follow these steps to run the complete stack: **Cloudflare Tunnel $\rightarrow$ Local LLM $\rightarrow$ Backend (BE) $\rightarrow$ Frontend (FE)**.
 
 ### 1. Prerequisites
 
-- **Node.js**: v20+ (Node.js 22 LTS recommended)
-- **C++ Build Tools / CMake**: Required for native bindings in `node-llama-cpp`
-- **NVIDIA CUDA Toolkit** (Windows/Linux) or **Apple Silicon** (macOS)
-- **Model File**: GGUF model located in `models/qwen2.5-7b-instruct-q4_k_m/qwen2.5-7b-instruct-q4_k_m.gguf` (4.68 GB)
-- **Data Lakehouse**: Gold LanceDB store located in `data/gold/lancedb/scientific_papers_gold.lance`
-
-### 2. Setup & Run Backend
-
-```bash
-cd backend_rag
-npm install
-npm run build
-npm run start:prod
-```
-
-> The backend server starts at **`http://localhost:8000`**.
-
-### 3. API Endpoints & Swagger Documentation
-
-- **Interactive Swagger UI**: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
-- **OpenAPI 3.0 Schema**: [http://localhost:8000/api/docs-json](http://localhost:8000/api/docs-json)
-- **System & GPU Health**: [http://localhost:8000/api/rag/health](http://localhost:8000/api/rag/health)
-- **RAG Chat**: `POST http://localhost:8000/api/rag/chat`
-
-#### Example RAG Request:
-
-```bash
-curl -X POST http://localhost:8000/api/rag/chat \
-  -H "Content-Type: application/json" \
-  -d '{"query": "How does LoRA optimize large models?", "top_k": 5}'
-```
+- **Node.js**: v22 LTS or higher
+- **npm**: v10+
+- **C++ Build Tools & CMake**: Required for building native bindings in `node-llama-cpp` (e.g. Visual Studio C++ Build Tools on Windows, Xcode on macOS)
+- **GPU Acceleration**: NVIDIA GPU with CUDA Toolkit installed (or Apple Silicon Metal on macOS)
+- **Cloudflare Tunnel (`cloudflared`)**: Required for bridging remote MongoDB TCP connection
 
 ---
 
-## 📖 In-Depth Documentation
+### 2. Setup Local LLM Weights (LLMs)
 
-For detailed architecture diagrams, API specifications, and prompt contracts, refer to:
+Download or place the quantized Qwen2.5-7B GGUF weights in the `model/` directory:
 
-- **[`docs/SCIENTIFIC_RAG_BACKEND.md`](docs/SCIENTIFIC_RAG_BACKEND.md)**: Complete system design, sequence diagrams, and GPU telemetry benchmarks.
-- **[`docs/API_SPECIFICATION.md`](docs/API_SPECIFICATION.md)**: Full REST & OpenAPI contract with schema definitions and response samples.
-- **[`agents/rules/MD_CONVENTION.md`](agents/rules/MD_CONVENTION.md)**: 7-field header standard, ISO 8601 timestamps, and documentation governance.
-- **[`agents/rules/COMMIT_CONVENTION.md`](agents/rules/COMMIT_CONVENTION.md)**: Conventional Commits with `Companion-Doc:` Git trailer standard.
-- **[`docs/RAG.md`](docs/RAG.md)**: LanceDB schemas, Silver Parquet layout, and data mining specifications.
-- **[`docs/prompt.md`](docs/prompt.md)**: System prompt and structured guidance catalog.
+```bash
+# Model target path (relative to backend_rag):
+# ../models/qwen2.5-7b-instruct-q4_k_m/qwen2.5-7b-instruct-q4_k_m.gguf
+# Or ../model/qwen2.5-7b-instruct-q4_k_m.gguf
+```
+
+> **Note**: On startup, `node-llama-cpp` automatically probes hardware capabilities, initializes CUDA / Metal acceleration, offloads 99 GPU layers into VRAM, and prints:
+> `GPU: CUDA (offload 99 layers) | VRAM: ~4.68 GiB allocated`.
+
+---
+
+### 3. Open MongoDB Tunnel (`cloudflared`)
+
+The remote MongoDB server runs behind a Cloudflare Access tunnel. Start the TCP tunnel daemon in an open terminal and leave it running:
+
+```bash
+cloudflared access tcp --hostname mongodb.minio-quangmanh.io.vn --url localhost:27017
+```
+
+> If port `27017` is occupied by a local MongoDB instance, use `localhost:27018` and adjust the port in `backend_rag/.env`.
+
+---
+
+### 4. Setup & Start Backend (`backend_rag`)
+
+1. Navigate to the backend directory and install dependencies:
+   ```bash
+   cd backend_rag
+   npm install
+   ```
+
+2. Configure `backend_rag/.env`:
+   ```dotenv
+   PORT=3000
+   NODE_ENV=development
+   CORS_ORIGINS=http://localhost:5174
+
+   # MongoDB (via cloudflared tunnel on localhost:27017)
+   MONGO_URI=mongodb://app_user:YqihzvCaDSkqGQEoR8xWwVZ3@localhost:27017/rag_ts?authSource=admin&directConnection=true
+
+   # Qdrant (read-only vector store via HTTPS)
+   QDRANT_URL=https://qdrant.minio-quangmanh.io.vn
+   QDRANT_API_KEY=uth_guest_readonly_key_4b71a8e9d2c
+   QDRANT_COLLECTION=scientific_papers_gold
+
+   # JWT Secrets (at least 32 characters each)
+   JWT_ACCESS_SECRET=rag-ts-dev-access-secret-32-chars-minimum-token
+   JWT_REFRESH_SECRET=rag-ts-dev-refresh-secret-32-chars-minimum-token
+
+   # Embedding Model
+   EMBEDDING_MODEL=nomic-ai/nomic-embed-text-v1.5
+
+   # LLM Configuration
+   MODEL_PATH=../models/qwen2.5-7b-instruct-q4_k_m/qwen2.5-7b-instruct-q4_k_m.gguf
+   LLM_GPU=auto
+   LLM_MAX_QUEUE=16
+   LLM_CONCURRENCY=4
+   LLM_TIMEOUT_MS=60000
+
+   # Mining & World Data
+   WORLD_DATA_DIR=../data/world
+   MINING_DIR=../data/gold/mining
+   ```
+
+3. Build and launch the backend server:
+   ```bash
+   # Development with auto-reload:
+   npm run start:dev
+
+   # Or production compile and run:
+   npm run build
+   node dist/main.js
+   ```
+
+4. Verify backend health:
+   ```bash
+   curl http://localhost:3000/api/v1/health
+   ```
+   **Expected Response**:
+   ```json
+   {
+     "status": "ok",
+     "version": "1.0.0",
+     "components": {
+       "mongo": true,
+       "qdrant": true,
+       "llm": true
+     },
+     "llm": {
+       "gpu": "cuda",
+       "queue_length": 0
+     }
+   }
+   ```
+   * **Swagger Interactive UI**: [http://localhost:3000/api/v1/docs](http://localhost:3000/api/v1/docs)
+
+---
+
+### 5. Setup & Start Frontend (`frontend_rag`)
+
+1. Open a new terminal, navigate to `frontend_rag`, and install dependencies:
+   ```bash
+   cd frontend_rag
+   npm install
+   ```
+
+2. Start the development server connected to the live backend:
+   ```bash
+   # Connects to backend at http://localhost:3000 via proxy:
+   npm run dev:live
+   ```
+
+   > **Windows PowerShell Tip**: If `npm run dev:live` fails due to POSIX environment variable syntax, run:
+   > ```powershell
+   > $env:VITE_USE_MOCK="false"; npx vite
+   > ```
+   >
+   > To run in **Mock mode** (standalone frontend with simulated 3D world and streaming responses, no backend required):
+   > ```bash
+   > npm run dev:mock
+   > ```
+
+3. Open **`http://localhost:5174`** in your browser.
+
+---
+
+## 💾 Offline-First Chat Persistence
+
+The application includes an **Offline-First Chat Persistence Engine** built with **Dexie.js (IndexedDB)**:
+
+- **Local Truth (Cache-First)**: Conversations and messages are saved directly into the browser's IndexedDB.
+- **Backend Survivability**: If the backend service is offline, killed, or unreachable, previous conversations, cited academic papers, and latency timings remain **100% viewable and navigable**. An offline badge (`Ngoại tuyến`) notifies the user while keeping historical chats accessible.
+- **Multi-Session History Drawer**:
+  - Click the **History** icon (`History`) in the chat header to open the collapsible drawer.
+  - Click **"+ Đoạn chat mới"** (`+ New Chat`) to start a fresh conversation.
+  - Chat titles are automatically generated from the first prompt slice (`query.slice(0, 48)`).
+  - Inline **Trash Bin (`Trash2`)** with 2-step confirmation (`Xóa?` / `Huỷ`) to safely delete conversations.
+- **Cloud Sync**: When online and logged in, sessions and exchanges are synchronized with the backend MongoDB database.
+
+---
+
+## 🧪 Testing & Verification
+
+### Backend Tests
+```bash
+cd backend_rag
+npm test                   # Run unit & integration tests
+npm run test:e2e           # Run end-to-end integration flows
+```
+
+### Frontend Tests
+```bash
+cd frontend_rag
+npm test                   # Run all 210 Vitest unit test cases
+npm run typecheck          # Verify TypeScript zero-error compliance
+npm run build              # Compile production bundle
+```
 
 ---
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE) (or academic research license as designated by UTH).
+This project is licensed under the [MIT License](LICENSE).
