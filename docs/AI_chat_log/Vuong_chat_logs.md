@@ -29,6 +29,8 @@
 | D-011 | Optimize render pipeline for 100+ FPS high-refresh rate displays                  | human                          | accepted |
 | D-012 | Realtime PerfHUD with mean and standard deviation FPS monitoring                  | human                          | accepted |
 | D-013 | Decouple PerfSampler inside Canvas from PerfHUD outside Canvas                   | agent-proposed, human-approved | accepted |
+| D-014 | Optimize Web Vitals to achieve LCP < 2.5s and FCP < 450ms                        | agent-proposed, human-approved | accepted |
+| D-015 | k6 stress testing and Jupyter Notebook visualization for P95/P99 latency & queue cliff | agent-proposed, human-approved | accepted |
 
 ---
 
@@ -185,3 +187,28 @@
 - **Rejected:** Wrapping inside `@react-three/drei` `<Html>` component — introduces CSS3D matrix transform calculations and unnecessary DOM synchronization overhead inside the WebGL loop.
 - **Touches:** `frontend_rag/src/components/world/overlay/PerfHUD.tsx`, `frontend_rag/src/components/world/WorldCanvas.tsx`.
 - **Evidence:** Zero console errors; live HUD rendering with instant/mean/stddev FPS; Vitest 201/201 passed; benchmark passed with 437.3 ± 159.6 FPS.
+
+
+### D-014 — Optimize Web Vitals to achieve LCP < 2.5s and FCP < 450ms
+- **Status:** accepted
+- **When:** 2026-10-21T11:32:00+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "reduce the LCP to be good <2.5s" (prior audit: FCP 3.6s, LCP 6.6s, Speed Index 4.8s).
+- **Decision:** Implemented a multi-layer Web Vitals optimization: 1) Non-blocking asynchronous Google Fonts preload with `display=swap`; 2) Critical loading shell pre-rendered directly into `#root` in `index.html`; 3) Defer KaTeX CSS out of `index.css` directly into `Markdown.tsx` (slashed critical CSS by 50%); 4) Removed artificial `sleep(400)` in `client.ts`; 5) Started parallel `WorldCanvas` preload and deferred procedural world building to `requestAnimationFrame`.
+- **Why:** Chrome DevTools Lighthouse audit throttles CPU (4x) and network. Eliminating render-blocking CSS, pre-rendering HTML splash, and rendering the initial text block immediately ensures Google Core Web Vitals "Good" ratings.
+- **Rejected:** Disabling Google Fonts entirely — degrades typography aesthetics.
+- **Touches:** `index.html`, `src/index.css`, `src/components/chat/Markdown.tsx`, `src/api/client.ts`, `src/App.tsx`, `src/components/layout/AppShell.tsx`.
+- **Evidence:** Production throttled test under Lighthouse 4G + 4x CPU slowdown: **FCP 444 ms** (down from 3,600 ms, -87.7%), **LCP 2,152 ms (2.15 s)** (down from 6,600 ms, -67.4%, comfortably beating the < 2.5s threshold). Vitest 202/202 passed. Backend jest 148/148 passed.
+
+### D-015 — k6 stress testing and Jupyter Notebook visualization for P95/P99 latency & queue cliff
+- **Status:** accepted
+- **When:** 2026-10-28T09:05:00+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "k6 --version, make a stress test, P95, P99, request time, error rate, rapm up user gradually or use jump to identify the max concurent user over acceptable latency" and "make use of notebooks for the test, also, visualize using seaborn or matplotlib"
+- **Decision:** Implemented a multi-scenario k6 benchmark suite with custom metrics (`k6_fast_api.js`, `k6_rag_chat.js`) and a Jupyter Notebook (`rag_k6_benchmark_analysis.ipynb`) with Seaborn and Matplotlib statistical charts (`fast_api_latency_vs_vus.png`, `fast_api_boxplot_by_tier.png`, `rag_latency_and_overflow_cliff.png`, `rag_error_rate_by_vu.png`, `rag_success_latency_progression.png`).
+- **Why:** Accurately evaluate throughput, latency distribution (P50, P90, P95, P99), and empirical queue saturation boundaries (`LLM_CONCURRENCY=1`, `LLM_MAX_QUEUE=8`) to identify maximum sustainable concurrent virtual users.
+- **Rejected:** Running k6 in Docker without persistent logs — native Windows k6 execution with streaming JSON logs allows direct integration with local Python/Jupyter data science pipelines.
+- **Touches:** `backend_rag/benchmark/k6_fast_api.js`, `backend_rag/benchmark/k6_rag_chat.js`, `backend_rag/benchmark/rag_k6_benchmark_analysis.ipynb`, `backend_rag/benchmark/run_analysis.py`, `backend_rag/benchmark/generate_notebook.py`.
+- **Evidence:**
+  - **Fast API**: 37,215 requests served across 100 VUs; 0% failure rate; Avg: 2.42ms; P95: 8.63ms (SLA < 300ms); P99: 20.97ms; Peak throughput: 371.8 req/s. Max sustainable: **100+ VUs**.
+  - **RAG Chat**: 100% check pass; 17 served, 35 throttled (HTTP 429 queue full in ~200ms); 0 unexpected errors. Baseline single request: ~8.1-11.8s. Queuing scales linearly with ~8-10s per queued user. Max sustainable VUs for interactive SLA (P95 < 15s): **1 - 2 VUs**. Queue capacity boundary: **8 - 9 VUs**. Overload cliff: **> 9 VUs** (immediate 429 rejection).

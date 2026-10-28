@@ -53,14 +53,14 @@ flowchart TD
 
 ## 📦 Repository Organization
 
-| Directory / Package | Description | Technology Stack |
-| :--- | :--- | :--- |
-| **[`backend_rag/`](backend_rag/)** | Backend RAG service providing vector retrieval, mining-based reranking, local GPU LLM generation, and Swagger UI. | NestJS 11, `@lancedb/lancedb`, `@xenova/transformers`, `node-llama-cpp`, `@nestjs/swagger` |
-| **[`frontend_rag/`](frontend_rag/)** | Modern web client for querying the RAG pipeline and exploring cited papers. | Next.js 16 (App Router), React 19, Tailwind CSS v4, TypeScript |
-| **[`docs/`](docs/)** | Comprehensive architectural documentation, API specifications, and prompt contracts. | Markdown, Mermaid (`MD_CONVENTION.md`, `COMMIT_CONVENTION.md`) |
-| **[`agents/rules/`](agents/rules/)** | Immutable documentation and commit standards (`MD_CONVENTION.md`, `COMMIT_CONVENTION.md`). | Markdown standard specifications |
-| **[`data/`](data/)** | Local lakehouse junction / Cloudflare R2 bucket connection (`gold/lancedb`, `gold/mining`). | LanceDB, Parquet, JSON |
-| **[`models/`](models/)** | Local quantized LLM weights (`qwen2.5-7b-instruct-q4_k_m.gguf`). | GGUF |
+| Directory / Package                         | Description                                                                                                       | Technology Stack                                                                                   |
+| :------------------------------------------ | :---------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------- |
+| **[`backend_rag/`](backend_rag/)**   | Backend RAG service providing vector retrieval, mining-based reranking, local GPU LLM generation, and Swagger UI. | NestJS 11, `@lancedb/lancedb`, `@xenova/transformers`, `node-llama-cpp`, `@nestjs/swagger` |
+| **[`frontend_rag/`](frontend_rag/)** | Modern web client for querying the RAG pipeline and exploring cited papers.                                       | Next.js 16 (App Router), React 19, Tailwind CSS v4, TypeScript                                     |
+| **[`docs/`](docs/)**                 | Comprehensive architectural documentation, API specifications, and prompt contracts.                              | Markdown, Mermaid (`MD_CONVENTION.md`, `COMMIT_CONVENTION.md`)                                 |
+| **[`agents/rules/`](agents/rules/)** | Immutable documentation and commit standards (`MD_CONVENTION.md`, `COMMIT_CONVENTION.md`).                    | Markdown standard specifications                                                                   |
+| **[`data/`](data/)**                 | Local lakehouse junction / Cloudflare R2 bucket connection (`gold/lancedb`, `gold/mining`).                   | LanceDB, Parquet, JSON                                                                             |
+| **[`models/`](models/)**             | Local quantized LLM weights (`qwen2.5-7b-instruct-q4_k_m.gguf`).                                                | GGUF                                                                                               |
 
 ---
 
@@ -88,6 +88,7 @@ flowchart TD
 ## ⚡ Quick Start
 
 ### 1. Prerequisites
+
 - **Node.js**: v20+ (Node.js 22 LTS recommended)
 - **C++ Build Tools / CMake**: Required for native bindings in `node-llama-cpp`
 - **NVIDIA CUDA Toolkit** (Windows/Linux) or **Apple Silicon** (macOS)
@@ -102,15 +103,18 @@ npm install
 npm run build
 npm run start:prod
 ```
+
 > The backend server starts at **`http://localhost:8000`**.
 
 ### 3. API Endpoints & Swagger Documentation
+
 - **Interactive Swagger UI**: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
 - **OpenAPI 3.0 Schema**: [http://localhost:8000/api/docs-json](http://localhost:8000/api/docs-json)
 - **System & GPU Health**: [http://localhost:8000/api/rag/health](http://localhost:8000/api/rag/health)
 - **RAG Chat**: `POST http://localhost:8000/api/rag/chat`
 
 #### Example RAG Request:
+
 ```bash
 curl -X POST http://localhost:8000/api/rag/chat \
   -H "Content-Type: application/json" \
@@ -122,6 +126,7 @@ curl -X POST http://localhost:8000/api/rag/chat \
 ## 📖 In-Depth Documentation
 
 For detailed architecture diagrams, API specifications, and prompt contracts, refer to:
+
 - **[`docs/SCIENTIFIC_RAG_BACKEND.md`](docs/SCIENTIFIC_RAG_BACKEND.md)**: Complete system design, sequence diagrams, and GPU telemetry benchmarks.
 - **[`docs/API_SPECIFICATION.md`](docs/API_SPECIFICATION.md)**: Full REST & OpenAPI contract with schema definitions and response samples.
 - **[`agents/rules/MD_CONVENTION.md`](agents/rules/MD_CONVENTION.md)**: 7-field header standard, ISO 8601 timestamps, and documentation governance.

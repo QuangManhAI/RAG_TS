@@ -15,12 +15,12 @@
 ## Table of Contents
 
 - [1. Executive Architecture](#1-executive-architecture)
-- [2. Hardware Acceleration & GPU Profiling](#2-hardware-acceleration--gpu-profiling)
-- [3. Vector Lakehouse & LanceDB Integration](#3-vector-lakehouse--lancedb-integration)
+- [2. Hardware Acceleration &amp; GPU Profiling](#2-hardware-acceleration--gpu-profiling)
+- [3. Vector Lakehouse &amp; LanceDB Integration](#3-vector-lakehouse--lancedb-integration)
 - [4. Data Mining Hybrid Reranker](#4-data-mining-hybrid-reranker)
 - [5. Local LLM Inference Engine](#5-local-llm-inference-engine)
-- [6. Production Verification & Benchmarks](#6-production-verification--benchmarks)
-- [7. References & File Directory](#7-references--file-directory)
+- [6. Production Verification &amp; Benchmarks](#6-production-verification--benchmarks)
+- [7. References &amp; File Directory](#7-references--file-directory)
 
 ---
 
@@ -41,7 +41,7 @@ sequenceDiagram
 
     User->>Gateway: POST /api/rag/chat { query, top_k, category }
     Gateway->>Orchestrator: executeRagPipeline(queryDto)
-    
+  
     rect rgb(240, 248, 255)
         note over Orchestrator,Mining: Phase 1: Query Analysis & Mining
         Orchestrator->>Mining: expandQuery(query) [Optional]
@@ -85,16 +85,17 @@ To maximize inference speed and respect hardware constraints, local execution is
 
 ### 2.1 Multi-Platform Support Matrix
 
-| OS Platform | Hardware Backend | Detection Mechanism | Offloaded Layers |
-| :--- | :--- | :--- | :--- |
-| **Windows** | NVIDIA CUDA | `nvidia-smi` query parsing | **99 layers** (Full offload) |
-| **macOS** | Apple Silicon Metal / MPS | `os.platform() === 'darwin' && os.arch() === 'arm64'` | **99 layers** (Unified memory) |
-| **Linux** | NVIDIA CUDA / Vulkan | `nvidia-smi` or Vulkan probe | **99 layers** |
-| **Fallback** | CPU | Default when no dedicated GPU detected | 0 layers |
+| OS Platform        | Hardware Backend          | Detection Mechanism                                     | Offloaded Layers                     |
+| :----------------- | :------------------------ | :------------------------------------------------------ | :----------------------------------- |
+| **Windows**  | NVIDIA CUDA               | `nvidia-smi` query parsing                            | **99 layers** (Full offload)   |
+| **macOS**    | Apple Silicon Metal / MPS | `os.platform() === 'darwin' && os.arch() === 'arm64'` | **99 layers** (Unified memory) |
+| **Linux**    | NVIDIA CUDA / Vulkan      | `nvidia-smi` or Vulkan probe                          | **99 layers**                  |
+| **Fallback** | CPU                       | Default when no dedicated GPU detected                  | 0 layers                             |
 
 ### 2.2 Live Host GPU Hardware Telemetry
 
 During startup on the deployment environment, the GPU detector verified:
+
 - **Device**: NVIDIA GeForce RTX 4060 Laptop GPU
 - **VRAM Total**: 8,188 MiB (~8.2 GB GDDR6)
 - **NVIDIA Driver**: 581.80 (CUDA Runtime 13.0)
@@ -107,6 +108,7 @@ During startup on the deployment environment, the GPU detector verified:
 Vector indexing and nearest-neighbor search are executed over LanceDB:
 
 ### 3.1 Dataset & Table Specifications
+
 - **Table Name**: `scientific_papers_gold`
 - **Total Vectors**: **913,205 chunks**
 - **Storage Strategy**: Compacted into 10 consolidated `.lance` data blocks following Cloudflare R2 reclamation (7.875 GB total lakehouse footprint).
@@ -115,12 +117,15 @@ Vector indexing and nearest-neighbor search are executed over LanceDB:
   2. Direct Cloudflare R2 object storage access using S3-compatible endpoints (`s3://...`).
 
 ### 3.2 Embedding Generation
+
 - **Model**: `nomic-ai/nomic-embed-text-v1.5` loaded locally via `@xenova/transformers`.
 - **Dimensions**: 768-D dense float vectors.
 - **Prefixing**: Queries prefixed with `search_query: ` per Nomic specifications.
 - **Normalization**: Strict L2 unit normalization ensuring cosine similarity equals inner product:
 
-$$\text{similarity} = \max\left(0, \min\left(1, 1 - \frac{d_{\text{cosine}}}{2}\right)\right)$$
+$$
+\text{similarity} = \max\left(0, \min\left(1, 1 - \frac{d_{\text{cosine}}}{2}\right)\right)
+$$
 
 ---
 
@@ -132,14 +137,18 @@ Raw vector search is augmented by data mining artifacts extracted during upstrea
    - Contains 40 primary academic influencers (max PageRank: `0.012632`).
    - Computes normalized author authority score:
 
-$$A(c) = \min\left(1.0, \frac{\max_{a \in \text{authors}} \text{PageRank}(a)}{\text{MaxPageRank}}\right)$$
+$$
+A(c) = \min\left(1.0, \frac{\max_{a \in \text{authors}} \text{PageRank}(a)}{\text{MaxPageRank}}\right)
+$$
 
 2. **Association Rules (`association_rules.json`)**:
-   - Contains 30 verified FP-Growth frequent itemset rules (support $\ge 0.02$, confidence $\ge 0.5$) for intelligent academic domain keyword expansion.
 
+   - Contains 30 verified FP-Growth frequent itemset rules (support $\ge 0.02$, confidence $\ge 0.5$) for intelligent academic domain keyword expansion.
 3. **Hybrid Reranking Formula**:
 
-$$S_{\text{final}}(c) = 0.85 \times S_{\text{sim}}(c) + 0.15 \times A(c)$$
+$$
+S_{\text{final}}(c) = 0.85 \times S_{\text{sim}}(c) + 0.15 \times A(c)
+$$
 
 ---
 
@@ -160,6 +169,7 @@ $$S_{\text{final}}(c) = 0.85 \times S_{\text{sim}}(c) + 0.15 \times A(c)$$
 The full pipeline was verified live against the complete 913,205-vector dataset on NVIDIA RTX 4060:
 
 ### 6.1 Live Test Query: *"How does LoRA optimize large models?"*
+
 - **Vector Retrieval**: Returned paper `2106.09685` (*"LoRA: Low-Rank Adaptation of Large Language Models"*) with top similarity score `0.5278` and authority score `0.3059`.
 - **Response Synthesis**: Synthesized 4 clear points covering parameter reduction, memory and storage efficiency, task-switching efficiency, and training throughput.
 - **Extracted Citations**: `["2106.09685"]`.
