@@ -3,10 +3,10 @@
 - **Motivation/Background**: Designing the MongoDB document-collection architecture for `users`, `chat_sessions` (`conversations`), and `chat_messages` (`messages`) required resolving data ownership, denormalization, RAG metadata persistence, sorting semantics, TTL soft deletion, and compatibility with the merged `feat/monolith-v1` and `frontend_rag` codebase.
 - **Purpose**: Record the architectural decisions, debated trade-offs, rejected alternatives, and human vs. AI attribution from the MongoDB 3-collection schema design session.
 - **Overview Pipeline**: Initial 3-collection draft proposal $\rightarrow$ 9-point technical critique & debate $\rightarrow$ iterative schema refinement $\rightarrow$ MongoDB B-Tree/TTL verification $\rightarrow$ Hybrid Schema Specification ([`docs/MONGODB_SCHEMA_DESIGN.md`](../MONGODB_SCHEMA_DESIGN.md)).
-- **Detailed Plan**: Index table of decisions `D-001` through `D-008` followed by immutable 12-line decision blocks adhering to the Decision Log and Markdown conventions.
+- **Detailed Plan**: Index table of decisions `D-001` through `D-011` followed by immutable 12-line decision blocks adhering to the Decision Log and Markdown conventions.
 - **References**: [`agents/rules/MD_CONVENTION.md`](../../agents/rules/MD_CONVENTION.md), [`agents/rules/COMMIT_CONVENTION.md`](../../agents/rules/COMMIT_CONVENTION.md), [`docs/MONGODB_SCHEMA_DESIGN.md`](../MONGODB_SCHEMA_DESIGN.md), [`docs/CHAT_SESSIONS_SPECIFICATION.md`](../CHAT_SESSIONS_SPECIFICATION.md), [`docs/DECISION_LOG.md`](../DECISION_LOG.md).
 - **Created**: 2026-10-22T17:29:36+07:00
-- **Last Updated**: 2026-10-28T10:34:00+07:00
+- **Last Updated**: 2026-10-28T16:40:00+07:00
 
 ---
 
@@ -24,6 +24,9 @@
 | D-006 | Use `UUIDv7` as primary key (`_id`) for chat sessions and messages | human | accepted |
 | D-007 | Cascade 3-day TTL soft deletion (`deleted_at`) across both `chat_sessions` and `chat_messages` | agent-proposed, human-approved | accepted |
 | D-008 | Format default session title as `YY-MM-DD:HH-MM-SS` (UTC+07) without first-question overwrite | human | accepted |
+| D-009 | Create chat sessions lazily on first message and never store `message_count = 0` sessions | human | accepted |
+| D-010 | Enforce fixed 10-item cursor pagination with `has_more` on `GET /api/v1/chat-sessions` | agent-proposed, human-approved | accepted |
+| D-011 | Comprehensive test coverage for boundary conditions, query injection resistance, and route auth guards | human | accepted |
 
 ---
 
@@ -116,3 +119,36 @@
 - **Rejected:** `"New conversation"` placeholder overwritten by the first 60 characters of the first user question — rejected by human in favor of the timestamp default title.
 - **Touches:** [`backend_rag/src/chat-sessions/schemas/chat-session.schema.ts`](../../backend_rag/src/chat-sessions/schemas/chat-session.schema.ts), [`backend_rag/src/chat-sessions/chat-sessions.service.ts`](../../backend_rag/src/chat-sessions/chat-sessions.service.ts), [`docs/MONGODB_SCHEMA_DESIGN.md`](../MONGODB_SCHEMA_DESIGN.md)
 - **Evidence:** `chat-sessions.spec.ts` and `rag.spec.ts` — verified `/^\d{2}-\d{2}-\d{2}:\d{2}-\d{2}-\d{2}$/` default title creation and preservation across exchanges.
+
+### D-009 — Create chat sessions lazily on first message and never store `message_count = 0` sessions
+- **Status:** accepted
+- **When:** 2026-10-28T13:08:17+07:00
+- **Decided by:** human
+- **Trigger:** "4. If message_count = 0 and user doesn't chat anything on that session,, don't store that conversation" and "Remove POST /api/v1/chat-sessions" (Turns 12–13)
+- **Decision:** Remove `POST /api/v1/chat-sessions` (`create()`); create `chat_sessions` documents exclusively inside `saveExchange()` / `writeExchange()` with `message_count: 2` after inserting the initial user/assistant message pair, and filter `message_count: { $gt: 0 }` in `list()`.
+- **Why:** Prevents polluting MongoDB with empty `message_count = 0` sessions when a user opens the app or starts a new tab without sending a question.
+- **Rejected:** Explicit `POST /api/v1/chat-sessions` empty-session creation endpoint — stores unused `message_count = 0` documents.
+- **Touches:** [`backend_rag/src/chat-sessions/chat-sessions.controller.ts`](../../backend_rag/src/chat-sessions/chat-sessions.controller.ts), [`backend_rag/src/chat-sessions/chat-sessions.service.ts`](../../backend_rag/src/chat-sessions/chat-sessions.service.ts), [`docs/MONGODB_SCHEMA_DESIGN.md`](../MONGODB_SCHEMA_DESIGN.md)
+- **Evidence:** `chat-sessions.spec.ts` ("does not expose POST /api/v1/chat-sessions" & "excluding any message_count = 0 documents") — passed.
+
+### D-010 — Enforce fixed 10-item cursor pagination with `has_more` on `GET /api/v1/chat-sessions`
+- **Status:** accepted
+- **When:** 2026-10-28T13:08:17+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "Fixed 10 items per page + add has_more: boolean (per CHAT_SESSIONS_SPECIFICATION.md §3.1)" (Turn 13)
+- **Decision:** Bound `GET /api/v1/chat-sessions` to a fixed page size of `10` (`SESSION_PAGE_SIZE = 10`, disallowing client `limit` query overrides) and return `{ items, next_cursor, has_more }`.
+- **Why:** Aligns the backend session list contract with [`docs/CHAT_SESSIONS_SPECIFICATION.md`](../CHAT_SESSIONS_SPECIFICATION.md) §3.1 and §7.3 for predictable response sizes.
+- **Rejected:** Client-configurable `?limit=1..50` (default `20`) without `has_more` — conflicted with [`docs/CHAT_SESSIONS_SPECIFICATION.md`](../CHAT_SESSIONS_SPECIFICATION.md) §3.1.
+- **Touches:** [`backend_rag/src/chat-sessions/dto/chat-session.dto.ts`](../../backend_rag/src/chat-sessions/dto/chat-session.dto.ts), [`backend_rag/src/chat-sessions/chat-sessions.service.ts`](../../backend_rag/src/chat-sessions/chat-sessions.service.ts), [`docs/MONGODB_SCHEMA_DESIGN.md`](../MONGODB_SCHEMA_DESIGN.md)
+- **Evidence:** `chat-sessions.spec.ts` ("paginates with fixed page size 10 and has_more") and `flow.e2e-spec.ts` — passed.
+
+### D-011 — Comprehensive test coverage for boundary conditions, query injection resistance, and route auth guards
+- **Status:** accepted
+- **When:** 2026-10-28T16:38:55+07:00
+- **Decided by:** human
+- **Trigger:** "In 4. Coverage Gaps, 2. if there are 23 sessions, don't need to add 11 sessions test cases, instead, I think we should add cases when user first use this RAG system, it means they don't have any conversations yet (sessions = 0), and in case they have exact 10 session as limit, also the query URL should be checked for injection case... Add both the 1 and 2 spec on coverage gaps and limitations" (Turns 16–17)
+- **Decision:** Implement exhaustive test cases in `chat-sessions.spec.ts` covering empty state (`sessions = 0`), exact 10-session page boundary (`has_more: false`, `next_cursor: null`), 200-message truncation cap (`MAX_MESSAGES`), `@MaxLength` query parameter validation (`q > 120`, `cursor > 512`), ReDoS & NoSQL query injection protection, cross-user cursor isolation, and 401 JWT auth guards on all individual endpoints.
+- **Why:** Verifies system resilience against injection attacks, boundary off-by-one pagination bugs, payload bloat, and unauthorized access across all chat session routes.
+- **Rejected:** 11-session test case — rejected by human as redundant since the 23-session test case already proves multi-page cursor transitions.
+- **Touches:** [`backend_rag/src/chat-sessions/chat-sessions.spec.ts`](../../backend_rag/src/chat-sessions/chat-sessions.spec.ts), [`backend_rag/docs/CHAT_SESSIONS-SPEC-TESTS.md`](../../backend_rag/docs/CHAT_SESSIONS-SPEC-TESTS.md)
+- **Evidence:** `chat-sessions.spec.ts` — 20 Jest tests (34 distinct scenarios) passed in 3.386 s; 0 lint/build errors.
