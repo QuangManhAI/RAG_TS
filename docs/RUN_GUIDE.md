@@ -88,15 +88,15 @@ Chấm **Route** đỏ trên thanh trạng thái là bình thường: pipeline c
 
 ## 6. Lỗi thường gặp
 
-| Hiện tượng | Nguyên nhân / cách xử lý |
-| :-- | :-- |
-| Backend dừng ngay, in `Invalid environment` | Thiếu biến trong `.env`; dòng lỗi ghi rõ tên biến |
-| `components.mongo: false`, log `Authentication failed` | Sai user/password, hoặc thiếu `authSource=admin` |
-| `components.mongo: false`, không kết nối được | Terminal `cloudflared access tcp` (bước 2) chưa chạy hoặc đã tắt |
-| `components.qdrant: false` / chat lỗi 503 `qdrant unavailable` | Sai `QDRANT_URL` / `QDRANT_API_KEY`, hoặc máy chủ đang tắt |
-| `components.llm: false` / chat lỗi 503 `llm unavailable` | `MODEL_PATH` sai, hoặc model chưa nạp xong (đợi vài giây) |
-| Frontend báo "Backend không phản hồi" | Backend chưa chạy ở `:3000`, hoặc đang chạy `npm run dev` thay vì `npm run dev:live` |
-| `Port 5174 is already in use` | Tắt tiến trình đang chiếm cổng, hoặc chạy `npm run dev:live -- --port 5175` |
+| Hiện tượng                                                       | Nguyên nhân / cách xử lý                                                                     |
+| :------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------ |
+| Backend dừng ngay, in `Invalid environment`                      | Thiếu biến trong `.env`; dòng lỗi ghi rõ tên biến                                        |
+| `components.mongo: false`, log `Authentication failed`          | Sai user/password, hoặc thiếu `authSource=admin`                                              |
+| `components.mongo: false`, không kết nối được               | Terminal `cloudflared access tcp` (bước 2) chưa chạy hoặc đã tắt                        |
+| `components.qdrant: false` / chat lỗi 503 `qdrant unavailable` | Sai `QDRANT_URL` / `QDRANT_API_KEY`, hoặc máy chủ đang tắt                               |
+| `components.llm: false` / chat lỗi 503 `llm unavailable`       | `MODEL_PATH` sai, hoặc model chưa nạp xong (đợi vài giây)                                |
+| Frontend báo "Backend không phản hồi"                           | Backend chưa chạy ở `:3000`, hoặc đang chạy `npm run dev` thay vì `npm run dev:live` |
+| `Port 5174 is already in use`                                     | Tắt tiến trình đang chiếm cổng, hoặc chạy `npm run dev:live -- --port 5175`             |
 
 ## 7. Ghi chú
 
