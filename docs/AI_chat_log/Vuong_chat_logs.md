@@ -6,7 +6,7 @@
 - **Detailed Plan**: Index table followed by immutable 12-line decision blocks with strict attribution and command-level verification evidence.
 - **References**: [agents/template/DECISION_LOG_TEMPLATE.md](../../agents/template/DECISION_LOG_TEMPLATE.md), [frontend_rag/docs/perf-chat-report.md](../../frontend_rag/docs/perf-chat-report.md).
 - **Created**: 2026-10-20T19:00:00+07:00
-- **Last Updated**: 2026-10-20T21:20:00+07:00
+- **Last Updated**: 2026-10-28T13:56:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -31,6 +31,8 @@
 | D-013 | Decouple PerfSampler inside Canvas from PerfHUD outside Canvas                   | agent-proposed, human-approved | accepted |
 | D-014 | Optimize Web Vitals to achieve LCP < 2.5s and FCP < 450ms                        | agent-proposed, human-approved | accepted |
 | D-015 | k6 stress testing and Jupyter Notebook visualization for P95/P99 latency & queue cliff | agent-proposed, human-approved | accepted |
+| D-016 | 5-Minute Sustained Qualification Soak Test & Empirical Burst Turnaround Validation | human | accepted |
+| D-017 | Offline-First Local Chat Persistence via IndexedDB (Dexie.js) with Multi-Turn Sessions | human | accepted |
 
 ---
 
@@ -212,3 +214,33 @@
 - **Evidence:**
   - **Fast API**: 37,215 requests served across 100 VUs; 0% failure rate; Avg: 2.42ms; P95: 8.63ms (SLA < 300ms); P99: 20.97ms; Peak throughput: 371.8 req/s. Max sustainable: **100+ VUs**.
   - **RAG Chat**: 100% check pass; 17 served, 35 throttled (HTTP 429 queue full in ~200ms); 0 unexpected errors. Baseline single request: ~8.1-11.8s. Queuing scales linearly with ~8-10s per queued user. Max sustainable VUs for interactive SLA (P95 < 15s): **1 - 2 VUs**. Queue capacity boundary: **8 - 9 VUs**. Overload cliff: **> 9 VUs** (immediate 429 rejection).
+
+### D-016 — 5-Minute Sustained Qualification Soak Test & Empirical Burst Turnaround Validation
+- **Status:** accepted
+- **When:** 2026-10-28T11:45:00+07:00
+- **Decided by:** human
+- **Trigger:** "qualification soak test at candidate concurrency 2000-2500 VUs", "why at queue slot 7,8,9 it clearly exceed 60s timeout but still have green indicate pass?", and "what are the two peak/throughtput p95 shutdown at around 50s and 30s? backend_rag\benchmark\results\qualification_5min_continuous_timeline.png"
+- **Decision:**
+  1. Executed candidate concurrency step-down protocol from 2,500 VUs (breached SLA with 99.59% error due to ephemeral socket exhaustion) to qualifying candidate concurrency of **2,000 VUs** (735,420 requests in 5m continuous soak, 2,451.3 req/s, P95: 368.1ms, P99: 379.8ms, 0.00% error rate).
+  2. Diagnosed and documented the two throughput dips at 20-25s and 47-49s as V8 Full GC mark-sweep pause during V8 old-space expansion and dynamic Windows socket ephemeral port equilibrium.
+  3. Resolved the apparent paradox in `empirical_k_fold_burst_turnaround.png` where slots 7-9 took 79.2s yet returned HTTP 200 OK: backend `LLM_TIMEOUT_MS=60000` is armed only *after* acquiring the GPU queue mutex, meaning inference time (24.1s) was within limits, but total client turnaround exceeded 60s client SLA. Re-rendered plots with non-overlapping callout badges and marked slots 7-9 as amber `[200* SLA Breach]`.
+- **Why:** Prevent misleading SLA compliance interpretations, explain OS socket/V8 runtime phenomena, and produce an auditable benchmark report for engineering review.
+- **Rejected:** Masking or dropping slots 7-9 — would obscure queue latency realities under GPU batch constraints.
+- **Touches:** `backend_rag/benchmark/generate_burst_empirical_plot.py`, `backend_rag/benchmark/generate_qualification_5min_plots.py`, `backend_rag/benchmark/results/qualification_5min_sustained_throughput.png`, `backend_rag/benchmark/results/qualification_5min_continuous_timeline.png`, `backend_rag/benchmark/results/empirical_k_fold_burst_turnaround.png`, `backend_rag/benchmark/results/benchmark_report.html`.
+- **Evidence:** Commits `b2f17b2` (`backend_rag`) and `95b6732` (`RAG_TS`). All 3 plots regenerated cleanly without label collision; benchmark report HTML recompiled.
+
+### D-017 — Offline-First Local Chat Persistence via IndexedDB (Dexie.js) with Multi-Turn Sessions
+- **Status:** accepted
+- **When:** 2026-10-28T13:48:00+07:00
+- **Decided by:** human
+- **Trigger:** "I test out the FE/BE/LLM with the new PR feature, prompt a quesion, wait for it to complte, and reload the page, but i dont see the chat persitance? its clearly a new chat like before... if BE dead for some reason, will FE have persistance chat available for views? that is the main point a web feature that still live if BE die... make the option for 'new chat' too, the name of the chat are the slide of the first prompt content... and beside those chat session, we have the trash bin for chat delete"
+- **Decision:**
+  1. Integrated **Dexie.js** (IndexedDB client-side database) in `frontend_rag` with `sessions` and `messages` tables. Local IndexedDB serves as the primary ground truth (Cache-First strategy).
+  2. Implemented `useSessionStore` (Zustand + IndexedDB) managing active session state, multi-turn message persistence, rehydration on page reload, and silent background sync with backend `/api/v1/chat-sessions` when online.
+  3. Chat history remains **100% viewable and navigable offline** even if the backend NestJS service is stopped, killed, or unreachable. Added an offline badge (`Ngoại tuyến`) to alert users while keeping full history readable.
+  4. Auto-titled new chat sessions by slicing the first user query (`firstQuery.trim().slice(0, 48)`).
+  5. Implemented collapsible `HistoryDrawer.tsx` with a "+ Đoạn chat mới" (`+ New Chat`) button, timestamp grouping, active session highlight, and trash bin with a 2-step inline confirmation (`Xóa?` / `Huỷ`).
+- **Why:** PR #8 only implemented backend database persistence in MongoDB; frontend was stateless in-memory Zustand. Direct backend dependency violated the user's core requirement that past chats must remain persistent, readable, and navigable even when the backend is completely offline.
+- **Rejected:** Relying solely on remote REST API endpoints (`/chat-sessions`) without local IndexedDB cache — would break on page reload whenever backend is offline. Relying on `localStorage` — 5MB quota limit and synchronous blocking serialization for large LLM responses with citations and timings.
+- **Touches:** `frontend_rag/src/db/chatDb.ts`, `frontend_rag/src/utils/uuid.ts`, `frontend_rag/src/store/sessionStore.ts`, `frontend_rag/src/store/ragStore.ts`, `frontend_rag/src/components/chat/HistoryDrawer.tsx`, `frontend_rag/src/components/chat/ChatPanel.tsx`, `frontend_rag/src/types/rag.ts`.
+- **Evidence:** `npm run typecheck` (`tsc --noEmit`) exited with code 0; Dexie schema verified with UUIDv7 compatibility; Vitest test suite executing in jsdom with fake-indexeddb.
