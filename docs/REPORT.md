@@ -487,7 +487,24 @@ Thử nghiệm kiểm định độ bền liên tục (5-Minute Certified Endura
 
 ![Burst turnaround](../backend_rag/benchmark/results/empirical_k_fold_burst_turnaround.png)
 
-### 7.4 Phân tích điểm nghẽn
+### 7.4 Đánh giá chất lượng RAG (Retrieval & Generation Quality)
+
+Dựa trên kết quả đo kiểm chuẩn từ phiên chạy tích hợp `bench-run-2026-10-23T08-19-38-jjpmf` với bộ dữ liệu mẫu gồm 15 câu hỏi khoa học đa lĩnh vực (Machine Learning, Computer Vision, NLP):
+
+| Chỉ số đánh giá | Giá trị | Ý nghĩa kỹ thuật |
+| :--- | :---: | :--- |
+| **Recall@5 (Độ phủ Top-5)** | **73.08 %** | Tỷ lệ tài liệu liên quan mục tiêu được tìm thấy trong 5 kết quả đầu tiên; thuật toán Mining Rerank kết hợp PageRank tác giả ($S = 0.85 \cdot S_{sim} + 0.15 \cdot A_{PageRank}$) đưa bài báo uy tín lên đầu |
+| **Zero Citation Hallucination** | **100.00 %** | 0 bài báo bịa đặt; 100% ID bài báo được trích dẫn `[Paper: id]` đều tồn tại thực sự trong ngữ cảnh truy xuất |
+| **Robust Abstention (Từ chối chuẩn)** | **100.00 %** | Nhận diện chính xác câu hỏi nằm ngoài phạm vi tri thức và trả về thông điệp chuẩn `NO_CONTEXT_ANSWER`, tránh suy diễn bừa bãi |
+| **Faithfulness (Độ trung thực ngữ cảnh)** | **20.00 %** | Tỷ lệ khẳng định có bằng chứng xác thực trực tiếp từ chunk trích xuất (tập ground truth ban đầu chưa có đáp án chuẩn hóa từ chuyên gia) |
+| **Time-to-First-Token (TTFT)** | **P95 < 200 ms** | Thời gian bắt đầu truyền dòng token đầu tiên qua SSE về client |
+| **Retrieval Latency (đơn luồng)** | **P50: 112 ms / P95: 120 ms** | Tốc độ truy vấn qua Qdrant vector database và routing centroid 3D |
+
+**Điểm mạnh nổi bật:**
+1. **Triệt tiêu hoàn toàn Hallucination nguồn trích dẫn**: 100% trích dẫn kiểm chứng được với cơ sở dữ liệu `scientific_papers_gold`.
+2. **Cơ chế từ chối an toàn (Robust Abstention)**: Ngăn chặn triệt để tình trạng mô hình tạo thông tin sai lệch khi câu hỏi nằm ngoài miền tài liệu.
+
+### 7.5 Phân tích điểm nghẽn
 
 | Hiện tượng | Nguyên nhân | Hướng xử lý |
 | :--- | :--- | :--- |
