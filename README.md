@@ -58,13 +58,13 @@ flowchart TD
 
 ## 📦 Repository Organization
 
-| Directory / Package | Description | Technology Stack |
-| :--- | :--- | :--- |
-| **[`backend_rag/`](backend_rag/)** | Backend NestJS service providing vector retrieval, author reranking, local GPU LLM streaming, auth, and Swagger UI. | NestJS 11, `@qdrant/js-client-rest`, `node-llama-cpp`, `@huggingface/transformers`, Mongoose, Argon2 |
-| **[`frontend_rag/`](frontend_rag/)** | Interactive web client featuring 3D Knowledge Tree, streaming chat, and offline-first IndexedDB persistence. | React 19, Vite 6, `@react-three/fiber`, Three.js, Dexie.js, Tailwind CSS v4, Zustand |
-| **[`docs/`](docs/)** | Architecture documentation, API specifications, and benchmark guides (`RUN_GUIDE.md`, `API_DESIGN.md`). | Markdown, Mermaid |
-| **[`models/`](model/)** | Local quantized GGUF model weights for local LLM generation. | GGUF (Qwen2.5-7B Instruct Q4_K_M) |
-| **[`data/`](data/)** | Procedural 3D world exports (`tree.json`) and data mining artifacts (`gold/mining`). | JSON |
+| Directory / Package                         | Description                                                                                                         | Technology Stack                                                                                           |
+| :------------------------------------------ | :------------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------- |
+| **[`backend_rag/`](backend_rag/)**   | Backend NestJS service providing vector retrieval, author reranking, local GPU LLM streaming, auth, and Swagger UI. | NestJS 11, `@qdrant/js-client-rest`, `node-llama-cpp`, `@huggingface/transformers`, Mongoose, Argon2 |
+| **[`frontend_rag/`](frontend_rag/)** | Interactive web client featuring 3D Knowledge Tree, streaming chat, and offline-first IndexedDB persistence.        | React 19, Vite 6, `@react-three/fiber`, Three.js, Dexie.js, Tailwind CSS v4, Zustand                     |
+| **[`docs/`](docs/)**                 | Architecture documentation, API specifications, and benchmark guides (`RUN_GUIDE.md`, `API_DESIGN.md`).         | Markdown, Mermaid                                                                                          |
+| **[`models/`](model/)**              | Local quantized GGUF model weights for local LLM generation.                                                        | GGUF (Qwen2.5-7B Instruct Q4_K_M)                                                                          |
+| **[`data/`](data/)**                 | Procedural 3D world exports (`tree.json`) and data mining artifacts (`gold/mining`).                            | JSON                                                                                                       |
 
 ---
 
@@ -112,12 +112,13 @@ cloudflared access tcp --hostname mongodb.minio-quangmanh.io.vn --url localhost:
 ### 4. Setup & Start Backend (`backend_rag`)
 
 1. Navigate to the backend directory and install dependencies:
+
    ```bash
    cd backend_rag
    npm install
    ```
-
 2. Configure `backend_rag/.env`:
+
    ```dotenv
    PORT=3000
    NODE_ENV=development
@@ -149,8 +150,8 @@ cloudflared access tcp --hostname mongodb.minio-quangmanh.io.vn --url localhost:
    WORLD_DATA_DIR=../data/world
    MINING_DIR=../data/gold/mining
    ```
-
 3. Build and launch the backend server:
+
    ```bash
    # Development with auto-reload:
    npm run start:dev
@@ -159,12 +160,14 @@ cloudflared access tcp --hostname mongodb.minio-quangmanh.io.vn --url localhost:
    npm run build
    node dist/main.js
    ```
-
 4. Verify backend health:
+
    ```bash
    curl http://localhost:3000/api/v1/health
    ```
+
    **Expected Response**:
+
    ```json
    {
      "status": "ok",
@@ -180,6 +183,7 @@ cloudflared access tcp --hostname mongodb.minio-quangmanh.io.vn --url localhost:
      }
    }
    ```
+
    * **Swagger Interactive UI**: [http://localhost:3000/api/v1/docs](http://localhost:3000/api/v1/docs)
 
 ---
@@ -187,27 +191,30 @@ cloudflared access tcp --hostname mongodb.minio-quangmanh.io.vn --url localhost:
 ### 5. Setup & Start Frontend (`frontend_rag`)
 
 1. Open a new terminal, navigate to `frontend_rag`, and install dependencies:
+
    ```bash
    cd frontend_rag
    npm install
    ```
-
 2. Start the development server connected to the live backend:
+
    ```bash
    # Connects to backend at http://localhost:3000 via proxy:
    npm run dev:live
    ```
 
    > **Windows PowerShell Tip**: If `npm run dev:live` fails due to POSIX environment variable syntax, run:
+   >
    > ```powershell
    > $env:VITE_USE_MOCK="false"; npx vite
    > ```
    >
    > To run in **Mock mode** (standalone frontend with simulated 3D world and streaming responses, no backend required):
+   >
    > ```bash
    > npm run dev:mock
    > ```
-
+   >
 3. Open **`http://localhost:5174`** in your browser.
 
 ---
@@ -230,6 +237,7 @@ The application includes an **Offline-First Chat Persistence Engine** built with
 ## 🧪 Testing & Verification
 
 ### Backend Tests
+
 ```bash
 cd backend_rag
 npm test                   # Run unit & integration tests
@@ -237,6 +245,7 @@ npm run test:e2e           # Run end-to-end integration flows
 ```
 
 ### Frontend Tests
+
 ```bash
 cd frontend_rag
 npm test                   # Run all 210 Vitest unit test cases
