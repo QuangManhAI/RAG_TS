@@ -6,7 +6,7 @@
 - **Detailed Plan**: Section 1 catalogs AI Agent Entrypoints & Governance Rules; Section 2 catalogs System Architecture & API Specifications; Section 3 catalogs Backend Engineering & SRE Benchmark Docs; Section 4 catalogs Frontend 3D, Design System & Offline Persistence Docs; Section 5 lists Archived Bootstrap Prompts (do not use for active code generation).
 - **References**: [AGENTS.md](../AGENTS.md), [backend_rag/AGENTS.md](../backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](../frontend_rag/AGENTS.md), [agents/rules/MD_CONVENTION.md](../agents/rules/MD_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-29T19:43:00+07:00
-- **Last Updated**: 2026-10-30T06:12:00+07:00
+- **Last Updated**: 2026-10-30T19:00:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -77,6 +77,7 @@
 | [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md) | `ACTIVE` | **Shader & Geometry Math Audit**: Trigonometric and procedural geometry notes for the 3D knowledge tree. |
 | [`frontend_rag/ASSUMPTIONS.md`](../frontend_rag/ASSUMPTIONS.md) | `ACTIVE` | **Frontend Engineering Assumptions Log**: Documented UI/UX and API boundary assumptions. |
 | [`frontend_rag/PROGRESS.md`](../frontend_rag/PROGRESS.md) | `ACTIVE` | **Frontend Feature Implementation Tracker**: Module completion and Vitest/Playwright verification log. |
+| [`frontend_rag/docs/design-migration-report.md`](../frontend_rag/docs/design-migration-report.md) | `ACTIVE` | **Design Migration Report**: per-prompt `check:design` counts, scale STATS, screenshot diffs and frame-time measurements. |
 
 ---
 

@@ -6,7 +6,7 @@
 - **Detailed Plan**: Section 1 defines the Progressive-Disclosure Routing Table; Section 2 maps the Monorepo Topology; Section 3 enforces Golden System Invariants; Section 4 lists Essential Verification Commands; Section 5 enforces Commit & Markdown Conventions.
 - **References**: [docs/INDEX.md](docs/INDEX.md), [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md), [backend_rag/AGENTS.md](backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](frontend_rag/AGENTS.md), [docs/FE_DESIGN_SYSTEM.md](docs/FE_DESIGN_SYSTEM.md), [docs/FE3d_prompt_v2.md](docs/FE3d_prompt_v2.md), [agents/rules/MD_CONVENTION.md](agents/rules/MD_CONVENTION.md), [agents/rules/COMMIT_CONVENTION.md](agents/rules/COMMIT_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](docs/AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-29T19:42:00+07:00
-- **Last Updated**: 2026-10-30T06:13:00+07:00
+- **Last Updated**: 2026-10-30T19:00:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -25,7 +25,7 @@ To avoid flooding your context window, **do not read every `.md` file in the rep
 | **Chat Sessions, UUIDv7 cursor pagination, or soft-delete** | [`backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md`](backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md) | [`backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md`](backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md) |
 | **Backend caching (`LRUCache`), latency optimization, or k6 stress testing** | [`backend_rag/docs/PERFORMANCE_AND_CACHING.md`](backend_rag/docs/PERFORMANCE_AND_CACHING.md) | [`backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md`](backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md), [`backend_rag/benchmark/README.md`](backend_rag/benchmark/README.md) |
 | **Frontend 3D World (`Three.js` / `R3F`), UI, or Web Vitals** | [`frontend_rag/AGENTS.md`](frontend_rag/AGENTS.md) | [`frontend_rag/docs/perf-chat-report.md`](frontend_rag/docs/perf-chat-report.md), [`frontend_rag/docs/perf-report.md`](frontend_rag/docs/perf-report.md) |
-| **UI design tokens, glass materials, Liquid Glass, or 3D rotation math (`P15`–`P23`)** | [`docs/FE_DESIGN_SYSTEM.md`](docs/FE_DESIGN_SYSTEM.md) | [`docs/FE3d_prompt_v2.md`](docs/FE3d_prompt_v2.md), [`docs/FE_DESIGN_AUDIT.md`](docs/FE_DESIGN_AUDIT.md) |
+| **UI design tokens, glass materials, Liquid Glass, or 3D rotation math (`P15`–`P23`)** | [`docs/FE_DESIGN_SYSTEM.md`](docs/FE_DESIGN_SYSTEM.md) | [`docs/FE3d_prompt_v2.md`](docs/FE3d_prompt_v2.md), [`docs/FE_DESIGN_AUDIT.md`](docs/FE_DESIGN_AUDIT.md), [`frontend_rag/docs/design-migration-report.md`](frontend_rag/docs/design-migration-report.md) |
 | **Frontend state (`Zustand`), IndexedDB (`Dexie.js`), or SSE streaming** | [`frontend_rag/docs/STATE_AND_STREAMING_ARCHITECTURE.md`](frontend_rag/docs/STATE_AND_STREAMING_ARCHITECTURE.md) | [`frontend_rag/AGENTS.md`](frontend_rag/AGENTS.md) |
 | **Writing `.md` documentation, Decision Logs, or Git commits** | [`agents/rules/MD_CONVENTION.md`](agents/rules/MD_CONVENTION.md) | [`agents/template/DECISION_LOG_TEMPLATE.md`](agents/template/DECISION_LOG_TEMPLATE.md), [`agents/rules/COMMIT_CONVENTION.md`](agents/rules/COMMIT_CONVENTION.md) |
 
