@@ -6,7 +6,7 @@
 - **Detailed Plan**: Index table followed by immutable 12-line decision blocks with strict attribution and command-level verification evidence.
 - **References**: [agents/template/DECISION_LOG_TEMPLATE.md](../../agents/template/DECISION_LOG_TEMPLATE.md), [frontend_rag/docs/perf-chat-report.md](../../frontend_rag/docs/perf-chat-report.md), [backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md](../../backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md).
 - **Created**: 2026-10-20T19:00:00+07:00
-- **Last Updated**: 2026-10-29T19:41:00+07:00
+- **Last Updated**: 2026-10-30T00:50:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -38,6 +38,10 @@
 | D-020 | Upgrade authenticated load testing to a 3-stage Production SRE Open-Workload harness | agent-proposed, human-approved | accepted |
 | D-021 | Parallelize MongoDB queries, use 1-RTT atomic refresh rotation, and add generation-versioned LRUCache | agent-proposed, human-approved | accepted |
 | D-022 | Keep UV_THREADPOOL_SIZE=4 and maxPoolSize=120; revert UV_THREADPOOL_SIZE=12 and maxPoolSize=250 | agent-default | accepted |
+| D-023 | Hide the canvas via stylePath and allow a 600 px noise floor in UI screenshots | agent-default | accepted |
+| D-024 | Seed a signed-in user in E2E instead of mocking the auth endpoint | agent-default | accepted |
+| D-025 | Defer the --ink-faint CSS variable from P16 to P17 | agent-default | accepted |
+| D-026 | Rewrite E2E c to assert a cited answer instead of a still-growing one | agent-proposed, human-approved | accepted |
 
 ---
 
@@ -326,3 +330,56 @@
 - **Touches:** `backend_rag/src/main.ts`, `backend_rag/src/app.module.ts`, `backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md`.
 - **Evidence:** Stage C `k6_prod_auth_crypto.ts` verified `UV_THREADPOOL_SIZE=4` achieved `P50 = 2.62s` (`21.1%` faster than `12` threads) with `0.00%` `GET /auth/me` Event Loop starvation (`P95 = 48.03ms`).
 - **Revisit if:** Dedicated bare-metal multi-socket server with 8-channel DDR5 and direct LAN MongoDB replaces the Cloudflare TCP tunnel.
+
+### D-023 — Hide the canvas via stylePath and allow a 600 px noise floor in UI screenshots
+
+- **Status:** accepted
+- **When:** 2026-10-30T00:20:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent initiative while executing docs/FE3d_prompt_v2.md P15–P16)`
+- **Decision:** `frontend_rag/e2e/visual.spec.ts` hides `<canvas>` and PerfHUD through `stylePath` (`e2e/visual.css`), treats at most 600 differing pixels as "no visual change", and retries a failed shot once.
+- **Why:** The canvas covers the viewport, so `mask` painted over the whole UI; identical runs differed by up to 428 glyph pixels (GPU and `--disable-gpu` alike), and roughly 1 run in 9 a 3D-anchored DOM label landed one frame late (13,620 px).
+- **Rejected:** `mask: canvas` — hid the entire UI; `--disable-gpu` — same 341–428 px noise and 2× slower; zero-pixel threshold — flaky.
+- **Touches:** `frontend_rag/e2e/visual.spec.ts`, `frontend_rag/e2e/visual.css`, `frontend_rag/e2e/visual.spec.ts-snapshots/`.
+- **Evidence:** `npx playwright test e2e/visual.spec.ts` on P15 code: 5 consecutive runs 8/8; defining `--ink-faint` produced a 907 px diff on shot 06 and failed as intended.
+- **Revisit if:** Baselines must run on another OS/CI (snapshots are `chromium-darwin`) or a real change smaller than 600 px needs to be caught.
+
+### D-024 — Seed a signed-in user in E2E instead of mocking the auth endpoint
+
+- **Status:** accepted
+- **When:** 2026-10-29T23:45:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent initiative while executing docs/FE3d_prompt_v2.md P15)`
+- **Decision:** `frontend_rag/e2e/helpers.ts` (`seedAuth`) writes a fake user into `localStorage['rag-auth-storage']` before the app boots; no change under `src/`.
+- **Why:** Since the Auth panel moved into ChatPanel, mock mode has no `/auth` endpoint, so the "Câu hỏi" input never rendered and E2E c, d, e timed out.
+- **Rejected:** Adding a mock auth endpoint in `src/api` — app-code change inside a prompt that forbids touching `src/`.
+- **Touches:** `frontend_rag/e2e/helpers.ts`, `frontend_rag/e2e/knowledge-tree.spec.ts`, `frontend_rag/e2e/visual.spec.ts`.
+- **Evidence:** Before: `npx playwright test e2e/knowledge-tree.spec.ts` 3 passed, 3 failed (timeout waiting for `getByLabel('Câu hỏi')`); after seeding: d and e passed.
+- **Revisit if:** Mock mode gains its own auth flow.
+
+### D-025 — Defer the --ink-faint CSS variable from P16 to P17
+
+- **Status:** accepted
+- **When:** 2026-10-30T00:05:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent deviation from the P16 task list in docs/FE3d_prompt_v2.md)`
+- **Decision:** `uiInkFaint` exists in `tokens.ts`, but `applyCssVars.ts` and `:root` do not emit `--ink-faint` until P17.
+- **Why:** `HistoryDrawer.tsx` already references `var(--ink-faint)`; defining it recolors that text, which breaks P16's "no visual change" requirement.
+- **Rejected:** Emitting it in P16 and refreshing the baseline — would mix a visible color fix into the no-visual-change step.
+- **Touches:** `frontend_rag/src/theme/tokens.ts`, `frontend_rag/src/theme/applyCssVars.ts`, `frontend_rag/src/index.css`, `frontend_rag/src/theme/tokens.test.ts`.
+- **Evidence:** With `--ink-faint` defined, `npx playwright test e2e/visual.spec.ts -g 06` failed (907 px); without it, 8/8 passed in two consecutive runs.
+- **Revisit if:** Not applicable — closed by P17.
+
+### D-026 — Rewrite E2E c to assert a cited answer instead of a still-growing one
+
+- **Status:** accepted
+- **When:** 2026-10-30T00:40:00+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "Sửa test cho khớp (Recommended)" (option selected by the human in the review dialog, 2026-10-30)
+- **Decision:** E2E c now asserts the answer rendered with at least one citation chip, then the existing "Xong" and pull-back checks; it no longer requires the answer to grow after the ResultCard appears.
+- **Why:** The answer was already complete (1067 characters) when the ResultCard became visible, reproduced in two runs; the cause was not investigated.
+- **Rejected:** Keep the failing test — leaves the suite red; change the typewriter/streaming behavior — outside the design-system scope.
+- **Touches:** `frontend_rag/e2e/knowledge-tree.spec.ts`.
+- **Evidence:** `npx playwright test e2e/knowledge-tree.spec.ts` 6 passed (56.1s).
+- **Revisit if:** Progressive streaming after the ResultCard becomes a product requirement again.
+
