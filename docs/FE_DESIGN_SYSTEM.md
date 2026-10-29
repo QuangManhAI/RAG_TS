@@ -1,8 +1,14 @@
-# Quy chuẩn thiết kế Frontend — "Cây Tri Thức Vector"
+# FE_DESIGN_SYSTEM.md — Quy chuẩn thiết kế Frontend "Cây Tri Thức Vector"
 
-- **Phiên bản:** 1.0 (2026-10-29)
-- **Áp dụng cho:** `frontend_rag` (Vite + React 19 + Tailwind CSS 4.3 + React Three Fiber)
-- **Liên quan:** [`FE_DESIGN_AUDIT.md`](./FE_DESIGN_AUDIT.md) (hiện trạng và số liệu đo), [`prompt_fe_3d.md`](./prompt_fe_3d.md) (spec), `frontend_rag/docs/trig-audit.md` (đo lượng giác)
+- **Motivation/Background**: Giao diện `frontend_rag` đang lệch chuẩn sau nhiều vòng prompt rời rạc (8 mức bo góc, 5 mức blur, 11 mức alpha, biến CSS không tồn tại — xem [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md)); cần một quy chuẩn chung trước khi nâng cấp Liquid Glass.
+- **Purpose**: Chốt bộ design token, vật liệu kính, đặc tả component, quy tắc toán 3D (số phức/quaternion) và lộ trình Liquid Glass, dựa trên giá trị đang dùng để FE sửa ít nhất.
+- **Overview Pipeline**: Đo hiện trạng bằng grep trên `src/` → chọn bậc từ giá trị dùng nhiều nhất → gộp giá trị lạc thang về bậc gần nhất → kiểm cú pháp `@theme` với Tailwind 4.3.3 của dự án.
+- **Detailed Plan**: §0 Quy tắc vàng; §1 Kiến trúc token; §2 Màu; §3 Bo góc; §4 Vật liệu kính; §5 Chữ; §6 Khoảng cách/icon/lớp; §7 Chuyển động; §8 Component; §9 Toán Web3D; §10 Liquid Glass; §11 Kiểm soát; §12 Lộ trình; Phụ lục A code token; Phụ lục B bảng quy đổi.
+- **References**: [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md), [`frontend_rag/src/theme/tokens.ts`](../frontend_rag/src/theme/tokens.ts), [`frontend_rag/src/utils/rotation.ts`](../frontend_rag/src/utils/rotation.ts), Tailwind CSS 4.3, Apple Human Interface Guidelines (Liquid Glass).
+- **Created**: 2026-10-29T22:46:54+07:00
+- **Last Updated**: 2026-10-29T23:05:00+07:00
+
+[STATUS: ACTIVE]
 
 > **Nguyên tắc soạn quy chuẩn này: giữ cái đang có, chỉ sửa chỗ lệch.**
 > - Mỗi bậc trong thang đều **lấy từ giá trị đang dùng nhiều nhất** trong code.

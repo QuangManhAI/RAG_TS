@@ -1,7 +1,16 @@
-# Rà soát Frontend — Quy trình prompt, Quy chuẩn thiết kế & Liquid Glass
+# FE_DESIGN_AUDIT.md — Rà soát Frontend: Quy trình prompt, Quy chuẩn thiết kế & Liquid Glass
 
-- **Ngày rà soát:** 2026-10-29
-- **Phạm vi:** submodule `frontend_rag` tại commit `d035b48` (2026-10-28, `fix(sync): enable bidirectional chat sync…`)
+- **Motivation/Background**: Thầy nhận xét FE thiếu quy chuẩn thiết kế chung; cần số liệu cụ thể về hiện trạng trước khi đặt quy chuẩn.
+- **Purpose**: Ghi lại hiện trạng FE, lịch sử quy trình prompt, các chỗ lệch token đo được và tình trạng Liquid Glass.
+- **Overview Pipeline**: Đọc `git log`, `PROGRESS.md`, `ASSUMPTIONS.md`, `prompt_fe_3d.md` → grep giá trị bo góc/blur/alpha/cỡ chữ/màu trong `src/` → đối chiếu với `tokens.ts`.
+- **Detailed Plan**: Tóm tắt; §1 Hiện trạng; §2 Quy trình prompt (3 giai đoạn); §3 Quy chuẩn thiết kế (có gì, thiếu gì, lỗi cụ thể); §4 Liquid Glass; §5 Đề xuất; Phụ lục lệnh đo lại.
+- **References**: [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`frontend_rag/PROGRESS.md`](../frontend_rag/PROGRESS.md), [`frontend_rag/src/index.css`](../frontend_rag/src/index.css).
+- **Created**: 2026-10-29T22:46:54+07:00
+- **Last Updated**: 2026-10-29T23:05:00+07:00
+
+[STATUS: ACTIVE]
+
+- **Phạm vi:** submodule `frontend_rag` tại commit `d035b48` (2026-10-28, `fix(sync): enable bidirectional chat sync…`); sau đó collaborator đã cập nhật lên `6d54674` (viết lại `AGENTS.md`, thêm `docs/STATE_AND_STREAMING_ARCHITECTURE.md` — không đổi `src/`).
 - **Câu hỏi cần trả lời:**
   1. FE hiện tại đang như thế nào?
   2. Quy trình prompt đã diễn ra ra sao, hiện ở tình trạng nào?
@@ -85,7 +94,7 @@ Khoảng 20 commit, nhóm theo chủ đề:
 - Không có spec, không có bước kiểm chứng trước khi làm.
 - `PROGRESS.md` không được cập nhật từ 2026-10-20. `ASSUMPTIONS.md` cũng dừng ở các giả định P1–P11 và Trig.
 - Thay đổi UI diễn ra kiểu thử rồi sửa (Auth sửa 6 lần), vì không có chuẩn để đối chiếu.
-- `AGENTS.md` vẫn là ghi chú Next.js cũ ("This is NOT the Next.js you know…"), trong khi dự án đã chuyển sang Vite. AI đọc file này sẽ bị dẫn sai.
+- `AGENTS.md` (tại `d035b48`) vẫn là ghi chú Next.js cũ ("This is NOT the Next.js you know…"), trong khi dự án đã chuyển sang Vite. *Cập nhật 2026-10-29:* collaborator đã viết lại thành hướng dẫn cho AI (`6d54674`), nhưng khối Next.js cũ vẫn còn ở cuối file và chưa có quy tắc nào về design token.
 
 ### Tình trạng hiện tại
 
@@ -251,7 +260,7 @@ Kèm **lint rule** (ESLint hoặc stylelint) chặn `rounded-[…]`, `text-[…p
   - **P16 — Liquid Glass** (chọn hướng, ngân sách FPS, fallback).
 - Thêm vào phần "Hướng dẫn dành cho AI" quy tắc: **đọc `tokens.ts` trước mọi prompt UI; không tạo CSS variable hay giá trị mới ngoài token.**
 - Cập nhật `PROGRESS.md` và `ASSUMPTIONS.md` cho giai đoạn 2026-10-20 → 2026-10-28.
-- Viết lại `AGENTS.md` cho đúng dự án Vite hiện tại.
+- `AGENTS.md`: xoá khối Next.js còn sót, thêm bất biến về design token và phép quay (xem [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md) P15).
 - Dọn CSS chết của theme sáng.
 
 ---
