@@ -1,3 +1,20 @@
+# prompt_backend.md — Initial B1-B11 Backend Scaffolding Prompts (Archived)
+
+- **Motivation/Background**: Step-by-step scaffolding prompts (B1 through B11) used to bootstrap the initial ackend_rag NestJS monolith prior to UUIDv7 migration, Offline-First IndexedDB sync (D-017), and the 400 CU SRE caching & 1-RTT atomic token optimizations (D-019-D-022).
+- **Purpose**: Historical record of the initial B1-B11 scaffolding phase. Superseded for active maintenance by ackend_rag/AGENTS.md, ackend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md, and ackend_rag/docs/PERFORMANCE_AND_CACHING.md.
+- **Overview Pipeline**: B1 Bootstrap -> B2 Auth -> B3 Embedding -> B4 Qdrant -> B5 Mining/TreeRouter -> B6 LLM Queue -> B7 RAG SSE -> B8 Chat Sessions -> B9 Papers -> B10 Health -> B11 E2E.
+- **Detailed Plan**: Preserves original B1-B11 prompt specifications and Appendices A & B for historical provenance.
+- **References**: [../AGENTS.md](../AGENTS.md), [INDEX.md](INDEX.md), [../backend_rag/AGENTS.md](../backend_rag/AGENTS.md), [../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md](../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md), [../backend_rag/docs/PERFORMANCE_AND_CACHING.md](../backend_rag/docs/PERFORMANCE_AND_CACHING.md).
+- **Created**: 2026-10-18T10:00:00+07:00
+- **Last Updated**: 2026-10-29T19:47:00+07:00
+
+[STATUS: ARCHIVED]
+
+> [!WARNING]
+> **Archived Scaffolding Prompt**: All modules B1-B11 have already been implemented and subsequently upgraded (e.g., UUIDv7 primary keys, 1-RTT refresh rotation, generation-versioned LRUCache, and Singleflight). AI agents must consult [ackend_rag/AGENTS.md](../backend_rag/AGENTS.md) and [docs/INDEX.md](INDEX.md) for active specifications.
+
+---
+
 # Kế hoạch & Danh mục Prompt Phát triển Backend RAG_TS (Monolith NestJS)
 
 Tài liệu này theo đúng nguyên tắc và cấu trúc của `docs/lesson_2.md`, `prompt.md` và `prompt_fe_3d.md`:

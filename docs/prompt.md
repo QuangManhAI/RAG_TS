@@ -1,3 +1,20 @@
+# prompt.md — Phase-1 LanceDB Prototype Prompt Catalog (Archived)
+
+- **Motivation/Background**: Early Phase-1 prompt decomposition written before ackend_rag standardized on Qdrant (scientific_papers_gold), MongoDB (users, chat_sessions), and the 3-Stage SRE caching layer.
+- **Purpose**: Historical archive of the initial F1-F6 prompt templates. Must NOT be used by AI agents for current code changes because it references LanceDB instead of Qdrant.
+- **Overview Pipeline**: F1 Types -> F2 Nomic v1.5 Embedding -> F3 LanceDB (Superseded by Qdrant) -> F4 Mining Service -> F5 Local LLM -> F6 Controller.
+- **Detailed Plan**: Retains the original F1-F6 specification and prompt blocks for historical traceability.
+- **References**: [../AGENTS.md](../AGENTS.md), [INDEX.md](INDEX.md), [ARCHITECTURE_OVERVIEW.md](ARCHITECTURE_OVERVIEW.md), [../backend_rag/AGENTS.md](../backend_rag/AGENTS.md).
+- **Created**: 2026-10-16T10:00:00+07:00
+- **Last Updated**: 2026-10-29T19:47:00+07:00
+
+[STATUS: ARCHIVED]
+
+> [!WARNING]
+> **Archived Prototype Prompt**: This document references an early LanceDB prototype and /api/rag/chat routes that have been superseded by Qdrant and /api/v1/*. AI agents must read [ackend_rag/AGENTS.md](../backend_rag/AGENTS.md) and [docs/ARCHITECTURE_OVERVIEW.md](ARCHITECTURE_OVERVIEW.md) instead.
+
+---
+
 # Kế hoạch & Danh mục Prompt Phát triển Hệ thống RAG bằng TypeScript/NestJS
 
 Tài liệu này được biên soạn theo nguyên tắc và cấu trúc từ [`docs/lesson_2.md`](lesson_2.md):
