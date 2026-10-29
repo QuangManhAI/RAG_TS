@@ -6,7 +6,7 @@
 - **Detailed Plan**: §0 Quy tắc vàng; §1 Kiến trúc token; §2 Màu; §3 Bo góc; §4 Vật liệu kính; §5 Chữ; §6 Khoảng cách/icon/lớp; §7 Chuyển động; §8 Component; §9 Toán Web3D; §10 Liquid Glass; §11 Kiểm soát; §12 Lộ trình; Phụ lục A code token; Phụ lục B bảng quy đổi.
 - **References**: [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md), [`frontend_rag/src/theme/tokens.ts`](../frontend_rag/src/theme/tokens.ts), [`frontend_rag/src/utils/rotation.ts`](../frontend_rag/src/utils/rotation.ts), Tailwind CSS 4.3, Apple Human Interface Guidelines (Liquid Glass).
 - **Created**: 2026-10-29T22:46:54+07:00
-- **Last Updated**: 2026-10-29T23:05:00+07:00
+- **Last Updated**: 2026-10-30T01:05:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -118,7 +118,7 @@ Alias trong CSS: `--glass-stroke: var(--ui-border)`.
 | :-- | :-- |
 | `var(--ink-secondary, #cbd5e1)` | `var(--ink-muted)` |
 | `var(--ui-hover, rgba(255,255,255,0.05))` | `var(--glass-fill-hover)` |
-| `var(--ui-panel-bg, rgba(18,20,28,0.96))` | `var(--ui-surface-strong)` |
+| `var(--ui-panel-bg, rgba(18,20,28,0.96))` | class `.surface-opaque` (`--ui-surface-strong` chồng lên `--bg`, xem §4.1) — *sửa ở P17: `--ui-surface-strong` một mình (α 0.9) để lộ chữ của khung chat bên dưới* |
 | `var(--ink-faint)` | giữ, nay đã được định nghĩa (§2.2) |
 
 ### 2.4 Pha màu (`color-mix`): chỉ dùng các tỷ lệ sau
@@ -211,6 +211,8 @@ Quy tắc này là điều kiện để §10 (Liquid Glass) trông đúng: viề
 - tốn thêm một lượt lấy mẫu nền trên mỗi phần tử, đặt trên canvas WebGL đang chạy 100+ FPS.
 
 Vì vậy control bên trong kính chỉ dùng fill + stroke + highlight. Theo HIG của Apple, Liquid Glass cũng không chồng kính lên kính.
+
+**Strong che lên chữ thì phải đục hoàn toàn** (bổ sung ở P17). `--ui-surface-strong` có α 0.9: đủ trên cảnh 3D, nhưng một ngăn kéo phủ lên khung chat (HistoryDrawer) vẫn để lộ chữ bên dưới. Trường hợp này dùng class `.surface-opaque`: `background: linear-gradient(var(--ui-surface-strong), var(--ui-surface-strong)), var(--bg)`. Đây là hai token có sẵn chồng lên nhau, không có giá trị mới. Ở P19, `Glass material="strong" nested` phải dùng nền này.
 
 ### 4.2 Thang blur (3 bậc)
 
