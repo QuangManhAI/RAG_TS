@@ -4,9 +4,9 @@
 - **Purpose**: Provide AI coding agents with the progressive-disclosure documentation routing map, repository topology, non-negotiable architectural invariants, and workflow rules across the entire `RAG_TS` workspace.
 - **Overview Pipeline**: Task Identification → Progressive-Disclosure Doc Lookup (`docs/INDEX.md`) → Subsystem `AGENTS.md` Inspection → Implementation & Invariant Verification → Decision Log & Convention Compliance.
 - **Detailed Plan**: Section 1 defines the Progressive-Disclosure Routing Table; Section 2 maps the Monorepo Topology; Section 3 enforces Golden System Invariants; Section 4 lists Essential Verification Commands; Section 5 enforces Commit & Markdown Conventions.
-- **References**: [docs/INDEX.md](docs/INDEX.md), [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md), [backend_rag/AGENTS.md](backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](frontend_rag/AGENTS.md), [agents/rules/MD_CONVENTION.md](agents/rules/MD_CONVENTION.md), [agents/rules/COMMIT_CONVENTION.md](agents/rules/COMMIT_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](docs/AI_chat_log/Vuong_chat_logs.md).
+- **References**: [docs/INDEX.md](docs/INDEX.md), [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md), [backend_rag/AGENTS.md](backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](frontend_rag/AGENTS.md), [docs/FE_DESIGN_SYSTEM.md](docs/FE_DESIGN_SYSTEM.md), [docs/FE3d_prompt_v2.md](docs/FE3d_prompt_v2.md), [agents/rules/MD_CONVENTION.md](agents/rules/MD_CONVENTION.md), [agents/rules/COMMIT_CONVENTION.md](agents/rules/COMMIT_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](docs/AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-29T19:42:00+07:00
-- **Last Updated**: 2026-10-29T19:42:00+07:00
+- **Last Updated**: 2026-10-30T06:13:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -25,6 +25,7 @@ To avoid flooding your context window, **do not read every `.md` file in the rep
 | **Chat Sessions, UUIDv7 cursor pagination, or soft-delete** | [`backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md`](backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md) | [`backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md`](backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md) |
 | **Backend caching (`LRUCache`), latency optimization, or k6 stress testing** | [`backend_rag/docs/PERFORMANCE_AND_CACHING.md`](backend_rag/docs/PERFORMANCE_AND_CACHING.md) | [`backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md`](backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md), [`backend_rag/benchmark/README.md`](backend_rag/benchmark/README.md) |
 | **Frontend 3D World (`Three.js` / `R3F`), UI, or Web Vitals** | [`frontend_rag/AGENTS.md`](frontend_rag/AGENTS.md) | [`frontend_rag/docs/perf-chat-report.md`](frontend_rag/docs/perf-chat-report.md), [`frontend_rag/docs/perf-report.md`](frontend_rag/docs/perf-report.md) |
+| **UI design tokens, glass materials, Liquid Glass, or 3D rotation math (`P15`–`P23`)** | [`docs/FE_DESIGN_SYSTEM.md`](docs/FE_DESIGN_SYSTEM.md) | [`docs/FE3d_prompt_v2.md`](docs/FE3d_prompt_v2.md), [`docs/FE_DESIGN_AUDIT.md`](docs/FE_DESIGN_AUDIT.md) |
 | **Frontend state (`Zustand`), IndexedDB (`Dexie.js`), or SSE streaming** | [`frontend_rag/docs/STATE_AND_STREAMING_ARCHITECTURE.md`](frontend_rag/docs/STATE_AND_STREAMING_ARCHITECTURE.md) | [`frontend_rag/AGENTS.md`](frontend_rag/AGENTS.md) |
 | **Writing `.md` documentation, Decision Logs, or Git commits** | [`agents/rules/MD_CONVENTION.md`](agents/rules/MD_CONVENTION.md) | [`agents/template/DECISION_LOG_TEMPLATE.md`](agents/template/DECISION_LOG_TEMPLATE.md), [`agents/rules/COMMIT_CONVENTION.md`](agents/rules/COMMIT_CONVENTION.md) |
 
@@ -47,6 +48,9 @@ RAG_TS/                                  # Workspace Root
 │   ├── ARCHITECTURE_OVERVIEW.md         # End-to-end full-stack architecture & request lifecycle
 │   ├── API_SPECIFICATION.md             # REST & SSE API endpoint contracts (/api/v1/*)
 │   ├── SCIENTIFIC_RAG_BACKEND.md        # Vector retrieval, PageRank authority & FP-Growth mining
+│   ├── FE_DESIGN_SYSTEM.md              # Unified UI design tokens, glass materials & 3D rotation rules
+│   ├── FE_DESIGN_AUDIT.md               # Empirical UI token drift & Liquid Glass audit
+│   ├── FE3d_prompt_v2.md                # Sequential P15-P23 prompt plan for Design System & Liquid Glass
 │   ├── RUN_GUIDE.md                     # Local environment startup (Cloudflare tunnel, Qdrant, Ollama)
 │   └── AI_chat_log/
 │       └── Vuong_chat_logs.md           # Authoritative Decision Log (D-001 through D-022+)
@@ -100,11 +104,12 @@ RAG_TS/                                  # Workspace Root
   ```
 - **Backend 3-Stage SRE Stress Test Certification (`backend_rag/benchmark/`)**:
   - Requires `P95 < 500ms`, `P99 < 1000ms`, `Error Rate < 1%` held continuously for **3 minutes (`180s`)** per Rule L1 (`D-019`). See [`backend_rag/docs/PERFORMANCE_AND_CACHING.md`](backend_rag/docs/PERFORMANCE_AND_CACHING.md).
-- **Frontend Typecheck & Vitest Suite (`frontend_rag/`)**:
+- **Frontend Typecheck, Vitest & Playwright E2E Suite (`frontend_rag/`)**:
   ```powershell
   cd frontend_rag
   npm run typecheck
   npm test -- --run
+  npx playwright test e2e/knowledge-tree.spec.ts
   ```
 
 ---

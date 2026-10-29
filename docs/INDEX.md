@@ -1,12 +1,12 @@
 # INDEX.md — Master Documentation Catalog & Status Registry
 
-- **Motivation/Background**: As `RAG_TS` evolved across multiple sprints (initial RAG bootstrapping, 3D WebGL world optimization, Auth/Chat-Sessions MongoDB persistence, Offline-First IndexedDB sync, and 3-Stage Production SRE Stress Testing), over 25 Markdown files accumulated across `docs/`, `backend_rag/`, `frontend_rag/`, and `agents/`. Without a central registry, AI agents risk reading outdated bootstrap prompts instead of active production specifications.
+- **Motivation/Background**: As `RAG_TS` evolved across multiple sprints (initial RAG bootstrapping, 3D WebGL world optimization, Auth/Chat-Sessions MongoDB persistence, Offline-First IndexedDB sync, 3-Stage Production SRE Stress Testing, and the Frontend Design System / Liquid Glass overhaul), over 30 Markdown files accumulated across `docs/`, `backend_rag/`, `frontend_rag/`, and `agents/`. Without a central registry, AI agents risk reading outdated bootstrap prompts instead of active production specifications.
 - **Purpose**: Provide a complete, status-tagged catalog (`ACTIVE` vs. `ARCHIVED`) of every Markdown document in the `RAG_TS` monorepo so AI agents and human engineers can locate the authoritative source of truth in seconds.
 - **Overview Pipeline**: Domain Classification → File Path & Status Badge Lookup → Progressive-Disclosure Navigation.
-- **Detailed Plan**: Section 1 catalogs AI Agent Entrypoints & Governance Rules; Section 2 catalogs System Architecture & API Specifications; Section 3 catalogs Backend Engineering & SRE Benchmark Docs; Section 4 catalogs Frontend 3D & Offline Persistence Docs; Section 5 lists Archived Bootstrap Prompts (do not use for active code generation).
+- **Detailed Plan**: Section 1 catalogs AI Agent Entrypoints & Governance Rules; Section 2 catalogs System Architecture & API Specifications; Section 3 catalogs Backend Engineering & SRE Benchmark Docs; Section 4 catalogs Frontend 3D, Design System & Offline Persistence Docs; Section 5 lists Archived Bootstrap Prompts (do not use for active code generation).
 - **References**: [AGENTS.md](../AGENTS.md), [backend_rag/AGENTS.md](../backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](../frontend_rag/AGENTS.md), [agents/rules/MD_CONVENTION.md](../agents/rules/MD_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-29T19:43:00+07:00
-- **Last Updated**: 2026-10-29T19:43:00+07:00
+- **Last Updated**: 2026-10-30T06:12:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -62,28 +62,32 @@
 
 ---
 
-## 4. Frontend 3D World, Offline State & Performance (`frontend_rag/`)
+## 4. Frontend 3D World, Design System, Offline State & Performance (`frontend_rag/` & `docs/`)
 
 | Document | Status | Audience & Scope |
 | :--- | :---: | :--- |
 | [`frontend_rag/AGENTS.md`](../frontend_rag/AGENTS.md) | `ACTIVE` | **Frontend AI Manual**: Component map, R3F `<Canvas>` rules, Zustand stores, Dexie.js IndexedDB rules, and Web Vitals guardrails. |
 | [`frontend_rag/README.md`](../frontend_rag/README.md) | `ACTIVE` | **Frontend App Guide**: Vite dev server, environment configuration, and build scripts. |
+| [`docs/FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md) | `ACTIVE` | **Frontend Design System & Liquid Glass Spec**: Single source of truth for design tokens (color, radius, blur, glass materials, typography, motion), complex/quaternion 3D rotation math, and Liquid Glass levels 1–4. |
+| [`docs/FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md) | `ACTIVE` | **Frontend Token Drift & Design Audit**: Empirical measurement of UI token drift across P1–P14 and post-P14 commits prior to `FE_DESIGN_SYSTEM.md`. |
+| [`docs/FE3d_prompt_v2.md`](FE3d_prompt_v2.md) | `ACTIVE` | **Frontend v2 Prompt Plan (`P15`–`P23`)**: Step-by-step specification, pseudocode, and verification plan for Design System migration, 3D complex/quaternion math, and Liquid Glass. |
 | [`frontend_rag/docs/STATE_AND_STREAMING_ARCHITECTURE.md`](../frontend_rag/docs/STATE_AND_STREAMING_ARCHITECTURE.md) | `ACTIVE` | **State, Offline Sync & Streaming Deep Dive**: `ragStore`, `sessionStore`, `Dexie.js` Cache-First persistence, background `/chat-sessions` sync, and `30ms` micro-batched SSE token streaming. |
 | [`frontend_rag/docs/perf-chat-report.md`](../frontend_rag/docs/perf-chat-report.md) | `ACTIVE` | **3D Render & Streaming Chat Performance Report**: Empirical analysis of draw-call batching, frustum clipping, DPR clamping, and `PerfHUD` telemetry (`D-005` – `D-013`). |
 | [`frontend_rag/docs/perf-report.md`](../frontend_rag/docs/perf-report.md) | `ACTIVE` | **WebGL & Core Web Vitals Audit**: Lighthouse performance optimization (`FCP 0.9s`, `LCP 1.0s`, Score `97/100`). |
 | [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md) | `ACTIVE` | **Shader & Geometry Math Audit**: Trigonometric and procedural geometry notes for the 3D knowledge tree. |
 | [`frontend_rag/ASSUMPTIONS.md`](../frontend_rag/ASSUMPTIONS.md) | `ACTIVE` | **Frontend Engineering Assumptions Log**: Documented UI/UX and API boundary assumptions. |
-| [`frontend_rag/PROGRESS.md`](../frontend_rag/PROGRESS.md) | `ACTIVE` | **Frontend Feature Implementation Tracker**: Module completion and Vitest verification log. |
+| [`frontend_rag/PROGRESS.md`](../frontend_rag/PROGRESS.md) | `ACTIVE` | **Frontend Feature Implementation Tracker**: Module completion and Vitest/Playwright verification log. |
 
 ---
 
 ## 5. Archived Bootstrap Prompts & Course Notes (`[STATUS: ARCHIVED]`)
 
 > [!WARNING]
-> The files below are **historical bootstrapping prompts and early course notes**. They reference early prototypes (e.g., LanceDB instead of Qdrant, or pre-optimization sequential queries). **AI agents must NOT use these files as specifications when modifying current code.** Always use the `ACTIVE` documents in Sections 1–4 instead.
+> The files below are **historical bootstrapping prompts and early course notes**. They reference early prototypes (e.g., LanceDB instead of Qdrant, or pre-Design-System UI tokens). **AI agents must NOT use these files as specifications when modifying current code.** Always use the `ACTIVE` documents in Sections 1–4 instead.
 
 | Document | Status | Historical Context |
 | :--- | :---: | :--- |
 | [`docs/prompt.md`](prompt.md) | `ARCHIVED` | Early Phase-1 prompt decomposition that referenced LanceDB before the system standardized on Qdrant (`scientific_papers_gold`) and MongoDB. |
 | [`docs/prompt_backend.md`](prompt_backend.md) | `ARCHIVED` | Initial B1–B11 step-by-step scaffolding prompt used to bootstrap `backend_rag`. Superseded by [`backend_rag/AGENTS.md`](../backend_rag/AGENTS.md) and [`docs/ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md). |
+| [`docs/prompt_fe_3d.md`](prompt_fe_3d.md) | `ARCHIVED` | Initial P1–P11 step-by-step bootstrap prompt and verification checklist for `frontend_rag` (`210/210` Vitest, `6/6` Playwright E2E verified). UI design tokens and glass rules are superseded by [`docs/FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md) and [`docs/FE3d_prompt_v2.md`](FE3d_prompt_v2.md). |
 | [`docs/lesson_2.md`](lesson_2.md) | `ARCHIVED` | General course lecture notes on human-AI pair programming methodology (`Requirement → Spec → Pseudocode → Prompt → Verification`). |

@@ -1,3 +1,20 @@
+# prompt_fe_3d.md — Initial P1-P11 Frontend 3D Knowledge Tree Prompts (Archived)
+
+- **Motivation/Background**: Step-by-step decomposition prompts (P1 through P11) and Appendices A & B used to bootstrap the 3D Vector Knowledge Tree frontend (`frontend_rag`) following the Lesson 2 methodology (`Requirement -> Spec -> Pseudocode -> Prompt -> Verification`).
+- **Purpose**: Historical record of the initial P1-P11 frontend 3D world and chat implementation and its verification checklist. The UI token and glassmorphism rules in this file have been superseded by [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md) and [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md).
+- **Overview Pipeline**: P1 Types/Theme -> P2 Binary/SSE/Mock -> P3 Zustand Store -> P4 Chat/Citations -> P5 World Canvas/PostFX -> P6 Ground/Crates -> P7 Ancient Tree -> P8 Vector Canopy -> P9 Query Flight -> P10 Result Card/Paper Panel -> P11 Layout/Perf/E2E.
+- **Detailed Plan**: Preserves original P1-P11 prompt specifications, Appendices A & B, and the completed P1-P11 verification & decision traceability checklist.
+- **References**: [../AGENTS.md](../AGENTS.md), [INDEX.md](INDEX.md), [../frontend_rag/AGENTS.md](../frontend_rag/AGENTS.md), [../frontend_rag/PROGRESS.md](../frontend_rag/PROGRESS.md), [FE_DESIGN_AUDIT.md](FE_DESIGN_AUDIT.md), [FE_DESIGN_SYSTEM.md](FE_DESIGN_SYSTEM.md), [FE3d_prompt_v2.md](FE3d_prompt_v2.md).
+- **Created**: 2026-10-18T10:00:00+07:00
+- **Last Updated**: 2026-10-30T06:11:00+07:00
+
+[STATUS: ARCHIVED]
+
+> [!WARNING]
+> **Archived Bootstrap Prompt**: All modules `P1`-`P11` have been implemented and verified (`210/210` Vitest unit tests, `6/6` Playwright E2E tests). For active UI design tokens, Liquid Glass rules, and P15-P23 upgrades, consult [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), and [`frontend_rag/AGENTS.md`](../frontend_rag/AGENTS.md).
+
+---
+
 lide 
 
 # Kế hoạch & Danh mục Prompt Phát triển Frontend 3D "Cây Tri Thức Vector" cho Hệ thống RAG
@@ -265,9 +282,9 @@ Dự án chạy bằng `npm run dev`, nút đổi theme tạm thời trên trang
 
 ### 1.3 Quy trình kiểm chứng
 
-- [ ] `npm run dev` chạy, đổi theme thấy màu nền đổi.
-- [ ] `npx tsc --noEmit` 0 lỗi; `npx vitest run src/theme` pass.
-- [ ] Đối chiếu field types với Mục 3.
+- [x] `npm run dev` chạy, đổi theme thấy màu nền đổi.
+- [x] `npx tsc --noEmit` 0 lỗi; `npx vitest run src/theme` pass.
+- [x] Đối chiếu field types với Mục 3.
 
 ---
 
@@ -343,7 +360,7 @@ Chuỗi mạng nhận 2 lần: "data: {\"type\":\"token\",\"te" và "xt\":\"LoRA
 
 ### 2.4 Quy trình kiểm chứng
 
-- [ ] `npx vitest run src/api` pass 100%.
+- [x] `npx vitest run src/api` pass 100%.
 
 ---
 
@@ -411,7 +428,7 @@ Tạo `src/store/pipeline.ts` (hàm thuần), `src/store/worldStore.ts`, `src/st
 
 ### 3.4 Quy trình kiểm chứng
 
-- [ ] `npx vitest run src/store` pass 100%.
+- [x] `npx vitest run src/store` pass 100%.
 
 ---
 
@@ -466,10 +483,10 @@ Tạo `src/utils/citations.ts` (`splitCitations`) và các component trong `src/
 
 ### 4.4 Quy trình kiểm chứng
 
-- [ ] `$$L = \sum_i x_i$$` hiển thị đúng.
-- [ ] `[Paper: 2310.00297, 2401.12345]` ra 2 chip.
-- [ ] `<script>alert(1)</script>` trong câu trả lời không thực thi.
-- [ ] Đổi theme, chat vẫn dễ đọc ở cả 2 chế độ.
+- [x] `$$L = \sum_i x_i$$` hiển thị đúng.
+- [x] `[Paper: 2310.00297, 2401.12345]` ra 2 chip.
+- [x] `<script>alert(1)</script>` trong câu trả lời không thực thi.
+- [x] Đổi theme, chat vẫn dễ đọc ở cả 2 chế độ.
 
 ---
 
@@ -517,8 +534,8 @@ Tạo `src/components/world/WorldCanvas.tsx`, `SkyBackground.tsx`, `Lighting.tsx
 
 ### 5.3 Quy trình kiểm chứng
 
-- [ ] Đổi theme: nền, fog, bloom đổi ngay.
-- [ ] 3 nút điều hướng chuyển camera mượt; reduce motion thì chuyển tức thì.
+- [x] Đổi theme: nền, fog, bloom đổi ngay.
+- [x] 3 nút điều hướng chuyển camera mượt; reduce motion thì chuyển tức thì.
 
 ---
 
@@ -578,9 +595,9 @@ Tạo `src/components/world/ground/GroundGrid.tsx`, `BookCrates.tsx`, `src/compo
 
 ### 6.4 Quy trình kiểm chứng
 
-- [ ] Mặt đất thấy rõ các mảng màu liền nhau theo loại bài báo, đúng màu với legend.
-- [ ] Mode "ground": nhìn xuyên thấy thùng sách.
-- [ ] Đổi theme: màu neon ➔ pastel.
+- [x] Mặt đất thấy rõ các mảng màu liền nhau theo loại bài báo, đúng màu với legend.
+- [x] Mode "ground": nhìn xuyên thấy thùng sách.
+- [x] Đổi theme: màu neon ➔ pastel.
 
 ---
 
@@ -639,8 +656,8 @@ Tạo `src/components/world/tree/AncientTree.tsx`, `Roots.tsx`, `Trunk.tsx`, `Br
 
 ### 7.4 Quy trình kiểm chứng
 
-- [ ] Mode "ground": thấy rõ rễ mọc từ từng thùng, màu rễ khớp màu ô đất phía trên.
-- [ ] Số draw call của rễ + thân + cành + hạt nhựa ≤ 4.
+- [x] Mode "ground": thấy rõ rễ mọc từ từng thùng, màu rễ khớp màu ô đất phía trên.
+- [x] Số draw call của rễ + thân + cành + hạt nhựa ≤ 4.
 
 ---
 
@@ -701,9 +718,9 @@ Tạo `src/components/world/canopy/VectorCanopy.tsx`, `canopyShader.ts` (vertex 
 
 ### 8.4 Quy trình kiểm chứng
 
-- [ ] Mock 150.000 vector: FPS ≥ 50 ở mode overview (`?perf`).
-- [ ] Click một ô đất ➔ chỉ vector của thùng đó sáng, còn lại mờ.
-- [ ] Kéo thanh năm thấy tán lá thưa/dày theo thời gian.
+- [x] Mock 150.000 vector: FPS ≥ 50 ở mode overview (`?perf`).
+- [x] Click một ô đất ➔ chỉ vector của thùng đó sáng, còn lại mờ.
+- [x] Kéo thanh năm thấy tán lá thưa/dày theo thời gian.
 
 ---
 
@@ -777,10 +794,10 @@ Tạo `src/components/world/fx/QueryFlight.tsx`, `QueryText.tsx`, `QueryOrb.tsx`
 
 ### 9.4 Quy trình kiểm chứng
 
-- [ ] Chạy mock: thấy đủ 6 giai đoạn đúng thứ tự, PipelineStatus khớp hình.
-- [ ] Đổi `nprobe` từ 1 lên 3: quả cầu tách và đi vào nhiều cành hơn.
-- [ ] Giai đoạn found: camera phóng vào đúng vector có final_score cao nhất.
-- [ ] Gửi 2 câu liên tiếp nhanh: không còn hiệu ứng thừa.
+- [x] Chạy mock: thấy đủ 6 giai đoạn đúng thứ tự, PipelineStatus khớp hình.
+- [x] Đổi `nprobe` từ 1 lên 3: quả cầu tách và đi vào nhiều cành hơn.
+- [x] Giai đoạn found: camera phóng vào đúng vector có final_score cao nhất.
+- [x] Gửi 2 câu liên tiếp nhanh: không còn hiệu ứng thừa.
 
 ---
 
@@ -826,10 +843,10 @@ Tạo `src/components/result/ResultCard.tsx`, `PaperPanel.tsx`, `ChunkList.tsx`,
 
 ### 10.3 Quy trình kiểm chứng
 
-- [ ] Sau khi tìm thấy: ResultCard hiện cạnh điểm sáng, đúng bài có final_score cao nhất.
-- [ ] Click chip trích dẫn ➔ camera bay tới đúng vector, card và panel đúng bài.
-- [ ] Click chip unverified ➔ không bay, panel cảnh báo.
-- [ ] Click một vector bất kỳ ➔ panel ghi "Không được dùng cho câu trả lời này".
+- [x] Sau khi tìm thấy: ResultCard hiện cạnh điểm sáng, đúng bài có final_score cao nhất.
+- [x] Click chip trích dẫn ➔ camera bay tới đúng vector, card và panel đúng bài.
+- [x] Click chip unverified ➔ không bay, panel cảnh báo.
+- [x] Click một vector bất kỳ ➔ panel ghi "Không được dùng cho câu trả lời này".
 
 ---
 
@@ -877,9 +894,9 @@ Hoàn thiện `src/App.tsx`, `src/components/layout/AppShell.tsx`, `TopBar.tsx`,
 
 ### 11.3 Quy trình kiểm chứng
 
-- [ ] `npm run build` thành công, three tách chunk riêng.
-- [ ] `npx vitest run` và `npx playwright test` pass.
-- [ ] `?perf`: FPS ≥ 50 ở overview với 150.000 vector, cả 2 theme.
+- [x] `npm run build` thành công, three tách chunk riêng.
+- [x] `npx vitest run` và `npx playwright test` pass.
+- [x] `?perf`: FPS ≥ 50 ở overview với 150.000 vector, cả 2 theme.
 - [ ] Chạy với backend thật: cùng câu hỏi, kết quả trên giao diện khớp `curl`.
 
 ---
@@ -923,14 +940,14 @@ Do thành viên phụ trách dữ liệu thực hiện, xuất file đúng Mục
 
 | Bước        | Tiêu chí kiểm chứng                                                              | Trạng thái |         Quyết định         |
 | :------------ | :----------------------------------------------------------------------------------- | :----------: | :----------------------------: |
-| **P1**  | Dự án chạy, types khớp Mục 3, theme Light/Dark hoạt động                     |     [ ]     | Chấp nhận / Sửa / Từ chối |
-| **P2**  | Parser binary + SSE đúng, mock world nhất quán, xác định                      |     [ ]     | Chấp nhận / Sửa / Từ chối |
-| **P3**  | Reducer thuần, phase/visualPhase đúng, phát hiện citation unverified            |     [ ]     | Chấp nhận / Sửa / Từ chối |
-| **P4**  | Markdown + LaTeX, chip trích dẫn có màu loại bài, không XSS                   |     [ ]     | Chấp nhận / Sửa / Từ chối |
-| **P5**  | Một canvas, bloom, đổi theme tức thì, camera 5 mode                             |     [ ]     | Chấp nhận / Sửa / Từ chối |
-| **P6**  | Lưới ô màu theo loại bài liền mảng, thùng sách nhìn xuyên được        |     [ ]     | Chấp nhận / Sửa / Từ chối |
-| **P7**  | Rễ mọc từ thùng, đổi màu dần, thân cổ thụ có gân sáng, ≤ 4 draw call  |     [ ]     | Chấp nhận / Sửa / Từ chối |
-| **P8**  | 150k vector một Points, ≥ 50 FPS, lọc theo thùng/loại, thanh năm               |     [ ]     | Chấp nhận / Sửa / Từ chối |
-| **P9**  | Đủ 6 giai đoạn, điểm số thật, nprobe có tác dụng, phóng to đúng vector |     [ ]     | Chấp nhận / Sửa / Từ chối |
-| **P10** | ResultCard đúng bài, panel 3 trường hợp, truy vết trích dẫn đúng          |     [ ]     | Chấp nhận / Sửa / Từ chối |
-| **P11** | Build OK, responsive, Vitest + Playwright pass, đạt ngân sách hiệu năng        |     [ ]     | Chấp nhận / Sửa / Từ chối |
+| **P1** | Dự án chạy, types khớp Mục 3, theme Light/Dark hoạt động | [x] | **Chấp nhận** (Đã kiểm chứng: Vitest 210/210, Playwright E2E 6/6) |
+| **P2** | Parser binary + SSE đúng, mock world nhất quán, xác định | [x] | **Chấp nhận** (Đã kiểm chứng: Vitest 210/210, Playwright E2E 6/6) |
+| **P3** | Reducer thuần, phase/visualPhase đúng, phát hiện citation unverified | [x] | **Chấp nhận** (Đã kiểm chứng: Vitest 210/210, Playwright E2E 6/6) |
+| **P4** | Markdown + LaTeX, chip trích dẫn có màu loại bài, không XSS | [x] | **Chấp nhận** (Đã kiểm chứng: Vitest 210/210, Playwright E2E 6/6) |
+| **P5** | Một canvas, bloom, đổi theme tức thì, camera 5 mode | [x] | **Chấp nhận** (Đã kiểm chứng: Vitest 210/210, Playwright E2E 6/6) |
+| **P6** | Lưới ô màu theo loại bài liền mảng, thùng sách nhìn xuyên được | [x] | **Chấp nhận** (Đã kiểm chứng: Vitest 210/210, Playwright E2E 6/6) |
+| **P7** | Rễ mọc từ thùng, đổi màu dần, thân cổ thụ có gân sáng, ≤ 4 draw call | [x] | **Chấp nhận** (Đã kiểm chứng: Vitest 210/210, Playwright E2E 6/6) |
+| **P8** | 150k vector một Points, ≥ 50 FPS, lọc theo thùng/loại, thanh năm | [x] | **Chấp nhận** (Đã kiểm chứng: Vitest 210/210, Playwright E2E 6/6) |
+| **P9** | Đủ 6 giai đoạn, điểm số thật, nprobe có tác dụng, phóng to đúng vector | [x] | **Chấp nhận** (Đã kiểm chứng: Vitest 210/210, Playwright E2E 6/6) |
+| **P10** | ResultCard đúng bài, panel 3 trường hợp, truy vết trích dẫn đúng | [x] | **Chấp nhận** (Đã kiểm chứng: Vitest 210/210, Playwright E2E 6/6) |
+| **P11** | Build OK, responsive, Vitest + Playwright pass, đạt ngân sách hiệu năng | [x] | **Chấp nhận** (Đã kiểm chứng: Vitest 210/210, Playwright E2E 6/6) |
