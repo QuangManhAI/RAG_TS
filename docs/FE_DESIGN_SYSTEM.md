@@ -6,7 +6,7 @@
 - **Detailed Plan**: §0 Quy tắc vàng; §1 Kiến trúc token; §2 Màu; §3 Bo góc; §4 Vật liệu kính; §5 Chữ; §6 Khoảng cách/icon/lớp; §7 Chuyển động; §8 Component; §9 Toán Web3D; §10 Liquid Glass; §11 Kiểm soát; §12 Lộ trình; Phụ lục A code token; Phụ lục B bảng quy đổi.
 - **References**: [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md), [`frontend_rag/src/theme/tokens.ts`](../frontend_rag/src/theme/tokens.ts), [`frontend_rag/src/utils/rotation.ts`](../frontend_rag/src/utils/rotation.ts), Tailwind CSS 4.3, Apple Human Interface Guidelines (Liquid Glass).
 - **Created**: 2026-10-29T22:46:54+07:00
-- **Last Updated**: 2026-10-30T01:05:00+07:00
+- **Last Updated**: 2026-10-30T09:30:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -280,13 +280,13 @@ Trên kính Clear **không dùng bóng đổ**, chỉ dùng `--glass-edge`.
 
 ### 6.2 Icon (lucide)
 
-Quy tắc: **cỡ icon = cỡ chữ đi kèm + 2px**.
+Quy tắc: **cỡ icon = cỡ chữ đi kèm + 2px**, làm tròn về bậc trong bảng (chốt ở P18: quy tắc này thắng cột "gộp từ").
 
 | Bối cảnh | Cỡ | Gộp từ |
 | :-- | :-- | :-- |
-| Đi với `text-micro` / `text-caption` | **12** | 10, 12, 13 |
-| Đi với `text-xs` / `text-control`, icon trong nút | **14** | 14, 15 |
-| TopBar, icon chính của panel | **16** | 16 |
+| Đi với `text-micro` / `text-caption` | **12** | 10, 12 (và 13 khi chữ đi kèm ≤ 11px) |
+| Đi với `text-xs` / `text-control`, icon trong nút | **14** | 13, 14, 15 |
+| TopBar, nút ở header của panel (Chat, Settings, PaperPanel), tiêu đề `text-sm` | **16** | 13, 15, 16 |
 | Emblem | **28** | 28 |
 
 Nét icon: mặc định `strokeWidth` 2. Riêng 12px dùng 2.25 để không bị mảnh.
@@ -350,7 +350,7 @@ Animation lặp (`pulse`, `blink`, `shimmer`, `twinkle`, `grow`) giữ nhịp ri
 | Chip / tag (`.tag`, `.liquid-badge-chip`) | `full` | Clear | `2px 8px` | `text-caption` | |
 | Chip trích dẫn (`.cite-chip`) | `full` | Nền accent 12%, viền accent 40% | `0 6px` | `0.72em` mono | Chưa xác minh: viền đứt `--warn` |
 | Tooltip | `sm` | Strong | `4px 8px` | `text-xs` | |
-| Bubble chat | `lg`, đuôi `sm` | Người dùng: accent 16%; trợ lý: ink 6% | `8px 14px` | `text-sm` | |
+| Bubble chat | `lg`, đuôi `sm` | Người dùng: accent 16%; trợ lý: ink 6% | `8px 12px` (`px-3`, §6.1 không có bậc 3.5) | `text-sm` | |
 | Thẻ trong panel (chunk, alert) | `md` | Viền `--glass-stroke` | `8px 12px` | `text-xs` | |
 | Dòng danh sách (History, Legend) | `md` | Hover `--glass-fill-hover` | `6px 10px` | `text-xs` | |
 | Nhãn 3D (`.label3d`, `.topk-badge`) | `full` | `--ui-surface`, `--blur-sm` | `2px 8px` | `text-caption`/`text-micro` mono | |
@@ -890,6 +890,9 @@ Mỗi bước là một PR riêng, đều nhỏ và dễ hoàn tác.
 | `0.9rem` | `.md` | `text-sm` |
 | `22px` | `.query-text` | `text-display` |
 | `0.72em`, `0.85em` | `.cite-chip`, `.md code` | Giữ (inline, co theo chữ cha) |
+| `text-[0.65rem]` | HealthBanner, TopBar (phụ đề), PipelineStatus (ms), ScoreBars compact, CrawlSettings (tiêu đề nhỏ) | `text-micro` — meta/số liệu phụ *(bổ sung P18, theo vai trò)* |
+| `text-[0.68rem]`, `text-[0.7rem]` | CrawlSettings, SettingsPanel (lỗi), MessageBubble (chân), ChunkList (meta), ScoreBars, nút "Bỏ qua" | `text-caption` — nhãn *(bổ sung P18)* |
+| `text-[0.78rem]`, `text-[0.8rem]`, `text-[0.82rem]` | CrawlSettings, ResultCard (tiêu đề), ChunkList (đoạn trích), PaperPanel (abstract) | `text-xs` — văn bản đọc trong panel *(bổ sung P18)* |
 | `font-weight: 650` | `.md strong` | `600` |
 
 ### B.5 Thời gian & easing
