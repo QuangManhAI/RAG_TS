@@ -6,7 +6,7 @@
 - **Detailed Plan**: §0 Quy tắc vàng; §1 Kiến trúc token; §2 Màu; §3 Bo góc; §4 Vật liệu kính; §5 Chữ; §6 Khoảng cách/icon/lớp; §7 Chuyển động; §8 Component; §9 Toán Web3D; §10 Liquid Glass; §11 Kiểm soát; §12 Lộ trình; Phụ lục A code token; Phụ lục B bảng quy đổi.
 - **References**: [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md), [`frontend_rag/src/theme/tokens.ts`](../frontend_rag/src/theme/tokens.ts), [`frontend_rag/src/utils/rotation.ts`](../frontend_rag/src/utils/rotation.ts), Tailwind CSS 4.3, Apple Human Interface Guidelines (Liquid Glass).
 - **Created**: 2026-10-29T22:46:54+07:00
-- **Last Updated**: 2026-10-30T10:45:00+07:00
+- **Last Updated**: 2026-10-30T12:10:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -529,6 +529,8 @@ Muốn bỏ một ngoại lệ, phải đo lại theo phương pháp ở `trig-a
 | Shader (`canopyShader.ts`, `Fireflies`, `QueryText`, `Branches`) | D | Góc khác nhau theo đỉnh | Giữ; góc đồng nhất thì dùng `uRotor` |
 
 Góc Euler: hiện **không có** chỗ nào dùng `rotation.x|y|z` theo thời gian. Quy chuẩn này giữ cho điều đó tiếp tục đúng.
+
+**Trạng thái (P20, 2026-10-30):** mọi chỗ "Đổi" ở bảng trên đã chuyển sang rotor. Thêm 3 helper `ringRotors`, `powRotor`, `randomDirection` vào `rotation.ts`. Không chỗ nào chậm hơn (ống 2.96×, thân 1.57×, đĩa 1.65× nhanh hơn), sai lệch tối đa 1.4e-14. `npm run lint` chặn lượng giác không có chú thích. Chi tiết ở [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md) §7.
 
 Các chỗ thuộc nhóm A chạy một lần lúc dựng cảnh, nên đổi sang rotor là để **code thống nhất**, không kỳ vọng tăng FPS. Đổi xong phải chạy lại `treeGeometry.test.ts` và chụp ảnh so sánh trước/sau.
 
