@@ -6,7 +6,7 @@
 - **Detailed Plan**: Index table followed by immutable 12-line decision blocks with strict attribution and command-level verification evidence.
 - **References**: [agents/template/DECISION_LOG_TEMPLATE.md](../../agents/template/DECISION_LOG_TEMPLATE.md), [frontend_rag/docs/perf-chat-report.md](../../frontend_rag/docs/perf-chat-report.md), [backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md](../../backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md).
 - **Created**: 2026-10-20T19:00:00+07:00
-- **Last Updated**: 2026-10-30T10:55:00+07:00
+- **Last Updated**: 2026-10-30T15:40:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -47,6 +47,10 @@
 | D-029 | Size icons by the "text + 2 px" rule over the merge column | agent-proposed, human-approved | accepted |
 | D-030 | Keep HistoryDrawer an opaque overlay instead of a Glass surface | agent-default | accepted |
 | D-031 | Benchmark on a dedicated 127.0.0.1 port with interleaved A/B runs | agent-default | accepted |
+| D-032 | Draw the Liquid Glass specular as a rim light, not a full-surface wash | agent-default | accepted |
+| D-033 | Drop mix-blend-mode from the specular layer (breaks backdrop blur) | agent-default | abandoned |
+| D-034 | Write the light direction per lit surface via non-inherited @property | agent-default | accepted |
+| D-035 | Apply the +2 % level-2 budget to the frame-time median | agent-default | accepted |
 
 ---
 
@@ -452,4 +456,55 @@
 - **Touches:** `frontend_rag/docs/design-migration-report.md` §2, `frontend_rag/ASSUMPTIONS.md` [P19].
 - **Evidence:** Interleaved runs on 5195/5196: P18 median 2.0 ms, P19 median 2.0 / 2.0 / 2.1 ms, p95 3.5–3.6 ms, 4 long tasks each.
 - **Revisit if:** The benchmark script starts its own server.
+
+### D-032 — Draw the Liquid Glass specular as a rim light, not a full-surface wash
+
+- **Status:** accepted
+- **When:** 2026-10-30T14:10:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent initiative after reviewing the first level-2 screenshot)`
+- **Decision:** `.glass::after` covers the border box and is masked to a 1.5 px band along the edge (`mask: … content-box exclude …`); `--lg-specular` is 0.6 at level ≥ 2.
+- **Why:** The full-surface radial gradient sketched in FE_DESIGN_SYSTEM §10.4 washed a large bright patch across the wide TopBar; §10.1 describes the specular as a highlight on the glass edge.
+- **Rejected:** Full-surface gradient at 0.35 — washed-out TopBar in the first `05-settings-lg2` shot.
+- **Touches:** `frontend_rag/src/index.css`, `docs/FE_DESIGN_SYSTEM.md` §10.4.
+- **Evidence:** `npx playwright test e2e/visual.spec.ts -g lg2 --update-snapshots`; shots reviewed and accepted by the human with P21.
+- **Revisit if:** Level 3/4 adds a lensing band that makes the rim redundant.
+
+### D-033 — Drop mix-blend-mode from the specular layer (breaks backdrop blur)
+
+- **Status:** abandoned
+- **When:** 2026-10-30T14:30:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent found the regression while reviewing 05-settings-lg2)`
+- **Decision:** `mix-blend-mode: plus-lighter` from the §10.4 sketch is not used; the rim blends normally.
+- **Why:** A blended child made the `.glass` element a backdrop root in Chromium, so its `::before` stopped blurring and the legend behind the Settings panel showed through sharply.
+- **Touches:** `frontend_rag/src/index.css`, `docs/FE_DESIGN_SYSTEM.md` §10.4.
+- **Evidence:** A/B probe on the Settings panel at level 3: with `plus-lighter` the legend text is visible (527 px differ from the version without); without it the area is blurred.
+- **Revisit if:** Chromium stops treating blended descendants as backdrop roots.
+
+### D-034 — Write the light direction per lit surface via non-inherited @property
+
+- **Status:** accepted
+- **When:** 2026-10-30T14:55:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent initiative after the level-2 budget check failed)`
+- **Decision:** `--lg-light-x/y` are registered `inherits: false`, `useLiquidLight` writes them on `.glass[data-shape=panel]` and interactive glass only, `::after` reads them with `inherit`, and lit `::after` layers get `will-change: transform`.
+- **Why:** Writing the light on `<html>` every frame cost median +11 % while the pointer moved; scoping the writes alone changed nothing, isolating the rim on its own layer removed the cost.
+- **Rejected:** Writing on `<html>` as in the P21 spec — median 2.9–3.0 ms vs 2.6 ms; per-surface writes without `will-change` — 2.9–3.0 ms.
+- **Touches:** `frontend_rag/src/theme/useLiquidLight.ts`, `frontend_rag/src/index.css`, `frontend_rag/src/theme/useLiquidLight.test.tsx`.
+- **Evidence:** Pointer-motion probe (150k vectors, 880 rAF intervals, 3 interleaved runs): level 1 median 2.6–2.7 ms / p95 3.7 ms; level 3 final median 2.5 ms / p95 4.4–5.1 ms; pointer still: 2.6 ms both.
+- **Revisit if:** The number of lit surfaces grows enough for the per-frame `querySelectorAll` to show up.
+
+### D-035 — Apply the +2 % level-2 budget to the frame-time median
+
+- **Status:** accepted
+- **When:** 2026-10-30T15:05:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent reading of Phụ lục A #2, which states the budget on the frame median)`
+- **Decision:** Level 2 passes on median (2.5 vs 2.6 ms with the pointer moving); the higher p95 (4.4–5.1 vs 3.7 ms) is recorded, not used as a gate.
+- **Why:** Phụ lục A #2 defines the budget as "frame median so với Cấp 1"; p95 rises only while the pointer moves and stays far below a 60 Hz frame.
+- **Rejected:** Blocking level 2 on p95 — not the approved metric.
+- **Touches:** `frontend_rag/docs/design-migration-report.md`, `frontend_rag/ASSUMPTIONS.md` [P21].
+- **Evidence:** Same probe as D-034; standard `test:perf` at level 3: median 2.2–2.3 ms, p95 3.4 ms, 4 long tasks.
+- **Revisit if:** Users report jank while moving the pointer, or the team wants a p95 budget.
 

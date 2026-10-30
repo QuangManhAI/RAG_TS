@@ -6,7 +6,7 @@
 - **Detailed Plan**: §0 Quy tắc vàng; §1 Kiến trúc token; §2 Màu; §3 Bo góc; §4 Vật liệu kính; §5 Chữ; §6 Khoảng cách/icon/lớp; §7 Chuyển động; §8 Component; §9 Toán Web3D; §10 Liquid Glass; §11 Kiểm soát; §12 Lộ trình; Phụ lục A code token; Phụ lục B bảng quy đổi.
 - **References**: [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md), [`frontend_rag/src/theme/tokens.ts`](../frontend_rag/src/theme/tokens.ts), [`frontend_rag/src/utils/rotation.ts`](../frontend_rag/src/utils/rotation.ts), Tailwind CSS 4.3, Apple Human Interface Guidelines (Liquid Glass).
 - **Created**: 2026-10-29T22:46:54+07:00
-- **Last Updated**: 2026-10-30T12:10:00+07:00
+- **Last Updated**: 2026-10-30T15:20:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -589,6 +589,29 @@ Các chỗ thuộc nhóm A chạy một lần lúc dựng cảnh, nên đổi sa
 - Đưa `backdrop-filter` xuống `::before` giúp Cấp 3 chỉ phải *thêm* một `url(#…)` vào filter, không phải đụng vào component.
 - Đưa specular vào `::after` giúp Cấp 2 chỉ cần đổi `--lg-specular` từ 0 lên.
 - Ở Cấp 1, hình ảnh giống hệt `.glass` hiện tại.
+
+**Triển khai thực tế ở Cấp 2 (P21). Ba điểm khác bản phác ở trên, đều có số đo kèm theo:**
+
+1. **Vệt sáng ở viền (rim light), không phủ cả mặt kính.**
+   - `::after` dùng `inset: -1px; padding: 1.5px` cộng với `mask: linear-gradient(white, white) content-box exclude, linear-gradient(white, white)`, nên gradient chỉ hiện trong dải ~1.5px quanh mép.
+   - Một gradient phủ cả mặt sẽ thành mảng sáng lớn trên TopBar rộng.
+   - `--lg-specular` là 0.6 (thay vì 0.35), vì dải viền rất mảnh.
+2. **Không dùng `mix-blend-mode`.**
+   - Trong Chromium, một phần tử con có `mix-blend-mode: plus-lighter` biến `.glass` thành backdrop root. Khi đó `::before` mất blur và nội dung phía sau lộ ra rõ nét.
+   - Đã kiểm chứng: thêm lại `mix-blend-mode` thì legend lộ qua panel Cài đặt.
+3. **Hướng sáng ghi theo từng bề mặt, không ghi lên `<html>`.**
+   - `--lg-light-x/y` được đăng ký bằng `@property … inherits: false`. Hook chỉ ghi lên các bề mặt có viền sáng (panel và control `interactive`). `::after` lấy giá trị qua `--lg-light-x: inherit`.
+   - Ở cấp ≥ 2, `::after` có `will-change: transform` để vẽ lại vệt sáng không chạy lại blur của `::before`.
+   - Số đo khi chuột di chuyển (median / p95):
+
+     | Phương án | Median | p95 |
+     | :-- | --: | --: |
+     | Cấp 1 | 2.6 ms | 3.7 ms |
+     | Ghi lên `<html>` | 2.9 ms | 6.5 ms |
+     | Ghi theo từng bề mặt | 2.9 ms | 6.7 ms |
+     | Ghi theo từng bề mặt + `will-change` | **2.5 ms** | 4.4–5.1 ms |
+
+`--lg-dim` được áp lên `::before` của vật liệu Clear (lớp `--bg` pha theo tỷ lệ). Mặc định là 0; chỉ lên 0.35 khi bật `prefers-contrast: more`.
 
 ### 10.5 Các cấp nâng cấp (bật dần, mỗi cấp có fallback xuống cấp dưới)
 
