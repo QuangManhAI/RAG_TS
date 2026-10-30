@@ -6,7 +6,7 @@
 - **Detailed Plan**: §0 Quy tắc vàng; §1 Kiến trúc token; §2 Màu; §3 Bo góc; §4 Vật liệu kính; §5 Chữ; §6 Khoảng cách/icon/lớp; §7 Chuyển động; §8 Component; §9 Toán Web3D; §10 Liquid Glass; §11 Kiểm soát; §12 Lộ trình; Phụ lục A code token; Phụ lục B bảng quy đổi.
 - **References**: [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md), [`frontend_rag/src/theme/tokens.ts`](../frontend_rag/src/theme/tokens.ts), [`frontend_rag/src/utils/rotation.ts`](../frontend_rag/src/utils/rotation.ts), Tailwind CSS 4.3, Apple Human Interface Guidelines (Liquid Glass).
 - **Created**: 2026-10-29T22:46:54+07:00
-- **Last Updated**: 2026-10-30T15:20:00+07:00
+- **Last Updated**: 2026-10-30T18:30:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -612,6 +612,18 @@ Các chỗ thuộc nhóm A chạy một lần lúc dựng cảnh, nên đổi sa
      | Ghi theo từng bề mặt + `will-change` | **2.5 ms** | 4.4–5.1 ms |
 
 `--lg-dim` được áp lên `::before` của vật liệu Clear (lớp `--bg` pha theo tỷ lệ). Mặc định là 0; chỉ lên 0.35 khi bật `prefers-contrast: more`.
+
+**Sửa cấu trúc lớp (P22). Thay cho sơ đồ ở trên:**
+
+1. **`backdrop-filter` đặt trên chính `.glass`, không đặt ở `::before`.**
+   - `::before` chỉ còn là lớp tô màu (tint). Khúc xạ cấp 3 cũng gắn `url(#…)` lên phần tử.
+   - Lý do: Chromium bỏ backdrop của pseudo-element mỗi khi nội dung bên trong bề mặt được composite. Đo 5 lần trên cột chat, có nền sọc phía sau: blur ở `::before` hỏng 4/5 lần (cấp Mờ) và 5/5 lần (cấp Liquid); blur trên phần tử đúng 5/5.
+   - Ảnh mốc của P19 không bắt được lỗi này vì canvas bị ẩn, nền phẳng. Từ P22 có test `glass backdrop` dùng nền sọc để chặn tái phát.
+2. **Cấp 3:**
+   - `--lg-refraction: 18px`, `--lg-bezel: var(--radius-lg)`.
+   - **`--lg-chroma: 0`**: tách màu (3 lần `feDisplacementMap` + 3 ma trận màu) làm median tăng +65–77% khi di chuột. Bỏ tách màu thì median bằng cấp 1. Code vẫn giữ nhánh cho `--lg-chroma > 0`.
+   - Filter chỉ được bật khi `<html data-lg-refract="ready">`, tức sau khi bản đồ dịch chuyển đã được sinh lúc trình duyệt rảnh.
+   - Cache bản đồ tối đa 4 kích thước.
 
 ### 10.5 Các cấp nâng cấp (bật dần, mỗi cấp có fallback xuống cấp dưới)
 

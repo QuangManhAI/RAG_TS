@@ -6,7 +6,7 @@
 - **Detailed Plan**: Index table followed by immutable 12-line decision blocks with strict attribution and command-level verification evidence.
 - **References**: [agents/template/DECISION_LOG_TEMPLATE.md](../../agents/template/DECISION_LOG_TEMPLATE.md), [frontend_rag/docs/perf-chat-report.md](../../frontend_rag/docs/perf-chat-report.md), [backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md](../../backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md).
 - **Created**: 2026-10-20T19:00:00+07:00
-- **Last Updated**: 2026-10-30T15:40:00+07:00
+- **Last Updated**: 2026-10-30T18:45:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -51,6 +51,9 @@
 | D-033 | Drop mix-blend-mode from the specular layer (breaks backdrop blur) | agent-default | abandoned |
 | D-034 | Write the light direction per lit surface via non-inherited @property | agent-default | accepted |
 | D-035 | Apply the +2 % level-2 budget to the frame-time median | agent-default | accepted |
+| D-036 | Put backdrop-filter on the .glass element, not on ::before | agent-default | accepted |
+| D-037 | Ship level-3 refraction without the chromatic split | agent-default | accepted |
+| D-038 | Cap the refraction-map cache at four sizes | agent-default | accepted |
 
 ---
 
@@ -507,4 +510,43 @@
 - **Touches:** `frontend_rag/docs/design-migration-report.md`, `frontend_rag/ASSUMPTIONS.md` [P21].
 - **Evidence:** Same probe as D-034; standard `test:perf` at level 3: median 2.2–2.3 ms, p95 3.4 ms, 4 long tasks.
 - **Revisit if:** Users report jank while moving the pointer, or the team wants a p95 budget.
+
+### D-036 — Put backdrop-filter on the .glass element, not on ::before
+
+- **Status:** accepted
+- **When:** 2026-10-30T17:20:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent found the bug while verifying P22 refraction over a striped backdrop)`
+- **Decision:** `.glass` carries its own `backdrop-filter` (and the level-3 `url(#…)`); `::before` is only the material tint. This reverses the `::before` backdrop layer introduced in P19 (§10.4).
+- **Why:** Chromium dropped the pseudo-element's backdrop whenever the surface's content was composited, so the chat column did not blur the scene; flat-background screenshots could not show it.
+- **Rejected:** Keeping the backdrop on `::before` — unblurred in 4/5 runs at level 1 and 5/5 at level 3.
+- **Touches:** `frontend_rag/src/index.css`, `frontend_rag/e2e/visual.spec.ts` (`glass backdrop`), `docs/FE_DESIGN_SYSTEM.md` §10.4.
+- **Evidence:** Stripe probe, luminance stddev inside the chat column over 5 runs: `::before` 80/3.7/80/80/80 (level 1) and 80×5 (level 3); element 3.7×5 and 6.1×5; the new `glass backdrop` screenshots fail 2/2 when the old CSS is restored.
+- **Revisit if:** Chromium samples pseudo-element backdrops reliably again.
+
+### D-037 — Ship level-3 refraction without the chromatic split
+
+- **Status:** accepted
+- **When:** 2026-10-30T17:55:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent initiative after the level-3 budget check failed)`
+- **Decision:** `--lg-chroma` is 0 at level 3, so the filter runs one `feDisplacementMap`; the multi-channel branch stays in `LiquidFilters.tsx` for `--lg-chroma > 0`.
+- **Why:** With a 0.5 px split, pointer-motion median rose to 4.3–4.6 ms against 2.5–2.7 ms at level 1 (budget +10 %); without it level 3 measured 2.5 ms.
+- **Rejected:** Chromatic split at 0.5 px — over budget; the spec fallback (level 3 only when the user picks "Liquid") — unnecessary once chroma was dropped.
+- **Touches:** `frontend_rag/src/index.css`, `docs/FE_DESIGN_SYSTEM.md` §10.5.
+- **Evidence:** Pointer-motion probe, 3 interleaved runs each (150k vectors, 880 rAF intervals); production build FCP/LCP median level 1 232/248 ms vs level 3 244/244 ms.
+- **Revisit if:** A cheaper chromatic edge is found (e.g. in the level-4 WebGL pass).
+
+### D-038 — Cap the refraction-map cache at four sizes
+
+- **Status:** accepted
+- **When:** 2026-10-30T18:00:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent initiative while reviewing the P22 memory check)`
+- **Decision:** `LiquidFilters` keeps the four most recently used displacement maps (LRU by size key).
+- **Why:** The spec keyed the cache by size without a bound; every window resize would keep another full-size PNG data URL alive.
+- **Rejected:** Unbounded cache — grows with each distinct size.
+- **Touches:** `frontend_rag/src/components/ui/LiquidFilters.tsx`, `frontend_rag/e2e/visual.spec.ts`.
+- **Evidence:** E2E "resizing the window keeps at most 4 refraction maps": 10 resizes → cache size ≤ 4.
+- **Revisit if:** More than one refracting surface is added.
 
