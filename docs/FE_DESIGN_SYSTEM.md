@@ -6,7 +6,7 @@
 - **Detailed Plan**: §0 Quy tắc vàng; §1 Kiến trúc token; §2 Màu; §3 Bo góc; §4 Vật liệu kính; §5 Chữ; §6 Khoảng cách/icon/lớp; §7 Chuyển động; §8 Component; §9 Toán Web3D; §10 Liquid Glass; §11 Kiểm soát; §12 Lộ trình; Phụ lục A code token; Phụ lục B bảng quy đổi.
 - **References**: [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md), [`frontend_rag/src/theme/tokens.ts`](../frontend_rag/src/theme/tokens.ts), [`frontend_rag/src/utils/rotation.ts`](../frontend_rag/src/utils/rotation.ts), Tailwind CSS 4.3, Apple Human Interface Guidelines (Liquid Glass).
 - **Created**: 2026-10-29T22:46:54+07:00
-- **Last Updated**: 2026-10-30T09:30:00+07:00
+- **Last Updated**: 2026-10-30T10:45:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -391,6 +391,12 @@ Xuất ra DOM thống nhất:
 ```
 
 Giữ class `.glass` và `.glass-strong` cũ làm alias trong thời gian chuyển đổi, để không phải sửa tất cả component cùng lúc.
+
+**Ghi chú triển khai (P19):**
+- `position: relative; isolation: isolate` của `.glass` nằm trong `@layer components`, để class tiện ích `absolute`/`fixed` trên cùng phần tử vẫn thắng (bottom sheet, tooltip 3D).
+- Phần sơn (viền, bo góc, bóng, `::before`, `::after`) để ngoài layer như các class khác trong `index.css`. Vì vậy muốn ghi đè bo góc phải dùng `!` (ví dụ `!rounded-b-none`).
+- CTA chính trên kính dùng thêm class `.glass-cta` (viền `--glass-stroke-strong`, cạnh `--glass-edge-strong`).
+- Ngăn kéo phủ chữ (HistoryDrawer) **không** dùng `Glass`, chỉ dùng `.surface-opaque`. Nó là lớp phủ đục, không phải bề mặt kính.
 
 ---
 

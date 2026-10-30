@@ -6,7 +6,7 @@
 - **Detailed Plan**: Index table followed by immutable 12-line decision blocks with strict attribution and command-level verification evidence.
 - **References**: [agents/template/DECISION_LOG_TEMPLATE.md](../../agents/template/DECISION_LOG_TEMPLATE.md), [frontend_rag/docs/perf-chat-report.md](../../frontend_rag/docs/perf-chat-report.md), [backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md](../../backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md).
 - **Created**: 2026-10-20T19:00:00+07:00
-- **Last Updated**: 2026-10-30T00:50:00+07:00
+- **Last Updated**: 2026-10-30T10:55:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -42,6 +42,11 @@
 | D-024 | Seed a signed-in user in E2E instead of mocking the auth endpoint | agent-default | accepted |
 | D-025 | Defer the --ink-faint CSS variable from P16 to P17 | agent-default | accepted |
 | D-026 | Rewrite E2E c to assert a cited answer instead of a still-growing one | agent-proposed, human-approved | accepted |
+| D-027 | Run the design-system migration on branch `quangmanh/design-system` | agent-default | accepted |
+| D-028 | Map off-scale font sizes by role, not by nearest value | agent-proposed, human-approved | accepted |
+| D-029 | Size icons by the "text + 2 px" rule over the merge column | agent-proposed, human-approved | accepted |
+| D-030 | Keep HistoryDrawer an opaque overlay instead of a Glass surface | agent-default | accepted |
+| D-031 | Benchmark on a dedicated 127.0.0.1 port with interleaved A/B runs | agent-default | accepted |
 
 ---
 
@@ -382,4 +387,69 @@
 - **Touches:** `frontend_rag/e2e/knowledge-tree.spec.ts`.
 - **Evidence:** `npx playwright test e2e/knowledge-tree.spec.ts` 6 passed (56.1s).
 - **Revisit if:** Progressive streaming after the ResultCard becomes a product requirement again.
+
+### D-027 — Run the design-system migration on branch `quangmanh/design-system`
+
+- **Status:** accepted
+- **When:** 2026-10-29T23:36:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent initiative when starting docs/FE3d_prompt_v2.md P15)`
+- **Decision:** All P15+ commits in `frontend_rag` land on `quangmanh/design-system`, branched from `vuong/perf-benchmark` at `6d54674`; the root repo's submodule pointer is not advanced until that branch is pushed.
+- **Why:** The migration rewrites UI styling across ~25 files and must stay revertible per prompt without mixing into the performance branch named in D-001.
+- **Rejected:** Committing on `vuong/perf-benchmark` — D-001 dedicates it to performance work.
+- **Touches:** `git branches` in `frontend_rag`.
+- **Evidence:** `git switch -c quangmanh/design-system`; commits `66edee0`, `88d9afe`, `f675a58`, `6a246ec`, `57224a6`, `0cff6d4` on that branch.
+- **Revisit if:** The branch is merged or the team wants one shared integration branch.
+
+### D-028 — Map off-scale font sizes by role, not by nearest value
+
+- **Status:** accepted
+- **When:** 2026-10-30T09:00:00+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "Theo vai trò (Recommended)" (option selected by the human in the review dialog, 2026-10-30)
+- **Decision:** `text-[0.65rem]` → `text-micro`, `0.68/0.7rem` → `text-caption`, `0.78/0.8/0.82rem` → `text-xs`; reading text in panels (abstract, chunk text, ResultCard title) is 12 px.
+- **Why:** Keeps one size per role (§5.2) instead of putting reading text on the 13 px size reserved for controls.
+- **Rejected:** Nearest value (0.8/0.82rem → 13 px `text-control`) — smallest pixel change but mixes roles.
+- **Touches:** `frontend_rag/src/components/**` (11 files), `docs/FE_DESIGN_SYSTEM.md` Phụ lục B.4.
+- **Evidence:** `npm run check:design` STATS font sizes 19 → 9 (7 + 2 em); `npx playwright test e2e/visual.spec.ts` showed 03 at 2.1 % and 04 at 4.2 % (text reflow), approved by the human.
+- **Revisit if:** Abstract or chunk text is reported too small to read.
+
+### D-029 — Size icons by the "text + 2 px" rule over the merge column
+
+- **Status:** accepted
+- **When:** 2026-10-30T09:00:00+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "Quy tắc chữ + 2 (Recommended)" (option selected by the human in the review dialog, 2026-10-30)
+- **Decision:** Icons are 12 px beside 10–11 px text, 14 px beside 12–13 px text and inside buttons, 16 px in TopBar and panel-header buttons, 28 px for emblems.
+- **Why:** §6.2 stated both a rule and a "merged from" column that contradicted it for 13 px icons next to 12 px text.
+- **Rejected:** Following the merge column (13 → 12, 15 → 14 regardless of adjacent text).
+- **Touches:** 17 component files under `frontend_rag/src/components/`, `docs/FE_DESIGN_SYSTEM.md` §6.2.
+- **Evidence:** Applied in commit `57224a6`; screenshots reviewed with P18.
+- **Revisit if:** A dense row needs smaller icons than the rule gives.
+
+### D-030 — Keep HistoryDrawer an opaque overlay instead of a Glass surface
+
+- **Status:** accepted
+- **When:** 2026-10-30T10:15:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent deviation from the P19 list in docs/FE3d_prompt_v2.md)`
+- **Decision:** HistoryDrawer keeps `.surface-opaque` (strong surface over `--bg`) and only drops its `backdrop-blur-md`; it is not wrapped in `Glass`.
+- **Why:** It covers the whole chat column as an overlay; `Glass` would add a border, radius and shadow inside the column, and blur under an opaque fill does nothing.
+- **Rejected:** `Glass material="strong" nested` as listed in P19 — changes the drawer's frame for no visual benefit.
+- **Touches:** `frontend_rag/src/components/chat/HistoryDrawer.tsx`, `docs/FE_DESIGN_SYSTEM.md` §8.3.
+- **Evidence:** `backdrop-filter layers per state` test: history 5 → 3; screenshot 06 unchanged.
+- **Revisit if:** The drawer becomes a floating panel instead of a full-column overlay.
+
+### D-031 — Benchmark on a dedicated 127.0.0.1 port with interleaved A/B runs
+
+- **Status:** accepted
+- **When:** 2026-10-30T10:35:00+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (agent initiative after an invalid measurement)`
+- **Decision:** `test:perf` runs target a mock dev server started with `--host 127.0.0.1 --port 519x --strictPort`; comparisons build the previous version in a temporary worktree and alternate runs.
+- **Why:** A non-mock dev server already held `127.0.0.1:5174`, so `localhost:5174` sometimes hit it and produced median 4–19 ms with 300–400 long tasks.
+- **Rejected:** Killing the other dev server — it belongs to the user; reporting the slow runs — they measured the wrong app.
+- **Touches:** `frontend_rag/docs/design-migration-report.md` §2, `frontend_rag/ASSUMPTIONS.md` [P19].
+- **Evidence:** Interleaved runs on 5195/5196: P18 median 2.0 ms, P19 median 2.0 / 2.0 / 2.1 ms, p95 3.5–3.6 ms, 4 long tasks each.
+- **Revisit if:** The benchmark script starts its own server.
 

@@ -23,7 +23,7 @@
   - Bảng Checklist.
 - **References**: [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md), [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`lesson_2.md`](lesson_2.md), [`frontend_rag/AGENTS.md`](../frontend_rag/AGENTS.md), [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md), [`frontend_rag/docs/perf-report.md`](../frontend_rag/docs/perf-report.md), [`agents/rules/MD_CONVENTION.md`](../agents/rules/MD_CONVENTION.md), [`agents/rules/COMMIT_CONVENTION.md`](../agents/rules/COMMIT_CONVENTION.md), [`agents/template/DECISION_LOG_TEMPLATE.md`](../agents/template/DECISION_LOG_TEMPLATE.md), Tailwind CSS 4.3, React 19, React Three Fiber 9, three.js 0.186, Playwright, Vitest.
 - **Created**: 2026-10-29T23:05:00+07:00
-- **Last Updated**: 2026-10-29T23:05:00+07:00
+- **Last Updated**: 2026-10-30T10:55:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -927,11 +927,11 @@ Code + test SDF; bảng hiệu năng; ảnh Cấp 4 được duyệt; PROGRESS; 
 
 | # | Quyết định | Đề xuất | Ảnh hưởng tới | Trạng thái |
 | :-: | :-- | :-- | :-- | :-: |
-| 1 | Đổi `uiBorder` từ α 0.12 → 0.14 để gộp hai giá trị viền | Đồng ý (chênh không nhận ra bằng mắt) | P17 | [ ] |
-| 2 | Ngân sách hiệu năng cho Liquid Glass (frame median so với Cấp 1, M4, 150k, overview) | Cấp 2 ≤ +2%; Cấp 3/4 ≤ +10% | P21–P23 | [ ] |
-| 3 | Cấp mặc định của thiết lập "Tự động" | Cấp 2 mọi nơi, Cấp 3 trên Chromium nếu đạt #2 | P21–P22 | [ ] |
+| 1 | Đổi `uiBorder` từ α 0.12 → 0.14 để gộp hai giá trị viền | Đồng ý (chênh không nhận ra bằng mắt) | P17 | [x] đồng ý 2026-10-30 |
+| 2 | Ngân sách hiệu năng cho Liquid Glass (frame median so với Cấp 1, M4, 150k, overview) | Cấp 2 ≤ +2%; Cấp 3/4 ≤ +10% | P21–P23 | [x] theo đề xuất 2026-10-30 |
+| 3 | Cấp mặc định của thiết lập "Tự động" | Cấp 2 mọi nơi, Cấp 3 trên Chromium nếu đạt #2 | P21–P22 | [x] theo đề xuất 2026-10-30 |
 | 4 | Có làm Cấp 4 (kính WebGL) không | Quyết định sau khi có số đo P22 | P23 | [ ] |
-| 5 | Ai duyệt ảnh diff và cập nhật baseline sau mỗi prompt | Trưởng nhóm FE (ghi tên vào báo cáo) | P17–P23 | [ ] |
+| 5 | Ai duyệt ảnh diff và cập nhật baseline sau mỗi prompt | Trưởng nhóm FE (ghi tên vào báo cáo) | P17–P23 | [x] người dùng duyệt từng prompt (P17–P19) |
 
 ---
 
