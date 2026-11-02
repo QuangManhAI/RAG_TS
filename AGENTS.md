@@ -22,6 +22,7 @@ To avoid flooding your context window, **do not read every `.md` file in the rep
 | **Full-stack architecture, data flow, or API contracts** | [`docs/ARCHITECTURE_OVERVIEW.md`](docs/ARCHITECTURE_OVERVIEW.md) | [`docs/API_SPECIFICATION.md`](docs/API_SPECIFICATION.md), [`docs/API_DESIGN.md`](docs/API_DESIGN.md) |
 | **Backend NestJS modules, controllers, or MongoDB schemas** | [`backend_rag/AGENTS.md`](backend_rag/AGENTS.md) | [`backend_rag/docs/MONGODB_SCHEMA_DESIGN.md`](backend_rag/docs/MONGODB_SCHEMA_DESIGN.md), [`docs/SCIENTIFIC_RAG_BACKEND.md`](docs/SCIENTIFIC_RAG_BACKEND.md) |
 | **Authentication, JWT, Argon2id, Refresh Rotation, or Logout** | [`backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md`](backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md) | [`backend_rag/docs/AUTH_LOGOUT_DESIGN.md`](backend_rag/docs/AUTH_LOGOUT_DESIGN.md) |
+| **Security hardening, RBAC (`admin`/`user`), rate limiting, or the admin surface** | [`docs/prompt_security.md`](docs/prompt_security.md) | [`backend_rag/AGENTS.md`](backend_rag/AGENTS.md) §2.1 |
 | **Chat Sessions, UUIDv7 cursor pagination, or soft-delete** | [`backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md`](backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md) | [`backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md`](backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md) |
 | **Backend caching (`LRUCache`), latency optimization, or k6 stress testing** | [`backend_rag/docs/PERFORMANCE_AND_CACHING.md`](backend_rag/docs/PERFORMANCE_AND_CACHING.md) | [`backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md`](backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md), [`backend_rag/benchmark/README.md`](backend_rag/benchmark/README.md) |
 | **Frontend 3D World (`Three.js` / `R3F`), UI, or Web Vitals** | [`frontend_rag/AGENTS.md`](frontend_rag/AGENTS.md) | [`frontend_rag/docs/perf-chat-report.md`](frontend_rag/docs/perf-chat-report.md), [`frontend_rag/docs/perf-report.md`](frontend_rag/docs/perf-report.md) |
@@ -86,6 +87,12 @@ RAG_TS/                                  # Workspace Root
 7. **3D Render Loop & Streaming Performance (`D-005` – `D-013`)**:
    - Never render raw HTML DOM elements (`<div>`, `<span>`) directly inside R3F `<Canvas>` (`D-013`).
    - Keep `useDeferredValue` and the `30ms` micro-batched streaming buffer in [`frontend_rag/src/store/ragStore.ts`](frontend_rag/src/store/ragStore.ts) so KaTeX/Markdown AST parsing never freezes the WebGL render loop.
+8. **Security Baseline & RBAC (`D-039` – `D-046`)**:
+   - Roles are exactly `admin` / `user`; every `/api/admin/*` route requires `JwtAuthGuard` + `RolesGuard` (`@Roles('admin')`) **and** a service-level `assertAdmin` re-check. Never expose an admin route without both layers.
+   - Access tokens carry a `ver` claim equal to the user's `token_version`. Disabling an account or changing a role **must** bump `token_version` (via `AuthService.revokeAllForUser`) so live access tokens die immediately.
+   - The first admin is created **only** by `npm run create:admin` (`backend_rag/scripts/create-admin.ts`). Never add a public endpoint or a register-time `role` field.
+   - `admin_audit_logs` is append-only: never add an update or delete path to it.
+   - Admin actions that lock out the actor are rejected: `assertNotSelf` and `assertNotLastAdmin` are mandatory on disable / demote.
 
 ---
 

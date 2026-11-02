@@ -6,7 +6,7 @@
 - **Detailed Plan**: Section 1 catalogs AI Agent Entrypoints & Governance Rules; Section 2 catalogs System Architecture & API Specifications; Section 3 catalogs Backend Engineering & SRE Benchmark Docs; Section 4 catalogs Frontend 3D, Design System & Offline Persistence Docs; Section 5 lists Archived Bootstrap Prompts (do not use for active code generation).
 - **References**: [AGENTS.md](../AGENTS.md), [backend_rag/AGENTS.md](../backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](../frontend_rag/AGENTS.md), [agents/rules/MD_CONVENTION.md](../agents/rules/MD_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-29T19:43:00+07:00
-- **Last Updated**: 2026-10-30T19:00:00+07:00
+- **Last Updated**: 2026-11-02T11:10:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -36,6 +36,7 @@
 | [`docs/RUN_GUIDE.md`](RUN_GUIDE.md) | `ACTIVE` | **Environment & Startup Guide**: How to run `cloudflared` TCP tunnel (`localhost:27018`), Qdrant, Ollama/GGUF model, `backend_rag`, and `frontend_rag`. |
 | [`docs/API_SPECIFICATION.md`](API_SPECIFICATION.md) | `ACTIVE` | **REST & SSE API Reference**: Detailed request/response payloads, status codes, and error envelopes for `/api/v1/*`. |
 | [`docs/API_DESIGN.md`](API_DESIGN.md) | `ACTIVE` | **Core API Design Contract**: Standard error format (`statusCode`, `error`, `message`, `details`), pagination rules, and route conventions. |
+| [`docs/prompt_security.md`](prompt_security.md) | `ACTIVE` | **Security Hardening & RBAC Specification (`admin`/`user`)**: Source of truth for the S1–S8 security work — security baseline (`helmet`, `trust proxy`, `@nestjs/throttler`), password policy, `token_version` token invalidation, the 13-route admin surface, the append-only `admin_audit_logs` trail, and the admin bootstrap CLI. Includes the implementation report. |
 | [`docs/SCIENTIFIC_RAG_BACKEND.md`](SCIENTIFIC_RAG_BACKEND.md) | `ACTIVE` | **Scientific RAG Pipeline**: Nomic v1.5 embeddings (`search_query:` prefix), Qdrant cosine search, PageRank authority boost, FP-Growth query expansion, and LLM citation grounding. |
 | [`docs/RAG.md`](RAG.md) | `ACTIVE` | **RAG Pipeline Concepts & Domain Notes**: Theoretical and practical notes on retrieval, reranking, and prompt grounding. |
 | [`docs/REPORT.md`](REPORT.md) | `ACTIVE` | **Executive Engineering & Performance Report**: Consolidated summary of WebGL 3D optimizations, Lighthouse 97 audit, and backend load qualification. |
