@@ -125,16 +125,16 @@ cloudflared access tcp --hostname mongodb.minio-quangmanh.io.vn --url localhost:
    CORS_ORIGINS=http://localhost:5174
 
    # MongoDB (via cloudflared tunnel on localhost:27017)
-   MONGO_URI=mongodb://app_user:YqihzvCaDSkqGQEoR8xWwVZ3@localhost:27017/rag_ts?authSource=admin&directConnection=true
+   MONGO_URI=mongodb://<user>:<password>@localhost:27017/rag_ts?authSource=admin&directConnection=true
 
    # Qdrant (read-only vector store via HTTPS)
    QDRANT_URL=https://qdrant.minio-quangmanh.io.vn
-   QDRANT_API_KEY=uth_guest_readonly_key_4b71a8e9d2c
+   QDRANT_API_KEY=<read-only key: ask the repo owner>
    QDRANT_COLLECTION=scientific_papers_gold
 
    # JWT Secrets (at least 32 characters each)
-   JWT_ACCESS_SECRET=rag-ts-dev-access-secret-32-chars-minimum-token
-   JWT_REFRESH_SECRET=rag-ts-dev-refresh-secret-32-chars-minimum-token
+   JWT_ACCESS_SECRET=<random string of at least 32 characters>
+   JWT_REFRESH_SECRET=<random string of at least 32 characters>
 
    # Embedding Model
    EMBEDDING_MODEL=nomic-ai/nomic-embed-text-v1.5

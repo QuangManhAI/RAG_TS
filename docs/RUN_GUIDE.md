@@ -47,7 +47,7 @@ MONGO_URI=mongodb://<user>:<password>@localhost:27018/rag_ts?authSource=admin&di
 
 # Qdrant qua tunnel: key chỉ đọc (RAG_TS không bao giờ ghi Qdrant)
 QDRANT_URL=https://qdrant.minio-quangmanh.io.vn
-QDRANT_API_KEY=uth_guest_readonly_key_4b71a8e9d2c
+QDRANT_API_KEY=<key chỉ đọc: xin chủ repo>
 QDRANT_COLLECTION=scientific_papers_gold
 
 # Mỗi khoá ≥ 32 ký tự, tự đặt

@@ -6,13 +6,15 @@
 - **Detailed Plan**: §1 Kiến trúc tổng thể & luồng bảo mật 3 lớp; §2 Bản đồ chức năng S1–S8; §3 Quyền Admin (nhóm A–E) và quy tắc tự bảo vệ; §4 PROMPT S1 Security Baseline; §5 PROMPT S2 User Schema & Account Lifecycle; §6 PROMPT S3 Token Hardening; §7 PROMPT S4 AdminModule Core & Audit Log; §8 PROMPT S5 Admin — Quản lý danh tính; §9 PROMPT S6 Admin — Nội dung & Vận hành; §10 PROMPT S7 Admin Bootstrap CLI; §11 PROMPT S8 Test Matrix & Doc Sync; §12 Phụ lục A đồng bộ FE & Golden Invariants; §13 Phụ lục B bảng quyền đầy đủ; §14 Checklist Quyết Định & Dò Vết; §15 Báo cáo triển khai (Implementation Report).
 - **References**: [../AGENTS.md](../AGENTS.md), [../docs/INDEX.md](INDEX.md), [../backend_rag/AGENTS.md](../backend_rag/AGENTS.md), [../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md](../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md), [../backend_rag/docs/MONGODB_SCHEMA_DESIGN.md](../backend_rag/docs/MONGODB_SCHEMA_DESIGN.md), [../backend_rag/docs/PERFORMANCE_AND_CACHING.md](../backend_rag/docs/PERFORMANCE_AND_CACHING.md), [../docs/API_DESIGN.md](API_DESIGN.md), [../agents/rules/MD_CONVENTION.md](../agents/rules/MD_CONVENTION.md), [../agents/rules/COMMIT_CONVENTION.md](../agents/rules/COMMIT_CONVENTION.md), [../docs/AI_chat_log/Vuong_chat_logs.md](AI_chat_log/Vuong_chat_logs.md), [prompt_backend.md](prompt_backend.md).
 - **Created**: 2026-11-02T10:05:00+07:00
-- **Last Updated**: 2026-11-02T11:30:00+07:00
+- **Last Updated**: 2026-11-05T01:48:40+07:00
 
 [STATUS: ACTIVE]
 
 > [!NOTE]
 > **Toàn bộ PROMPT S1–S8 đã được triển khai** (2026-11-02). Xem [§ Báo cáo triển khai](#-báo-cáo-triển-khai-implementation-report) ở cuối file để đối chiếu đặc tả với mã nguồn thật.
 > File này giữ vai trò **đặc tả gốc (source of truth)** cho công trình bảo mật: khi sửa mã nguồn, cập nhật mục tương ứng trong file này và `backend_rag/ASSUMPTIONS.md` + `backend_rag/PROGRESS.md`.
+
+> **Route names superseded (D-047):** the plan below keeps the route names it was written with. The current routes are in [API_DESIGN.md](API_DESIGN.md): §2 for `/auth/*` and `/users/*`, §9 for `/admin/*` (`disable`/`enable` ➔ `PUT .../status`, `revoke-tokens` ➔ `DELETE .../tokens`, `/admin/sessions` ➔ `/admin/chat-sessions`).
 
 ---
 
@@ -40,7 +42,7 @@ flowchart TB
 
     subgraph SEC["Security Layer — S1"]
         HEL["helmet 8.3<br/>CSP + HSTS + nosniff"]
-        TP["trust proxy = 1<br/>@Ip() lấy IP thật"]
+        TP["trust proxy = TRUST_PROXY_HOPS<br/>@Ip() lấy IP thật"]
         TH["@nestjs/throttler 6.7<br/>register/login/refresh/chat"]
     end
 
@@ -190,7 +192,7 @@ flowchart LR
 - **Output**: app khởi động an toàn, mọi response có security header, request vượt ngưỡng bị `429`.
 - **Ràng buộc**:
   - **Helmet**: `helmet` 8.3.0, `contentSecurityPolicy` bật (mặc định của helmet là đủ: `default-src 'self'`), `hsts` bật khi `NODE_ENV=production` (maxAge 31536000, `includeSubDomains`), `frameguard: { action: 'deny' }`, `noSniff: true`, `referrerPolicy: { policy: 'no-referrer' }`, `crossOriginEmbedderPolicy: false` (SSE + WASM/GGUF không cần).
-  - **`trust proxy`**: `app.set('trust proxy', 1)` khi `NODE_ENV=production` (1 hop = reverse proxy của nhóm). `NODE_ENV=test` ⇒ `'loopback'`. Không bật khi dev để `@Ip()` lấy IP thật của client.
+  - **`trust proxy`**: lấy từ `TRUST_PROXY_HOPS` (mặc định `0` = không tin proxy nào), không suy ra từ `NODE_ENV`: tin một proxy không tồn tại cho phép client tự chọn IP bằng `X-Forwarded-For`, vượt được rate limit và khóa đăng nhập (D-054). `NODE_ENV=test` ⇒ `'loopback'`.
   - **Rate limit** (`@nestjs/throttler` 6.7.1): `register` 5 req/60s, `login` 10 req/60s, `refresh` 30 req/60s, `change-password` 5 req/60s, `POST /rag/chat` + `/rag/chat/stream` 20 req/60s theo IP. Trả `429` với body chuẩn §1.2 (`message: "too many requests"`). Throttle theo IP cho endpoint public, theo `userId` cho endpoint đã đăng nhập.
   - **Env guard**: ở `NODE_ENV=production`, `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` **không được** chứa chuỗi `change-me` và phải khác nhau. `MONGO_URI` không được chứa `mongodb://` không có thông tin đăng nhập. Sai ⇒ `EnvValidationError` ⇒ `process.exit(1)`.
   - **Bỏ credential plaintext**: `README.md` và `backend_rag/benchmark/seed_prod_auth_data.js` không được chứa mật khẩu MongoDB thật; thay bằng biến môi trường `${MONGO_URI}`.
@@ -203,10 +205,10 @@ flowchart LR
 ```text
 # --- app.setup.ts ---
 configureApp(app):
-    if NODE_ENV == "production":
-        app.set("trust proxy", 1)
-    else if NODE_ENV == "test":
+    if NODE_ENV == "test":
         app.set("trust proxy", "loopback")
+    else:
+        app.set("trust proxy", TRUST_PROXY_HOPS > 0 ? TRUST_PROXY_HOPS : false)
     app.use(helmet({
         contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], ... } },
         hsts: NODE_ENV == "production" ? { maxAge: 31536000, includeSubDomains: true } : false,
@@ -302,7 +304,7 @@ Hợp đồng chung ở `docs/API_DESIGN.md` §1; hạ tầng hiện tại ở `
 - [ ] `NODE_ENV=production npm run start:prod` ⇒ `curl http://localhost:3000/api/v1/docs` trả 404.
 - [ ] `NODE_ENV=production` với `JWT_ACCESS_SECRET=change-me-x...` ⇒ process exit ≠ 0 và log đủ biến lỗi.
 - [ ] 6 lần `POST /api/v1/auth/register` trong 60s ⇒ lần 6 trả 429 `too many requests`.
-- [ ] `grep -rn "YqihzvCaDSkqGQEoR8xWwVZ3" .` ⇒ **không** còn kết quả nào.
+- [ ] `grep -rn "<password>" .` ⇒ **không** còn kết quả nào.
 
 ---
 

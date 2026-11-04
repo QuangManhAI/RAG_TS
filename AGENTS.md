@@ -6,7 +6,7 @@
 - **Detailed Plan**: Section 1 defines the Progressive-Disclosure Routing Table; Section 2 maps the Monorepo Topology; Section 3 enforces Golden System Invariants; Section 4 lists Essential Verification Commands; Section 5 enforces Commit & Markdown Conventions.
 - **References**: [docs/INDEX.md](docs/INDEX.md), [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md), [backend_rag/AGENTS.md](backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](frontend_rag/AGENTS.md), [docs/FE_DESIGN_SYSTEM.md](docs/FE_DESIGN_SYSTEM.md), [docs/FE3d_prompt_v2.md](docs/FE3d_prompt_v2.md), [agents/rules/MD_CONVENTION.md](agents/rules/MD_CONVENTION.md), [agents/rules/COMMIT_CONVENTION.md](agents/rules/COMMIT_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](docs/AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-29T19:42:00+07:00
-- **Last Updated**: 2026-10-30T19:00:00+07:00
+- **Last Updated**: 2026-11-05T03:06:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -88,11 +88,18 @@ RAG_TS/                                  # Workspace Root
    - Never render raw HTML DOM elements (`<div>`, `<span>`) directly inside R3F `<Canvas>` (`D-013`).
    - Keep `useDeferredValue` and the `30ms` micro-batched streaming buffer in [`frontend_rag/src/store/ragStore.ts`](frontend_rag/src/store/ragStore.ts) so KaTeX/Markdown AST parsing never freezes the WebGL render loop.
 8. **Security Baseline & RBAC (`D-039` – `D-046`)**:
-   - Roles are exactly `admin` / `user`; every `/api/admin/*` route requires `JwtAuthGuard` + `RolesGuard` (`@Roles('admin')`) **and** a service-level `assertAdmin` re-check. Never expose an admin route without both layers.
+   - Roles are exactly `admin` / `user`; every `/api/v1/admin/*` route requires `JwtAuthGuard` + `RolesGuard` (`@Roles('admin')`) **and** a service-level `assertAdmin` re-check. Never expose an admin route without both layers.
    - Access tokens carry a `ver` claim equal to the user's `token_version`. Disabling an account or changing a role **must** bump `token_version` (via `AuthService.revokeAllForUser`) so live access tokens die immediately.
    - The first admin is created **only** by `npm run create:admin` (`backend_rag/scripts/create-admin.ts`). Never add a public endpoint or a register-time `role` field.
    - `admin_audit_logs` is append-only: never add an update or delete path to it.
    - Admin actions that lock out the actor are rejected: `assertNotSelf` and `assertNotLastAdmin` are mandatory on disable / demote.
+   - The app's MongoDB always runs with authentication and is published on `127.0.0.1` only; the app connects with a `readWrite` account on `rag_ts`, never root (`D-056`). Real credentials never go into tracked files.
+   - `TRUST_PROXY_HOPS` must equal the proxies really in front of the app (`D-054`); never derive it from `NODE_ENV`.
+   - `rag_ts_corpus` is read-only from the app, through `CORPUS_MONGO_URI` on an account that is not root (`D-058`).
+
+9. **API Design Contract (`D-047`)**:
+   - [`docs/API_DESIGN.md`](docs/API_DESIGN.md) is the contract: versioned kebab-case nouns, `PATCH` for partial and `PUT` for full updates, JSON and XML negotiation, `_links` on responses, and the shared `limit`/`cursor`/`sort`/filter language from [`backend_rag/src/common/pagination.ts`](backend_rag/src/common/pagination.ts). A new route must extend the `API contract (OpenAPI)` test in `backend_rag/test/flow.e2e-spec.ts`.
+   - `PUT` and `DELETE` must be idempotent: a repeated call that changes nothing writes nothing, bumps no `token_version` and adds no audit record. `POST /rag/chat*` stays idempotent through `Idempotency-Key`.
 
 ---
 

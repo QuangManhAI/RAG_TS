@@ -6,7 +6,7 @@
 - **Detailed Plan**: Index table followed by immutable 12-line decision blocks with strict attribution and command-level verification evidence.
 - **References**: [agents/template/DECISION_LOG_TEMPLATE.md](../../agents/template/DECISION_LOG_TEMPLATE.md), [frontend_rag/docs/perf-chat-report.md](../../frontend_rag/docs/perf-chat-report.md), [backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md](../../backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md).
 - **Created**: 2026-10-20T19:00:00+07:00
-- **Last Updated**: 2026-10-30T15:40:00+07:00
+- **Last Updated**: 2026-11-05T03:06:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -508,3 +508,171 @@
 - **Evidence:** Same probe as D-034; standard `test:perf` at level 3: median 2.2–2.3 ms, p95 3.4 ms, 4 long tasks.
 - **Revisit if:** Users report jank while moving the pointer, or the team wants a p95 budget.
 
+### D-047 — Redesign the whole API around the 8 REST rules, replacing routes in v1
+
+- **Status:** accepted
+- **When:** 2026-11-04T22:27:54+07:00
+- **Decided by:** human
+- **Trigger:** "tôi cần bản sửa lại BE và FE - có 1 API Design chuẩn đầy đủ 8 nguyên tắc gì đó, cho toàn bộ các loại API nhé"
+- **Decision:** All routes follow `docs/API_DESIGN.md`; old routes are replaced in `/api/v1` with no aliases, and a contract test enforces the route list and naming.
+- **Why:** The frontend is the only client and ships with the backend (agent-default detail: no `/api/v2`, no aliases).
+- **Rejected:** `/api/v2` next to v1 — two surfaces to maintain with one client.
+- **Touches:** `backend_rag/src`, `backend_rag/test/flow.e2e-spec.ts`, `backend_rag/benchmark/k6_*.ts`, `frontend_rag/src/api`, `frontend_rag/src/store`, `docs/API_DESIGN.md`.
+- **Evidence:** `npx jest --runInBand`: 210 passed; `npx jest --config test/jest-e2e.json --runInBand`: 13 passed; FE and BE not yet run together at acceptance.
+- **Revisit if:** A second API client appears: breaking changes then need `/api/v2`.
+
+### D-048 — Use PATCH for partial updates and PUT for full replacement
+
+- **Status:** accepted
+- **When:** 2026-11-04T22:47:55+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "oh no! bạn đừng tin cái hình quá" and "cái ảnh nó lỗi lắm ! nên là cứ tin mình"
+- **Decision:** `PATCH /users/me` and `PATCH /chat-sessions/:id`; `PUT` for `/users/me/password` and `/admin/users/:id/roles` and `/status`, whose body is the whole state.
+- **Why:** The image's "avoid PATCH" is not part of the human's 8 standards; PATCH leaves room for new optional fields.
+- **Rejected:** PUT everywhere — done first to follow the image, then reversed in the same task.
+- **Touches:** `backend_rag/src/auth/users.controller.ts`, `backend_rag/src/chat-sessions/chat-sessions.controller.ts`, `frontend_rag/src/store/sessionStore.ts`, `backend_rag/benchmark/k6_*.ts`.
+- **Evidence:** Contract test `lists exactly the documented routes` in `backend_rag/test/flow.e2e-spec.ts`.
+- **Revisit if:** A resource needs PATCH semantics other than a partial update of its own fields.
+
+### D-049 — Keep cursor pagination instead of page and size
+
+- **Status:** accepted
+- **When:** 2026-11-04T22:27:54+07:00
+- **Decided by:** agent-default
+- **Trigger:** "cái ảnh nó lỗi lắm ! nên là cứ tin mình"; standard 5 of the human's list shows `page`/`size` as an example.
+- **Decision:** Every list uses `limit` + keyset `cursor`; the cursor is bound to its `sort`, and `sort` and operator filters are whitelisted per route.
+- **Why:** Session lists change constantly, so offsets repeat or skip rows and slow down on deep pages.
+- **Rejected:** `page`/`size` — the drawbacks above.
+- **Touches:** `backend_rag/src/common/pagination.ts`.
+- **Evidence:** `backend_rag/src/common/pagination.spec.ts`, admin cursor test in `backend_rag/src/admin/admin.spec.ts`.
+- **Revisit if:** A UI needs to jump to an arbitrary page number.
+
+### D-050 — Idempotent chat through an Idempotency-Key header and a chat_requests collection
+
+- **Status:** accepted
+- **When:** 2026-11-04T22:27:54+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "bạn cũng hiểu rồi" (reply to the proposal: replay when finished, 409 while running); header instead of a body field is agent-default.
+- **Decision:** With a JWT, a repeated key replays the stored answer, a running or mismatched one gets 409, a failed or aborted one is released, and a crashed one is taken over after 5 minutes.
+- **Why:** A retry otherwise reruns the LLM and stores duplicate messages or a duplicate session; `completed` shares the transaction of the messages.
+- **Rejected:** `client_request_id` in the body — the header is the common convention; 409 for every repeat — the client would have to reload the session itself.
+- **Touches:** `backend_rag/src/chat-sessions/schemas/chat-request.schema.ts`, `backend_rag/src/chat-sessions/chat-sessions.service.ts`, `backend_rag/src/rag/rag.service.ts`.
+- **Evidence:** e2e test `a repeated chat request replays the stored answer`, `Idempotency-Key store` tests in `backend_rag/src/chat-sessions/chat-sessions.spec.ts`.
+- **Revisit if:** On a standalone MongoDB (no transactions), a crash between the writes could still duplicate an exchange after the lock expires.
+
+### D-051 — Invalidate the whole session list cache on rename
+
+- **Status:** accepted
+- **When:** 2026-11-04T22:27:54+07:00
+- **Decided by:** agent-default
+- **Trigger:** `none (found while adding limit, sort and filter to the cache key)`
+- **Decision:** `rename()` bumps the user's generation instead of patching the cached first page.
+- **Why:** Patching left filtered and later pages stale for up to 5 minutes, which breaks invariant 4; more cache-key dimensions would make it worse.
+- **Rejected:** Keeping the in-place patch for its cache-hit rate — stale data is the worse failure.
+- **Touches:** `backend_rag/src/chat-sessions/chat-sessions.service.ts`.
+- **Evidence:** not verified under load: the 400 CU certification was not re-run.
+- **Revisit if:** A new k6 run shows the extra list misses after rename matter.
+
+### D-052 — Negotiate JSON and XML per request, with XML behind a hardened parser
+
+- **Status:** accepted
+- **When:** 2026-11-04T22:47:55+07:00
+- **Decided by:** human
+- **Trigger:** "Đảm bảo API hỗ trợ nhiều định dạng dữ liệu, chẳng hạn như JSON và XML"
+- **Decision:** `Content-Type` and `Accept` choose the format on every route except the SSE stream; no document types are accepted and XML values stay strings except known boolean and list fields (agent-default details, `fast-xml-parser`).
+- **Why:** Standard 4 of the human's list; string values keep numeric passwords and titles intact.
+- **Rejected:** `parseTagValue` type guessing — a numeric password would fail validation.
+- **Touches:** `backend_rag/src/common/xml.ts`, `backend_rag/src/app.setup.ts`, `backend_rag/package.json`.
+- **Evidence:** e2e tests `accepts and returns XML` and `rejects malformed XML` in `backend_rag/test/flow.e2e-spec.ts`.
+- **Revisit if:** A new DTO adds a boolean or list field: it must be added to the XML field sets.
+
+### D-053 — Add HATEOAS links through a route decorator and an entry point
+
+- **Status:** accepted
+- **When:** 2026-11-04T22:47:55+07:00
+- **Decided by:** human
+- **Trigger:** "Sử dụng Hypermedia as the Engine of Application State (HATEOAS)"
+- **Decision:** `@WithLinks` plus a global interceptor add `_links` on copies of the body; `GET /api/v1` is the entry point and action links can depend on state (agent-default details: link shape `href` + `method`).
+- **Why:** Copies keep cached bodies clean, and services stay unaware of URLs.
+- **Rejected:** Building links inside services — they would then need to know the API prefix.
+- **Touches:** `backend_rag/src/common/hateoas.ts`, `backend_rag/src/api-root/api-root.controller.ts`, all controllers.
+- **Evidence:** e2e test `responses carry hypermedia links a client can follow`.
+- **Revisit if:** The frontend starts following links instead of hard-coded paths.
+
+### D-054 — Declare proxy hops per deployment instead of trusting one in production
+
+- **Status:** accepted
+- **When:** 2026-11-05T01:48:40+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "fix lại toàn bộ tất cả các lỗi đó nhé"
+- **Decision:** `TRUST_PROXY_HOPS` (default 0) sets `trust proxy`; `docker-compose.yml` publishes the app on loopback by default.
+- **Why:** With `trust proxy = 1` and no proxy, `X-Forwarded-For` chooses the client IP, which defeats the rate limiter and login lockout and forges audit IPs.
+- **Rejected:** Keeping 1 in production and documenting that a proxy is required — a wrong deployment would fail silently and unsafely.
+- **Touches:** `backend_rag/src/common/security.ts`, `backend_rag/src/config/env.schema.ts`, `backend_rag/docker-compose.yml`.
+- **Evidence:** `backend_rag/src/common/security.spec.ts`.
+- **Revisit if:** A deployment puts a proxy in front of the app: set the variable to its hop count, or all clients share one bucket.
+
+### D-055 — Cap running chat requests per client
+
+- **Status:** accepted
+- **When:** 2026-11-05T01:48:40+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "fix lại toàn bộ tất cả các lỗi đó nhé"
+- **Decision:** At most 2 running chat requests per user and 3 per IP, in-process; anonymous chat gets 10 requests/min, callers with a token 20 (agent-default values).
+- **Why:** One slot plus 8 waiting meant a single anonymous IP within its rate limit could answer every other client with 429 `llm queue is full`.
+- **Rejected:** Requiring login for chat — it removes the anonymous mode the product offers.
+- **Touches:** `backend_rag/src/rag/client-slots.ts`, `backend_rag/src/rag/rag.controller.ts`, `backend_rag/src/common/throttler.ts`.
+- **Evidence:** `backend_rag/src/rag/client-slots.spec.ts`, `concurrent requests per client` in `backend_rag/src/rag/rag.spec.ts`.
+- **Revisit if:** k6 chat scenarios from one IP need these limits lifted, or the LLM moves to more than one instance.
+
+### D-056 — Run the app's MongoDB with authentication on loopback
+
+- **Status:** accepted
+- **When:** 2026-11-05T01:48:40+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "fix lại toàn bộ tất cả các lỗi đó nhé"
+- **Decision:** `--keyFile` (which implies auth) on the single-node replica set, published on `127.0.0.1`; the app uses `ragts_app` with `readWrite` on `rag_ts`, and root stays for administration.
+- **Why:** The container accepted anonymous connections on all interfaces, so anyone on the network could read the data or set `roles: ['admin']`.
+- **Rejected:** Binding to loopback only, without auth — any local process or later port change would still get full access.
+- **Touches:** `backend_rag/docker-compose.yml`, `backend_rag/docker/mongo-init-app-user.js`, `backend_rag/.env.example`.
+- **Evidence:** Throwaway compose project: anonymous access denied, app user can run transactions and cannot write other databases. Live: same document counts before and after.
+- **Revisit if:** The app must also read `rag_ts_corpus` from this instance: grant `read` on it.
+
+### D-057 — Override vulnerable transitive dependencies
+
+- **Status:** accepted
+- **When:** 2026-11-05T01:48:40+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "fix lại toàn bộ tất cả các lỗi đó nhé"
+- **Decision:** npm `overrides` for `simple-git` ^4.0.2, `multer` ^2.5.0 and `undici` ^7.30.1.
+- **Why:** Their parents pin vulnerable versions, and `npm audit` only offered downgrades such as `node-llama-cpp@2.0.0`.
+- **Rejected:** `npm audit fix --force` — it downgrades `node-llama-cpp` by a major version.
+- **Touches:** `backend_rag/package.json`, `backend_rag/package-lock.json`.
+- **Evidence:** `npm audit --omit=dev` reports 0; backend tests pass. `simple-git` 4 is a major jump for `node-llama-cpp`: only its build-from-source path uses it, and that path was not exercised.
+- **Revisit if:** A parent package updates its range, or `node-llama-cpp` has to build llama.cpp from source.
+
+### D-058 — Read chunk text from `rag_ts_corpus`
+
+- **Status:** accepted
+- **When:** 2026-11-05T03:06:00+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** Qdrant no longer stores `text`, so `toChunkPayload` dropped every point and every chat answered "no context".
+- **Decision:** `CorpusService` reads `paper_chunks` and `papers` by id in one batched read per page, on its own connection from `CORPUS_MONGO_URI`.
+- **Why:** MongoDB is the source of truth for content. A point that still has `text` keeps working.
+- **Rejected:** Using the `MONGO_ADMIN_*` account as the app's URI — it has `root`, which D-056 forbids. Startup logs `CORPUS_OVERPRIVILEGED` for such an account.
+- **Touches:** `backend_rag/src/corpus/`, `backend_rag/src/vector-store/`, `backend_rag/src/config/env.schema.ts`, `backend_rag/.env.example`.
+- **Evidence:** Live chat on port 3100 returned text and citations. The account used for that test was `root`, passed through the process environment only.
+- **Revisit if:** A read-only corpus account exists, or the remaining 827 chunks and 11,928+ papers are synced: unsynced chunks are skipped and unsynced papers have no title or authors.
+
+### D-059 — Run Laya on Node: fused rerank plus evidence and groundedness gates
+
+- **Status:** accepted
+- **When:** 2026-11-05T03:06:00+07:00
+- **Decided by:** human-directed (Laya, TypeScript only, `receptron/laya-onnx`), agent-proposed (defaults)
+- **Trigger:** "Laya là 1 giải pháp thay thế cho JEV nên bạn có thể thực hiện ngay bây giờ xem sao" and "đây là môn TS/JS vậy chúng ta sẽ run bằng TS/JS".
+- **Decision:** `JudgeService` runs `@receptron/laya` in-process. A context with low relevance gets one LLM query rewrite, then an abstention; an answer with low support is replaced through the `answer_replaced` SSE event. `LAYA_RERANK` defaults to true and fuses the existing order with Laya's through reciprocal rank fusion; false keeps the existing order. `LAYA_EVIDENCE_THRESHOLD` defaults to 0.6, `LAYA_GROUNDED_THRESHOLD` to 0.3. Unset `LAYA_MODEL_DIR` turns all of it off, and any judge failure falls back to the plain pipeline.
+- **Why:** On 28 known-answer questions, top 10: vector hit@1 11/28, MRR 0.494; Laya alone 9/28, 0.457; fused 13/28, 0.577. Changing the prompt or using a 0–3 score did not beat vector alone.
+- **Rejected:** Laya alone as the ranker, per the numbers above. A Python sidecar, removed at the user's request. Rewriting the ONNX graph by hand, since a published bundle exists.
+- **Touches:** `backend_rag/src/judge/`, `backend_rag/src/rag/`, `backend_rag/benchmark/eval-laya.mjs`, `backend_rag/benchmark/eval-laya-variants.mjs`, `backend_rag/benchmark/laya-eval-set.json`, `frontend_rag/src/store/pipeline.ts`, `frontend_rag/src/store/ragStore.ts`, `frontend_rag/src/types/rag.ts`.
+- **Evidence:** Top 5 at t=0.6 keeps 25/28 answerable questions; top 10 at t=0.6 rejects 11/14 unanswerable ones. Groundedness at t=0.3 keeps 10/10 supported answers and rejects 3/10 fabricated ones. The set is small, written by the agent, and the thresholds were picked on the same data with no holdout. About 427 ms per Laya call under memory pressure.
+- **Revisit if:** A larger labelled set exists, BM25 or hybrid retrieval is added, or the 20 s rewrite on a rejected question proves too slow.

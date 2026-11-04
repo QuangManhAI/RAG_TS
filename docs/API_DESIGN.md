@@ -1,23 +1,23 @@
 # API_DESIGN.md — Thiết kế API (Monolith NestJS)
 
+- **Motivation/Background**: API cũ lệch giữa FE, BE và docs (FE gửi `?limit=` bị trả 400, admin cursor hỏng ở trang 2, không có idempotency, tên route lẫn động từ). Tài liệu này là contract chuẩn duy nhất cho toàn bộ API.
+- **Purpose**: Định nghĩa 8 tiêu chuẩn RESTful của dự án và mọi route của `/api/v1`; test `API contract (OpenAPI)` trong `backend_rag/test/flow.e2e-spec.ts` giữ code khớp với tài liệu này.
+- **Overview Pipeline**: Danh từ cho URL → Status code → Versioning → Nhiều định dạng → Lọc & phân trang → Token auth → Đặt tên thống nhất → Hypermedia.
+- **Detailed Plan**: §1 Quy ước (8 tiêu chuẩn, query language, định dạng, hypermedia); §2 Tài khoản & token; §3 RAG; §4 Phiên chat; §5 Paper; §6 Health; §7 Dữ liệu; §8 Ngoài phạm vi; §9 Admin.
+- **References**: [API_SPECIFICATION.md](API_SPECIFICATION.md), [prompt_security.md](prompt_security.md), [backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md](../backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md).
+- **Created**: 2026-10-20T18:01:49+07:00
+- **Last Updated**: 2026-11-04T22:47:55+07:00
+
+[STATUS: ACTIVE]
+
+---
+
 - **Kiến trúc**: 1 app NestJS. Mỗi tính năng là 1 module (`controller` + `service`).
 - **Phạm vi**: RAG_TS chỉ **đọc** dữ liệu để hỏi đáp. Cào data, nạp dữ liệu và World 3D thuộc pipeline UTH (§8).
-- **Stack**: MongoDB (user, token, session chat), Qdrant (vector + payload chunk, do pipeline ghi). Không dùng SQL.
+- **Stack**: MongoDB (user, token, session chat, idempotency key), Qdrant (vector + payload chunk, do pipeline ghi). Không dùng SQL.
 - **Base URL**: `/api/v1`. Frontend đặt `VITE_API_BASE=/api/v1`.
 - **Auth**: `Authorization: Bearer <access_token>`. Role: `user`, `admin`.
   - `—`: public · `JWT?`: tuỳ chọn (có token thì lưu lịch sử) · `JWT`: bắt buộc · `Admin`: JWT + role `admin`.
-
-## Mục lục
-
-| # | Tính năng | Controller | Số API |
-| :--- | :--- | :--- | :--- |
-| 2 | Xác thực, tài khoản | `AuthController` | 7 |
-| 3 | Hỏi đáp RAG | `RagController` | 2 |
-| 4 | Phiên chat | `ChatSessionController` | 5 |
-| 5 | Paper | `PaperController` | 1 |
-| 6 | Health | `HealthController` | 3 |
-| 7 | Dữ liệu | — | — |
-| 8 | Ngoài phạm vi (pipeline UTH) | — | — |
 
 ---
 
@@ -27,14 +27,17 @@
 
 | Code | Khi nào | `message` mẫu |
 | :--- | :--- | :--- |
-| 200 | Thành công | — |
-| 201 | Tạo mới | — |
+| 200 | Đọc hoặc cập nhật thành công | — |
+| 201 | Tạo mới (user, cặp token) | — |
 | 204 | Thành công, không có body | — |
-| 400 | Sai validate | `query should not be empty` |
+| 400 | Sai validate, sai `sort` / filter / `cursor` / `ids` | `invalid filter: role` |
 | 401 | Thiếu / sai / hết hạn token | `unauthorized`, `token expired` |
 | 403 | Không đủ quyền | `admin role required` |
-| 404 | Không tìm thấy | `session not found` |
-| 409 | Trùng / xung đột trạng thái | `email already exists` |
+| 404 | Không tìm thấy, hoặc tài nguyên của người khác | `session not found` |
+| 405 | Path có tồn tại nhưng sai method (kèm header `Allow`) | `method not allowed` |
+| 406 | `Accept` không cho phép JSON hoặc XML | `accept must allow application/json or application/xml` |
+| 409 | Xung đột nghiệp vụ / trạng thái | `email already exists`, `request already in progress` |
+| 415 | Body không phải JSON hoặc XML | `content type must be application/json or application/xml` |
 | 429 | Quá giới hạn | `too many requests`, `llm queue is full` |
 | 500 | Lỗi không lường trước | `internal server error` |
 | 503 | Phụ thuộc chết (Mongo, Qdrant, LLM) | `qdrant unavailable` |
@@ -50,32 +53,92 @@
 
 ### 1.3 Log
 
-Mỗi request ghi 1 dòng JSON khi kết thúc. Một số sự kiện nghiệp vụ ghi thêm dòng riêng (cột **Log** trong các bảng dưới).
-
-```json
-{ "level": "info", "time": "2026-10-20T08:00:00.000Z", "request_id": "...", "method": "POST", "path": "/api/v1/auth/login", "status": 200, "latency_ms": 42, "user_id": "...", "msg": "LOGIN_OK" }
-```
+Mỗi request ghi 1 dòng JSON khi kết thúc. Một số sự kiện nghiệp vụ ghi thêm dòng riêng.
 
 - `info` cho 2xx, `warn` cho 4xx, `error` cho 5xx (kèm `stack`).
 - Không log: password, token, nội dung câu hỏi (chỉ log `query_len`).
 
-### 1.4 Phân trang
+### 1.4 Tám tiêu chuẩn
 
-Danh sách dùng cursor: `?limit=20&cursor=<opaque>` (`limit` 1–50) → `{ "items": [...], "next_cursor": "..." | null }`.
+| # | Tiêu chuẩn | Áp dụng trong dự án |
+| :--- | :--- | :--- |
+| 1 | Danh từ cho URL | `/users`, `/chat-sessions`, `/auth/tokens`. Đăng nhập, refresh, đăng xuất lần lượt là tạo, xoay vòng và thu hồi token. |
+| 2 | HTTP status code | Theo §1.1. Tài nguyên của người khác luôn là 404, không phải 403. |
+| 3 | Versioning | Trên path: `/api/v1`. Đổi contract mà phá tương thích thì lên `/api/v2`. |
+| 4 | Nhiều định dạng | JSON và XML, chọn bằng `Content-Type` và `Accept` (§1.6). |
+| 5 | Lọc và phân trang | Mọi danh sách dùng chung `limit`, `cursor`, `sort`, filter (§1.5). |
+| 6 | Token authentication | JWT access token kèm refresh token xoay vòng, gửi qua `Authorization: Bearer`. |
+| 7 | Đặt tên rõ ràng, thống nhất | Danh từ số nhiều, kebab-case; field `snake_case`; danh sách luôn trả `items`, `next_cursor`, `has_more`. |
+| 8 | Hypermedia (HATEOAS) | `_links` trong response và điểm vào `GET /api/v1` (§1.7). |
+
+**Quy tắc bổ sung của dự án:**
+
+- **HTTP method**: `GET` đọc, `POST` tạo, `PATCH` sửa một phần (`/users/me`, `/chat-sessions/:id`), `PUT` thay toàn bộ (`roles`, `status`, `password`), `DELETE` xoá.
+- **Idempotency**: `GET`, `PUT`, `PATCH`, `DELETE` gọi lặp không đổi kết quả. `PUT` và `DELETE` không đổi trạng thái thì không ghi gì thêm. `POST /rag/chat*` dùng `Idempotency-Key` (§3). `POST /auth/token-rotations` **cố ý không** idempotent: refresh token dùng một lần, dùng lại sẽ thu hồi cả family.
+- **Batch**: đọc bằng `GET /chat-sessions?ids=a,b` và `GET /papers?ids=a,b`; xoá bằng `DELETE /chat-sessions?ids=a,b`.
+
+### 1.5 Query language
+
+```
+GET /chat-sessions?limit=20&sort=title:asc,created_at:desc&created_at=gte:2026-01-01,lt:2026-02-01
+```
+
+- **Phân trang**: `limit` + `cursor` → `{ "items": [...], "next_cursor": "..." | null, "has_more": false }`. Dùng cursor thay `page`/`size` vì danh sách phiên chat thay đổi liên tục: offset sẽ trùng hoặc sót dòng và chậm dần ở trang sâu.
+- **Sort**: `field:asc|desc`, tối đa 3 trường, chỉ trường được liệt kê ở từng route. `_id` luôn là tie-break. Cursor gắn với sort đã tạo ra nó: đổi `sort` mà giữ cursor → 400 `invalid cursor`.
+- **Filter**: `field=op:value`, nhiều phép so sánh nối bằng dấu phẩy. Giá trị trần tương đương `eq:`. Toán tử: `eq`, `ne`, `gt`, `gte`, `lt`, `lte` và `match` (chuỗi con, không phân biệt hoa thường, theo nghĩa đen). Chỉ trường và toán tử trong whitelist của route mới tới được MongoDB.
+- **`q`**: tìm tự do trên các trường text của route đó.
+
+### 1.6 Định dạng dữ liệu
+
+| Hướng | Header | Giá trị |
+| :--- | :--- | :--- |
+| Request | `Content-Type` | `application/json`, `application/xml`, `text/xml`. Khác → 415. |
+| Response | `Accept` | Mặc định JSON. `application/xml` hoặc `text/xml` → XML, cả với body lỗi. Không chấp nhận được loại nào → 406. |
+
+- XML: một phần tử gốc tuỳ tên ở request, gốc `<response>` ở response. Danh sách lặp lại tag (`<items>...</items><items>...</items>`); danh sách rỗng không có tag.
+- Chặn `DOCTYPE` và `ENTITY` (XXE, billion laughs); XML sai → 400 `invalid xml`. Body tối đa 100 KB.
+- `POST /rag/chat/stream` luôn là `text/event-stream`, body request vẫn có thể là XML. `GET /health/live` trả theo `Accept` như mọi route khác.
+
+### 1.7 Hypermedia
+
+Dạng link: `{ "href": "/api/v1/...", "method": "PATCH" }`; không có `method` nghĩa là `GET`. `GET /api/v1` liệt kê các tài nguyên gốc, client chỉ cần biết URL này.
+
+```jsonc
+{
+  "items": [
+    { "id": "...", "title": "...", "_links": {
+        "self": { "href": "/api/v1/chat-sessions/019..." },
+        "messages": { "href": "/api/v1/chat-sessions/019.../messages" },
+        "rename": { "href": "/api/v1/chat-sessions/019...", "method": "PATCH" },
+        "delete": { "href": "/api/v1/chat-sessions/019...", "method": "DELETE" },
+        "chat": { "href": "/api/v1/rag/chat", "method": "POST" } } }
+  ],
+  "next_cursor": "...", "has_more": true,
+  "_links": { "self": { "href": "..." }, "next": { "href": "...&cursor=..." } }
+}
+```
+
+- Danh sách có `self` và `next` (khi còn trang). Link hành động theo trạng thái: admin user có `lock` khi đang hoạt động, `unlock` khi đang khoá.
+- Câu trả lời chat có `session`, `messages`, `papers`; ở stream, các link nằm trong event `done`.
+- Không có `_links`: `GET /health/live`, `GET /admin/stats`, `GET /admin/health`. Schema Swagger hiện chưa mô tả `_links`.
 
 ---
 
-## 2. Auth — `AuthController` (`/auth`)
+## 2. Tài khoản & token
+
+Tài khoản ở `UsersController` (`/users`), vòng đời token ở `AuthController` (`/auth`).
 
 | Route | Auth | Request | Response | Status · message | Log |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST /auth/register` | — | `RegisterReq` | `AuthRes` | 201 · 400 `invalid email` / `password too short` · 409 `email already exists` | `REGISTER_OK` / `REGISTER_EMAIL_TAKEN` |
-| `POST /auth/login` | — | `{ email, password }` | `AuthRes` | 200 · 401 `invalid credentials` · 429 `too many login attempts` | `LOGIN_OK` / `LOGIN_FAILED` (kèm `email_hash`) |
-| `POST /auth/refresh` | — | `{ refresh_token }` | `AuthRes` | 200 · 401 `refresh token invalid or expired` | `REFRESH_OK` / `REFRESH_REUSED` (token đã thu hồi bị dùng lại → thu hồi cả họ token) |
-| `POST /auth/logout` | JWT | `{ refresh_token }` | — | 204 · 401 | `LOGOUT_OK` |
-| `GET /auth/me` | JWT | — | `User` | 200 · 401 | — |
-| `PATCH /auth/me` | JWT | `{ display_name }` (1–60 ký tự) | `User` | 200 · 400 `invalid display_name` | `PROFILE_UPDATED` |
-| `POST /auth/change-password` | JWT | `{ old_password, new_password }` | — | 204 · 400 `password too short` · 401 `old password incorrect` | `PASSWORD_CHANGED` (thu hồi mọi refresh token) |
+| `POST /users` (đăng ký, 5/phút) | — | `RegisterReq` | `AuthRes` | 201 · 400 `invalid email` / `password too short` · 409 `email already exists` | `REGISTER_OK` |
+| `GET /users/me` | JWT | — | `User` | 200 · 401 | — |
+| `PATCH /users/me` | JWT | `{ display_name }` | `User` | 200 · 400 `invalid display_name` | `PROFILE_UPDATED` |
+| `PUT /users/me/password` (5/phút) | JWT | `{ old_password, new_password }` | — | 204 · 401 `old password incorrect` · 400 `password too short` | `PASSWORD_CHANGED` |
+| `POST /auth/tokens` (đăng nhập, 10/phút) | — | `{ email, password }` | `AuthRes` | 201 · 401 `invalid credentials` · 429 `too many login attempts` | `LOGIN_OK` / `LOGIN_FAILED` |
+| `POST /auth/token-rotations` (refresh, 30/phút) | — | `{ refresh_token }` | `AuthRes` | 201 · 401 `refresh token invalid or expired` | `REFRESH_OK` / `REFRESH_REUSED` |
+| `POST /auth/token-revocations` (đăng xuất) | JWT | `{ refresh_token }` | — | 204 · 401 | `LOGOUT_OK` |
+
+Đăng xuất là `POST` vì refresh token phải đi trong body, và `DELETE` không nên có body.
 
 ```jsonc
 // RegisterReq — password ≥ 8 ký tự
@@ -90,7 +153,23 @@ Danh sách dùng cursor: `?limit=20&cursor=<opaque>` (`limit` 1–50) → `{ "it
 
 ---
 
+---
+
 ## 3. RAG — `RagController` (`/rag`)
+
+Giới hạn 20 request/phút mỗi IP, vì LLM queue chỉ có một slot.
+
+**Idempotency** (chỉ khi có JWT; không có JWT thì không lưu gì nên header bị bỏ qua). Client gửi `Idempotency-Key: <uuid>`; key sống 24 giờ:
+
+| Tình huống gửi lại cùng key | Kết quả |
+| :--- | :--- |
+| Lần trước đã xong | Phát lại câu trả lời đã lưu, không chạy LLM, không lưu thêm; header `Idempotent-Replayed: true`. Với stream: `retrieval` → `phase` → `token` → `done`. |
+| Lần trước đang chạy | 409 `request already in progress` |
+| Body khác | 409 `idempotency key reused with a different request` |
+| Lần trước lỗi / bị huỷ | Chạy lại bình thường (key đã được trả) |
+| Worker chết giữa chừng | Chạy lại được sau khi khoá 5 phút hết hạn |
+| Key không phải UUID | 400 `invalid Idempotency-Key` |
+
 
 | Route | Auth | Request | Response | Status · message | Log |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -143,17 +222,18 @@ Client đóng kết nối thì server huỷ lượt sinh LLM và không lưu mes
 
 ---
 
-## 4. Phiên chat — `ChatSessionController` (`/chat-sessions`)
+## 4. Phiên chat — `ChatSessionsController` (`/chat-sessions`)
 
-Tất cả cần JWT. Phiên của người khác trả **404** (không lộ là có tồn tại).
+Tất cả cần JWT. Phiên của người khác trả **404** (không lộ là có tồn tại). Phiên được tạo khi gửi tin nhắn đầu tiên qua `/rag/chat*`, nên không có `POST /chat-sessions`.
 
 | Route | Request | Response | Status · message | Log |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET /chat-sessions?limit&cursor&q` | `q`: tìm theo tiêu đề | `{ items: SessionSummary[], next_cursor }` | 200 · 400 `invalid cursor` | — |
-| `POST /chat-sessions` | `{ title? }` | `SessionSummary` | 201 · 400 `invalid title` | `SESSION_CREATED` |
-| `GET /chat-sessions/:id` | — | `Session` | 200 · 404 `session not found` | — |
+| `GET /chat-sessions` | `limit` (1–50, mặc định 10), `cursor`, `q`, `ids` (tối đa 50), `sort` (`last_message_at`, `created_at`, `title`; mặc định `last_message_at:desc`), filter `created_at`, `last_message_at`, `message_count` | `Page<SessionSummary>` | 200 · 400 | — |
+| `DELETE /chat-sessions?ids=a,b` | tối đa 50 id | — | 204 (gọi lặp vẫn 204; id lạ bị bỏ qua) · 400 `invalid ids` | `SESSIONS_DELETED` |
+| `GET /chat-sessions/:id` | — | `Session` (kèm tối đa 200 tin nhắn mới nhất) | 200 · 404 `session not found` | — |
 | `PATCH /chat-sessions/:id` | `{ title }` (trim, 1–120 ký tự) | `SessionSummary` | 200 · 400 `invalid title` · 404 | `SESSION_RENAMED` |
 | `DELETE /chat-sessions/:id` | — | — | 204 (gọi lặp vẫn 204) | `SESSION_DELETED` |
+| `GET /chat-sessions/:id/messages` | `limit` (1–100, mặc định 50), `cursor`, `sort` (`created_at`; mặc định `created_at:asc`) | `Page<Message>` | 200 · 404 | — |
 
 ```jsonc
 // SessionSummary — title mặc định là 60 ký tự đầu của câu hỏi đầu tiên
@@ -171,7 +251,9 @@ Tất cả cần JWT. Phiên của người khác trả **404** (không lộ là
 
 ---
 
-## 5. Paper — `PaperController` (`/papers`)
+## 5. Paper — `PapersController` (`/papers`)
+
+`GET /papers?ids=a,b,c` đọc theo lô, tối đa 20 id, 30 request/phút → `{ "items": PaperDetail[], "not_found": string[] }`. Không có danh sách toàn bộ: thiếu `ids` trả 400. Qdrant chết thì cả request trả 503.
 
 | Route | Auth | Request | Response | Status · message | Log |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -230,3 +312,25 @@ Repo `UTH-Data-Mining-.../backend` (FastAPI, prefix `/api`) lo cào, embed, ghi 
 | Hiệu ứng cào (HUD crawl) | `POST /api/ingestion/start`, `POST /api/ingestion/stop`, `GET /api/ingestion/status` | Start/stop chạy DAG harvest trên Airflow |
 | Luồng cào realtime | `GET /api/ingestion/stream` (SSE) | Event `CONNECTION_ESTABLISHED`, `SNAPSHOT`, `LOG`, `PAPER_INGESTED`. FE đang chờ `crawl_status` / `crawl_batch` / `crawl_vectors` → cần lớp map ở `crawlClient.ts` |
 | World 3D | `GET /api/mining/pillars/clusters` (K-Means/DBSCAN + toạ độ **2D**), `GET /api/mining/pillars/graph` | FE cần toạ độ 3D và `ground`, `tree`, `vectors.bin` → pipeline chưa có, cần bổ sung |
+
+---
+
+## 9. Admin — `AdminController` (`/admin`)
+
+Mọi route cần JWT + role `admin`, và service kiểm tra lại role lần nữa. Mỗi lời gọi được ghi vào `admin_audit_logs` (append-only), trừ các `PUT` không làm đổi gì.
+
+| Route | Request | Response | Ghi chú |
+| :--- | :--- | :--- | :--- |
+| `GET /admin/users` | `limit`, `cursor`, `q`, `sort` (`created_at`, `email`), filter `role`, `is_active`, `email`, `created_at` | `Page<AdminUser>` | |
+| `GET /admin/users/:id` | — | `AdminUserDetail` | 404 `user not found` |
+| `PUT /admin/users/:id/roles` | `{ roles }` | `AdminUser` | 409 `SELF_LOCKOUT_FORBIDDEN` / `LAST_ADMIN_PROTECTED`. Roles không đổi thì không ghi gì và không thu hồi token. |
+| `PUT /admin/users/:id/status` | `{ active, reason? }` | `AdminUser` | Thay `disable` / `enable`. Trạng thái không đổi thì không ghi gì. Khoá lại với `reason` khác chỉ cập nhật `reason`. `reason` khi mở khoá → 400. |
+| `GET /admin/users/:id/tokens` | — | `{ items: TokenFamily[] }` | |
+| `DELETE /admin/users/:id/tokens` | — | `{ revoked_count }` | Force logout, luôn tăng `token_version`. |
+| `GET /admin/users/:id/chat-sessions` | `limit`, `cursor`, `q`, `sort`, filter `created_at` | `Page<AdminSession>` | |
+| `GET /admin/chat-sessions/:id` | — | `AdminSessionDetail` | Tối đa 200 tin nhắn mới nhất. |
+| `GET /admin/chat-sessions/:id/messages` | `limit`, `cursor`, `sort` | `Page<AdminMessage>` | |
+| `GET /admin/stats` | — | `AdminStats` | |
+| `GET /admin/login-attempts` | `limit`, `cursor`, `sort`, filter `created_at` | `Page<LoginAttempt>` | |
+| `GET /admin/health` | — | `Health` | Chi tiết đầy đủ, không che như `/health`. |
+| `GET /admin/audit-logs` | `limit`, `cursor`, `sort`, filter `actor_id`, `action`, `target_type`, `created_at` | `Page<AuditLog>` | Không có route sửa hoặc xoá. |
