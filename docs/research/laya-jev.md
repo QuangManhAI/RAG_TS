@@ -6,7 +6,7 @@
 - **Detailed Plan**: §1 Kiến trúc quy trình; §2 Bảng xếp hạng 5 kịch bản (Đã Hydrate); §3 Bảng DeepEval trên các mẫu Valid Context; §4 Cổng bằng chứng & Groundedness.
 - **References**: [laya-eval-set.json](../../backend_rag/benchmark/laya-eval-set.json), [eval-laya.mjs](../../backend_rag/benchmark/eval-laya.mjs), [rag_goldens_200.json](../../../Uth-Data-Mining/benchmarks/datasets/rag_goldens_200.json).
 - **Created**: 2026-11-05T03:47:43+07:00
-- **Last Updated**: 2026-11-06T20:18:00+07:00
+- **Last Updated**: 2026-11-06T23:00:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -69,24 +69,24 @@ xychart-beta
 
 > [!IMPORTANT]
 > **Kịch bản chạy**: **`Vector + Laya RRF + Graph PageRank (Full System)`** | **Top-K**: 5 | **Judge**: Local Qwen 2.5-7B (CUDA) | **Chi phí API**: **$0.00**
-> Đã loại bỏ các bản ghi bị rỗng `text: ""` (do thay đổi schema Qdrant `D-058`) khỏi bộ đệm để phản ánh chính xác chất lượng trên các mẫu có đầy đủ văn bản ngữ cảnh.
+> Đã loại bỏ các bản ghi bị rỗng `text: ""` (do thay đổi schema Qdrant `D-058`), nạp đầy đủ văn bản từ `ChunkStore` (Silver Parquet + OpenReview + CVPR 2024 + arXiv API) và chạy lại toàn bộ tập `gold-001`..`gold-100` (`N=105` mẫu).
 
-| Chỉ số DeepEval (Metric) | Tập Chuẩn 20 Mẫu (`gold-001`..`020`) | Toàn bộ 86 Mẫu Valid Full-Text | Ngưỡng (Threshold) |
-| :--- | :---: | :---: | :---: |
-| **Contextual Recall** | **`0.947`** (94.7%) | `0.381` | >= 0.70 |
-| **Contextual Precision** | **`0.860`** (86.0%) | `0.389` | >= 0.70 |
-| **Answer Relevancy** | **`0.769`** (76.9%) | **`0.548`** | >= 0.75 |
-| **Academic Citation Grounding [GEval]** | **`0.747`** (74.7%) | **`0.675`** | >= 0.70 |
-| **Faithfulness** | **`0.660`** (66.0%) | **`0.505`** | >= 0.70 |
-| **Contextual Relevancy** | **`0.534`** (53.4%) | `0.320` | >= 0.60 |
+| Chỉ số DeepEval (Metric) | Tập Chuẩn 20 Mẫu (`gold-001`..`020`) | Tập 105 Mẫu Đã Hydrate (`gold-001`..`100`) | Toàn bộ 169 Mẫu Valid Full-Text | Ngưỡng (Threshold) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Contextual Recall** | **`0.947`** (94.7%) | **`0.900`** (`89.3%` pass, 92/103) | **`0.637`** (`63.3%` pass, 105/166) | >= 0.70 |
+| **Contextual Precision** | **`0.860`** (86.0%) | **`0.852`** (`83.5%` pass, 86/103) | **`0.618`** (`60.8%` pass, 101/166) | >= 0.70 |
+| **Academic Citation Grounding [GEval]** | **`0.747`** (74.7%) | **`0.762`** (`90.4%` pass, 94/104) | **`0.719`** (`86.2%` pass, 144/167) | >= 0.70 |
+| **Faithfulness** | **`0.660`** (66.0%) | **`0.667`** (`57.3%` pass, 55/96) | **`0.592`** (`46.8%` pass, 73/156) | >= 0.70 |
+| **Answer Relevancy** | **`0.769`** (76.9%) | **`0.667`** (`51.0%` pass, 50/98) | **`0.594`** (`40.6%` pass, 65/160) | >= 0.75 |
+| **Contextual Relevancy** | **`0.534`** (53.4%) | **`0.520`** (`45.2%` pass, 42/93) | **`0.444`** (`36.6%` pass, 45/123) | >= 0.60 |
 
 ```mermaid
 xychart-beta
-    title "DeepEval Metrics: Gold 1-20 (100% Qdrant Text) vs Valid Full-Text (N=86)"
-    x-axis ["Context Recall", "Context Precision", "Answer Relevancy", "Citations GEval", "Faithfulness", "Context Relevancy"]
+    title "DeepEval Metrics: Hydrated Gold 1-100 (N=105) vs All Valid Full-Text (N=169)"
+    x-axis ["Context Recall", "Context Precision", "Citations GEval", "Faithfulness", "Answer Relevancy", "Context Relevancy"]
     y-axis "Diem Trung binh" 0.0 --> 1.0
-    bar [0.947, 0.860, 0.769, 0.747, 0.660, 0.534]
-    line [0.381, 0.389, 0.548, 0.675, 0.505, 0.320]
+    bar [0.900, 0.852, 0.762, 0.667, 0.667, 0.520]
+    line [0.637, 0.618, 0.719, 0.592, 0.594, 0.444]
 ```
 
 ---
