@@ -62,7 +62,7 @@ RAG_TS/                                  # Workspace Root
 │   ├── AGENTS.md                        # Backend-specific AI agent guide & module map
 │   ├── src/                             # modules/ (HTTP features), engines/ (retrieval & inference providers), common/, config/
 │   ├── docs/                            # Backend subsystem specs (Auth, Caching, MongoDB, Chat Sessions)
-│   └── benchmark/                       # 3-Stage Production SRE k6 Stress Test Suite & Python Analytics
+│   └── benchmark/                       # 3-Stage Production SRE k6 Stress Test Suite & Laya Evaluation
 ├── frontend_rag/                        # React 19 + Vite + Three.js (R3F) + Zustand + Dexie.js (Port 5173)
 │   ├── AGENTS.md                        # Frontend-specific AI agent guide & component map
 │   ├── src/                             # app/ (shell), features/ (auth, chat, crawl, result, world), shared/, test/

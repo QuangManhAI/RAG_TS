@@ -44,7 +44,7 @@
 | [`docs/api/API-compare.md`](api/API-compare.md) | `ACTIVE` | **API Before/After Comparison**: The redesign against the 8 API principles. |
 | [`docs/architecture/database-v2.md`](architecture/database-v2.md) | `IN_PROGRESS` | **Storage Redesign**: Qdrant, MongoDB and MinIO after moving chunk content out of Qdrant. |
 | [`docs/security/agent-sec.md`](security/agent-sec.md) | `IN_PROGRESS` | **Backend Security Review**: Findings and fixes before production. |
-| [`docs/research/laya-jev.md`](research/laya-jev.md) | `IN_PROGRESS` | **Laya Evaluation**: Results of adding Laya to the RAG pipeline, with the JEV sources beside it. |
+| [`docs/research/laya-jev.md`](research/laya-jev.md) | `ACTIVE` | **Laya Evaluation**: Results of adding Laya to the RAG pipeline, with the JEV sources beside it. |
 
 ---
 

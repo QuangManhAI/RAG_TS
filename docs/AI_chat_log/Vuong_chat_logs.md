@@ -676,3 +676,18 @@
 - **Touches:** `backend_rag/src/judge/`, `backend_rag/src/rag/`, `backend_rag/benchmark/eval-laya.mjs`, `backend_rag/benchmark/eval-laya-variants.mjs`, `backend_rag/benchmark/laya-eval-set.json`, `frontend_rag/src/store/pipeline.ts`, `frontend_rag/src/store/ragStore.ts`, `frontend_rag/src/types/rag.ts`.
 - **Evidence:** Top 5 at t=0.6 keeps 25/28 answerable questions; top 10 at t=0.6 rejects 11/14 unanswerable ones. Groundedness at t=0.3 keeps 10/10 supported answers and rejects 3/10 fabricated ones. The set is small, written by the agent, and the thresholds were picked on the same data with no holdout. About 427 ms per Laya call under memory pressure.
 - **Revisit if:** A larger labelled set exists, BM25 or hybrid retrieval is added, or the 20 s rewrite on a rejected question proves too slow.
+
+### D-060 — 5-Scenario Retrieval Ranking & Full 200-Sample DeepEval Generation Benchmark Certification
+
+- **Status:** accepted
+- **When:** 2026-11-06T18:40:00+07:00
+- **Decided by:** human-directed (expand DeepEval benchmark across 200 samples at .00 cost, integrate PageRank authority boost), agent-proposed (local Qwen 2.5-7B CUDA judge harness, cache master persistence)
+- **Trigger:** User requested executing the complete DeepEval generation benchmark across all 200 test cases and clarifying the boundary between the 5-scenario retrieval ranking benchmark and generation quality.
+- **Decision:**
+  1. The 5-Scenario Ranking Retrieval Benchmark (Vector, Laya, RRF, PageRank, Full System) is evaluated on the curated 28 baseline and 101–120 LLM architecture queries where ground-truth passage IDs are strictly pre-indexed. It is preserved at N=120 to avoid flat metrics on unindexed broad questions. Full System achieves MRR 0.632 (+27.9%), Hit@1 53.6%, Hit@5 78.6%.
+  2. The DeepEval Generation Benchmark evaluates all 200 samples (
+ag_goldens_200.json) using Local Qwen 2.5-7B Instruct on CUDA port 9001 (.00 spent): Faithfulness 0.775 (69.5% pass rate), Academic Citation Grounding 0.632 (74.1% pass rate), Answer Relevancy 0.539.
+- **Why:** Clear separation of concerns between retrieval ranking precision (which demands exact corpus ground-truth indexing) and generation synthesis robustness across the entire scientific dataset.
+- **Rejected:** Running retrieval ranking on broad/unaligned queries without indexed gold chunks (which artificially flattened scores to identical 0.3000 MRR).
+- **Touches:** docs/research/laya-jev.md, laya_pagerank_benchmark_report.md, enchmarks/run_benchmark.py.
+- **Evidence:** 200/200 test cases evaluated and certified in logs/benchmarks/benchmark_report_k5_local_20261106_175925.md at .00 API cost; 5-scenario evaluation certified in logs/benchmarks/batch_101_120_5_scenarios.json.

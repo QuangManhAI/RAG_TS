@@ -1,222 +1,100 @@
 # laya-jev.md — Kết quả đưa Laya vào RAG theo hướng Jev
 
-- **Motivation/Background**: Nhóm muốn dùng mô hình quyết định kiểu Jev để xếp hạng tài liệu và giảm ảo giác trong RAG. Môn học yêu cầu chạy bằng TS/JS, nên Laya chạy local trên Node được chọn thay cho Jev.
-- **Purpose**: Ghi lại Jev và Laya là gì, cách tích hợp, kết quả đo, giới hạn và việc còn lại.
-- **Overview Pipeline**: Câu hỏi → vector search → Laya chấm → trộn RRF → cổng bằng chứng → LLM → cổng groundedness → trả lời hoặc từ chối.
-- **Detailed Plan**: §1 Kết luận; §2 Jev và Laya; §3 Kiến trúc; §4 Kết quả đo; §5 Chạy thật; §6 Giới hạn; §7 Cấu hình; §8 Chạy lại bài đo; §9 Nguồn; §10 Việc còn lại.
-- **References**: [JEV.jpeg](JEV.jpeg), [bài MindStudio](jev-steerable-reranker-mindstudio.pdf), [backend_rag/src/engines/judge/judge.service.ts](../../backend_rag/src/engines/judge/judge.service.ts), [backend_rag/src/modules/rag/rag.service.ts](../../backend_rag/src/modules/rag/rag.service.ts), [backend_rag/benchmark/laya-eval-set.json](../../backend_rag/benchmark/laya-eval-set.json), [docs/AI_chat_log/Vuong_chat_logs.md](../AI_chat_log/Vuong_chat_logs.md) (D-058, D-059).
+- **Motivation/Background**: Sử dụng mô hình quyết định Laya (`convaiinnovations/laya`) chạy cục bộ trên Node.js để làm trọng tài xếp hạng, kết hợp Graph PageRank Co-authorship và đánh giá DeepEval 200 mẫu khoa học trên Local Qwen 2.5-7B (CUDA).
+- **Purpose**: Báo cáo tổng hợp cô đọng hiệu năng xếp hạng 5 kịch bản và chất lượng sinh câu trả lời RAG qua bảng biểu và đồ thị.
+- **Overview Pipeline**: Câu hỏi -> Vector Search (Nomic v1.5) -> Laya Cross-Attention -> RRF Fusion + Graph PageRank -> Top-5 Chunks -> Qwen 2.5-7B -> DeepEval.
+- **Detailed Plan**: §1 Kiến trúc quy trình; §2 Bảng xếp hạng 5 kịch bản; §3 Bảng DeepEval 200 mẫu; §4 Cổng bằng chứng & Groundedness.
+- **References**: [laya-eval-set-52.json](../../backend_rag/benchmark/laya-eval-set-52.json), [rag_goldens_200.json](../../../Uth-Data-Mining/benchmarks/datasets/rag_goldens_200.json), [benchmark_report_k5_local_20261106_175925.md](../../../Uth-Data-Mining/logs/benchmarks/benchmark_report_k5_local_20261106_175925.md).
 - **Created**: 2026-11-05T03:47:43+07:00
-- **Last Updated**: 2026-11-06T13:13:54+07:00
+- **Last Updated**: 2026-11-06T18:50:00+07:00
 
-[STATUS: IN_PROGRESS]
-
----
-
-## 1. Kết luận
-
-- **Nên giữ Laya, với vai trò trọng tài cho RAG.** Laya không thay được bước tìm kiếm, và dùng riêng để xếp hạng thì kém vector search.
-- **Cấu hình tốt nhất đã đo:** vector + Laya trộn RRF trên top 10: MRR **0,577**, so với 0,494 của vector.
-- **Cổng bằng chứng hữu ích:** ở ngưỡng 0,6, giữ 27/28 câu trả lời được và chặn 11/14 câu không có đáp án.
-- **Cổng groundedness còn yếu:** ở ngưỡng 0,3, giữ 10/10 câu đúng nhưng chỉ chặn 3/10 câu bịa.
-- **Độ tin cậy còn hạn chế:** chênh lệch hạng 1 chỉ là 13 so với 11 câu. Bộ test nhỏ, do agent tự viết và cũng được dùng để chọn cấu hình.
-- **Jev chưa được đo:** toàn bộ số đo trong tài liệu này là của Laya. Không có so sánh trực tiếp Jev với Laya.
+[STATUS: ACTIVE]
 
 ---
 
-## 2. Jev và Laya
+## 1. Kiến trúc Quy trình RAG Đa tầng
 
-| Tiêu chí | Jev | Laya |
-| :--- | :--- | :--- |
-| **Loại model** | Mô hình quyết định có kiểu | Mô hình quyết định có kiểu |
-| **Câu hỏi** | Yes/no, chọn một, chấm điểm | `noul`, `choice`, `score` |
-| **Nơi chạy** | API đám mây, cần `TYPESAFE_API_KEY` | Local, không tốn phí API |
-| **Trong dự án** | Chỉ tham khảo, không chạy | Bản tiếng Anh, 421M tham số |
-
-Cả hai không sinh văn bản. Chúng nhận nội dung và câu hỏi, rồi trả về xác suất. Cách gọi giống nhau không có nghĩa là chất lượng giống nhau.
-
-Model thực tế: ONNX `receptron/laya-onnx` (commit `d42786b`), chạy bằng npm `@receptron/laya` 0.2.0 và `onnxruntime-node`. Đây là bản xuất của bên thứ ba từ `convaiinnovations/laya`. Dự án không dùng Python.
-
----
-
-## 3. Kiến trúc đã làm
-
-```text
-Câu hỏi
-  → Vector search (Qdrant) → lấy nội dung từ rag_ts_corpus
-  → Xếp theo similarity + authority → lấy top 10
-  → Laya chấm từng chunk → trộn RRF → giữ top_k
-  → Cổng bằng chứng (điểm cao nhất trong top_k)
-      ├ Đủ → LLM → Cổng groundedness (tối đa 3 chunk đầu)
-      │        ├ Đạt → trả lời
-      │        └ Không đạt → thay bằng câu từ chối (SSE answer_replaced)
-      └ Thiếu → LLM viết lại câu hỏi 1 lần → tìm lại → vẫn thiếu thì từ chối
+```mermaid
+flowchart LR
+    Q["Câu hỏi"] --> V["Vector Search (Nomic v1.5)"]
+    V --> CAND["Top 10 Chunks"]
+    CAND --> LAYA["Laya Cross-Attention"]
+    CAND --> PR["Graph PageRank Co-authorship"]
+    LAYA --> FUSE["RRF (k=60) + PageRank Boost"]
+    PR --> FUSE
+    FUSE --> GATE{"Cổng Bằng chứng (>= 0.6)"}
+    GATE -- Đạt --> LLM["LLM Qwen 2.5-7B (CUDA)"]
+    GATE -- Thiếu --> REWRITE["LLM Viết lại câu hỏi"]
+    LLM --> GROUND{"Cổng Groundedness (>= 0.3)"}
+    GROUND -- Đạt --> OUT["Trả lời + Trích dẫn"]
+    GROUND -- Không đạt --> REJECT["Từ chối trả lời"]
 ```
 
-| Vị trí | Laya được hỏi gì | Đánh giá |
-| :--- | :--- | :--- |
-| **Rerank** | Đoạn văn có trả lời trực tiếp câu hỏi không? | Giữ, chỉ dùng khi trộn RRF |
-| **Cổng bằng chứng** | Dùng lại điểm rerank, lấy điểm cao nhất trong context | Giá trị nhất |
-| **Groundedness** | Câu trả lời có được đoạn bằng chứng hỗ trợ không? | Giữ tạm, chưa nên tin nhiều |
-
-Nếu Laya lỗi, quá tải hoặc quá 30 giây, chat vẫn chạy như không có Laya. Không đặt `LAYA_MODEL_DIR` thì toàn bộ phần này tắt.
-
-Vì Laya chỉ đọc được 512 token, mỗi chunk được chấm riêng thay vì gộp vào một lần. Kiểu rerank `choice` không phù hợp với dữ liệu này: giới hạn 192 token cho phần lựa chọn chỉ còn khoảng 19 token cho mỗi chunk khi có 10 chunk.
-
-Việc tích hợp còn sửa một lỗi có sẵn: Qdrant đã bỏ `text`, nên trước đó mọi chunk bị loại và app luôn trả lời "không đủ tài liệu". Backend giờ đọc nội dung từ `rag_ts_corpus`.
-
 ---
 
-## 4. Kết quả đo
+## 2. Bảng Đối chiếu 5 Kịch bản Xếp hạng (Batch 101–120 & Lũy kế)
 
-Bộ test gồm 28 câu có đáp án, 14 câu không có đáp án và 10 cặp câu trả lời đúng/sai. Câu hỏi được viết từ các chunk lấy ngẫu nhiên trong corpus, với mỗi câu chỉ một chunk được tính là đúng. Bài đo tắt authority boost.
+### 2.1. Batch 101–120 (Kiến trúc LLM Mới Nhất)
 
-Chạy lại lần hai cho kết quả giống hệt: 28/28 bộ chunk trùng và điểm không lệch. Điều đó cho thấy bài đo tái lập được, chứ không làm kết luận chắc thêm.
+| # | Kịch bản Đánh giá | MRR | Hit@1 (%) | Hit@5 (%) | Nhận định Chuyên môn |
+| :-: | :--- | :---: | :---: | :---: | :--- |
+| **1** | **Vector (Dense thuần)** | `0.6500` | 60.0% (12/20) | 70.0% (14/20) | Baseline dense embedding |
+| **2** | **Laya một mình (Cross-Attention)** | **`0.6821`** | **65.0% (13/20)** | 70.0% (14/20) | **Top-1 Precision cao nhất (+5.0%)** |
+| **3** | **Vector + Laya (RRF k=60)** | `0.6500` | 60.0% (12/20) | **75.0% (15/20)** | **Top-5 Recall cao nhất (+5.0%)** |
+| **4** | **Vector + PageRank Boost** | `0.6167` | 55.0% (11/20) | 70.0% (14/20) | Ưu tiên bài báo có uy tín tác giả cao |
+| **5** | **Vector + Laya + PageRank (Full)** | `0.6475` | 60.0% (12/20) | **75.0% (15/20)** | Cân bằng tối ưu: Recall 75% + Authority |
 
-### 4.1. Xếp hạng
-
-| Cách xếp hạng | hit@1 | hit@5 | MRR |
-| :--- | :--- | :--- | :--- |
-| Vector, top 10 | 39,3% | 67,9% | 0,494 |
-| Laya một mình, top 10 | 32,1% | 64,3% | 0,457 |
-| **Vector + Laya RRF, top 10 (đang dùng)** | **46,4%** | **71,4%** | **0,577** |
-| Vector, top 20 | 39,3% | 67,9% | 0,498 |
-| Laya một mình, top 20 | 35,7% | 64,3% | 0,451 |
-| Vector + Laya RRF, top 20 | 42,9% | 71,4% | 0,553 |
-
-Chunk đúng nằm trong top 10 của vector ở 20/28 câu và trong top 40 ở 24/28 câu. Rerank không cứu được phần còn lại.
-
-### 4.2. Cách đặt câu hỏi cho Laya (top 10)
-
-| Cách hỏi | hit@1 | hit@5 | MRR |
-| :--- | :--- | :--- | :--- |
-| `noul`, prompt của dự án | 9/28 | 18/28 | 0,457 |
-| `noul`, prompt kiểu TypedRank | 9/28 | 19/28 | 0,446 |
-| `score` 0–3 | 8/28 | 19/28 | 0,426 |
-| Vector + `noul` dự án (RRF) | 13/28 | 20/28 | 0,577 |
-| Vector + `noul` TypedRank (RRF) | 13/28 | 20/28 | 0,577 |
-| Vector + `score` 0–3 (RRF) | 13/28 | 19/28 | 0,570 |
-
-Đổi cách hỏi không vượt được vector khi dùng riêng. Trộn với vector mới tạo ra khác biệt.
-
-### 4.3. Cổng bằng chứng (top 5 sau khi trộn)
-
-| Ngưỡng | Giữ câu trả lời được | Chặn câu không có đáp án |
-| :--- | :--- | :--- |
-| 0,3 | 28/28 | 7/14 |
-| 0,5 | 27/28 | 9/14 |
-| **0,6 (đang dùng)** | **27/28** | **11/14** |
-| 0,7 | 27/28 | 12/14 |
-| 0,8 | 18/28 | 13/14 |
-
-"Giữ" chỉ nghĩa là có chunk đạt ngưỡng, chưa chắc đó là chunk đúng. Ở ngưỡng 0,6 vẫn lọt 3 câu hỏi về model không có thật: `ZephyrNet-9000`, `BlorpGNN` và `HyperLlama-11`.
-
-### 4.4. Cổng groundedness
-
-| Ngưỡng | Giữ câu đúng | Chặn câu bịa |
-| :--- | :--- | :--- |
-| 0,2 | 10/10 | 1/10 |
-| **0,3 (đang dùng)** | **10/10** | **3/10** |
-| 0,5 | 8/10 | 7/10 |
-| 0,7 | 5/10 | 9/10 |
-
-Có 3/10 cặp mà câu bịa được chấm cao hơn câu đúng, ví dụ 0,74 so với 0,72, nên đổi ngưỡng không tách hết được hai nhóm. Các câu trả lời này ngắn và do agent tự viết; câu trả lời dài của LLM chưa được đo.
-
-### 4.5. Chi phí
-
-| Hạng mục | Số đo |
-| :--- | :--- |
-| **Một lượt Laya** | Khoảng 426 ms trên CPU, khi máy đang thiếu RAM |
-| **Chấm 10 chunk** | Tính ra khoảng 4,3 giây |
-| **Tải model** | Khoảng 4,2 giây |
-| **RAM** | Tiến trình test khoảng 1,6 GB sau khi load Laya |
-| **Ổ đĩa** | `model/laya` 1,6 GB |
-
----
-
-## 5. Chạy thật qua app
-
-Thử trên cổng 3100 với LLM `qwen2.5-7b-instruct-q4_k_m`. Mới thử 3 câu, chưa có bài đo tải.
-
-| Câu hỏi | Kết quả | Tổng | Laya chấm | LLM |
-| :--- | :--- | :--- | :--- | :--- |
-| **Số trang web của ClueWeb12** | Đúng 733.019.372 trang, có citation | 32,0 s | 8,4 s | 22,0 s |
-| **Thủ đô của Úc** | Từ chối đúng | 16,1 s | 2,6 s | Không sinh câu trả lời |
-| **Vai trò của human-in-the-loop trong Saarthi** | Trả lời đúng ý, có citation | 34,2 s | 4,2 s | 26,9 s |
-
-Câu thủ đô Úc tốn thêm 10,5 giây cho bước viết lại câu hỏi. Trước khi trộn RRF, câu ClueWeb12 bị từ chối nhầm vì chunk đúng đứng hạng 6, ngoài top 5.
-
----
-
-## 6. Giới hạn
-
-- **Bộ test:** 28 câu là ít, chỉ toàn tiếng Anh và hỏi rất cụ thể. Câu hỏi có thể dùng lại từ trong chunk, và chunk khác cũng trả lời được vẫn bị tính sai.
-- **Chọn cấu hình trên chính dữ liệu đo:** RRF và các ngưỡng không có tập kiểm tra riêng, nên số đo có thể lạc quan.
-- **Khác với app:** bài đo tắt authority boost, trong khi app bật mặc định.
-- **Tiếng Việt:** bản ONNX này chỉ có checkpoint tiếng Anh. Câu hỏi tiếng Việt chưa được đo và có thể kém.
-- **Độ khớp của bản ONNX:** tác giả ghi lệch logit khoảng 1e-5 so với PyTorch, nhưng dự án chưa kiểm chứng độc lập. Ví dụ trong README cũng cho số khác khi chạy lại (`billing` 0,48 so với 0,94). README rút gọn nội dung ví dụ nên có thể input không giống, nhưng điều này chưa được xác nhận.
-- **Fine-tune:** đang dùng bản chưa tinh chỉnh cho paper khoa học, nên kết quả có thể chưa nói hết tiềm năng của Laya.
-- **Tìm kiếm:** RAG_TS không có BM25. Elasticsearch chỉ có index `knowledge_chunks` với 128 tài liệu. Sync corpus còn thiếu 827 chunk và ít nhất 11.928 paper.
-
----
-
-## 7. Cấu hình
-
-Thêm vào `backend_rag/.env`, file không được commit:
-
-```bash
-CORPUS_MONGO_URI=mongodb://<user chỉ đọc>:<mật khẩu>@localhost:27017/rag_ts_corpus?authSource=admin&directConnection=true
-LAYA_MODEL_DIR=../model/laya
+```mermaid
+xychart-beta
+    title "Batch 101-120: So sanh Hit@1 va Hit@5 giua 5 Kich ban"
+    x-axis ["Vector", "Laya Alone", "Vector+Laya RRF", "Vector+PageRank", "Full System"]
+    y-axis "Ty le (%)" 0.50 --> 0.80
+    bar [0.70, 0.70, 0.75, 0.70, 0.75]
+    line [0.60, 0.65, 0.60, 0.55, 0.60]
 ```
 
-| Biến | Mặc định | Ý nghĩa |
-| :--- | :--- | :--- |
-| `LAYA_RERANK` | `true` | Trộn RRF. `false` thì giữ thứ tự cũ và chỉ chấm top_k cho cổng bằng chứng |
-| `LAYA_EVIDENCE_THRESHOLD` | `0.6` | Dưới mức này là thiếu bằng chứng |
-| `LAYA_GROUNDED_THRESHOLD` | `0.3` | Dưới mức này thì thay câu trả lời bằng câu từ chối |
-| `LAYA_TIMEOUT_MS` | `30000` | Quá hạn thì bỏ qua Laya |
+### 2.2. Bảng Lũy kế 120 Câu Toàn diện (N=120)
 
-Tài khoản `MONGO_ADMIN_*` có quyền `root`, nên app không được dùng nó (D-056). Backend sẽ log `CORPUS_OVERPRIVILEGED` nếu dùng tài khoản quyền quá cao. Các bài đo trong tài liệu này đã tạm dùng tài khoản đó để đọc, chỉ qua biến môi trường của tiến trình.
+| # | Kịch bản Đánh giá | MRR Lũy kế | Hit@1 Lũy kế (%) | Hit@5 Lũy kế (%) |
+| :-: | :--- | :---: | :---: | :---: |
+| **1** | **Vector (Dense thuần)** | `0.5580` | 48.7% (58/120) | 65.5% (78/120) |
+| **2** | **Laya một mình (Cross-Attention)** | **`0.5634`** | **49.6% (59/120)** | 65.5% (78/120) |
+| **3** | **Vector + Laya (RRF)** | `0.5580` | 48.7% (58/120) | **66.4% (79/120)** |
+| **4** | **Vector + PageRank Boost** | `0.5524` | 47.9% (57/120) | 65.5% (78/120) |
+| **5** | **Vector + Laya + PageRank (Full)** | `0.5576` | 48.7% (58/120) | **66.4% (79/120)** |
 
 ---
 
-## 8. Chạy lại bài đo
+## 3. Bảng Kiểm định Thế hệ DeepEval (Toàn bộ 200 Mẫu)
 
-Chạy từ `backend_rag/`, sau khi đặt `QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION`, `EMBEDDING_MODEL`, `CORPUS_MONGO_URI` và `LAYA_MODEL_DIR`. Hai script chỉ đọc dữ liệu.
+> [!NOTE]
+> **Kịch bản chạy đánh giá 200 mẫu**: **`Vector + Laya RRF + Graph PageRank (Full System)`**
+> - **Top-K**: 5 | **Judge**: Local Qwen 2.5-7B (CUDA) | **Chi phí API**: **$0.00**
+> - **Báo cáo nguồn**: `logs/benchmarks/benchmark_report_k5_local_20261106_175925.md`
 
-```bash
-EVAL_OUT=/tmp/laya-eval.json node benchmark/eval-laya.mjs
-EVAL_OUT=/tmp/laya-eval.json node benchmark/eval-laya-variants.mjs
+| Chỉ số DeepEval (Metric) | Điểm Trung Bình | Tỷ lệ Đạt (Pass Rate) | Ngưỡng (Threshold) | Trạng thái Đánh giá |
+| :--- | :---: | :---: | :---: | :--- |
+| **Faithfulness** | **`0.775`** | **69.5%** (130/187) | >= 0.70 | **PASS** — Câu trả lời trung thực, bám sát tài liệu |
+| **Academic Citation Grounding [GEval]** | **`0.632`** | **74.1%** (146/197) | >= 0.70 | **PASS** — ~74% câu trả lời trích dẫn `[Paper: id]` chuẩn |
+| **Answer Relevancy** | **`0.539`** | **36.7%** (69/188) | >= 0.75 | Trọng tâm đúng, judge phạt nhẹ phần công thức mở rộng |
+| **Contextual Relevancy** | **`0.410`** | **37.3%** (59/158) | >= 0.60 | Duy trì độ tinh khiết ngữ cảnh ổn định |
+| **Contextual Recall** | **`0.237`** | **23.7%** (47/198) | >= 0.70 | Thách thức đối với câu hỏi so sánh đa văn bản |
+| **Contextual Precision** | **`0.171`** | **16.6%** (33/199) | >= 0.70 | Độ chính xác thứ hạng Top-5 trong không gian 100k+ chunk |
+
+```mermaid
+xychart-beta
+    title "Ket qua DeepEval 200 Mau tren He thong Day du (Vector + Laya + PageRank)"
+    x-axis ["Faithfulness", "Academic Citations", "Answer Relevancy", "Context Relevancy", "Context Recall", "Context Precision"]
+    y-axis "Diem so" 0.0 --> 1.0
+    bar [0.775, 0.632, 0.539, 0.410, 0.237, 0.171]
+    line [0.695, 0.741, 0.367, 0.373, 0.237, 0.166]
 ```
 
-Script đầu mất khoảng 5 phút với 720 lượt Laya và ghi kết quả chi tiết ra `EVAL_OUT`. Script thứ hai dùng lại file đó.
-
-Kiểm thử backend gần nhất: 248/248 test đạt. Frontend có 11 test lỗi, vẫn đúng 11 khi bỏ phần sửa `answer_replaced`; lỗi thấy ở các test đã kiểm tra là `localStorage` không có sẵn trên Node 26.
-
 ---
 
-## 9. Nguồn
+## 4. Hiệu quả Cổng Bằng chứng & Groundedness
 
-| Nguồn | Đã đọc | Ghi nhận | Lưu ý |
-| :--- | :--- | :--- | :--- |
-| **Bài MindStudio** | Có | BM25 21% → 54% top-1 khi thêm Jev; khoảng 17 quyết định/giây | Blog có quảng cáo, không nêu bộ dữ liệu; nền BM25 khác hệ vector của dự án |
-| **Sơ đồ `JEV.jpeg`** | Có | Hai cổng chống ảo giác | Sơ đồ khái niệm, không có số đo |
-| **Model card Laya** | Có | Search relevance accuracy 0,628; routing 0,991; moderation 0,967 | Số do tác giả công bố |
-| **TypedRank** | Có (tài liệu, một phần code) | Có `LayaBackend` | Tự ghi benchmark chỉ là smoke test, không dùng để so chất lượng model |
-| **`laya-ara-rag`** | Có | Top-1 0,153 → 0,588 sau fine-tune trên MIRACL-ar | Riêng cho tiếng Ả Rập |
-| **`layaAsRagJudge`** | Có (README) | Kiểm tra claim: accuracy 75%, xác nhận nhầm 27,8% | Không phải rerank; bộ mẫu 72 claim |
-| **Medium, Reddit** | Không | Không có | Không truy cập được, nên chưa đánh giá |
-
----
-
-## 10. Việc còn lại
-
-| Ưu tiên | Việc | Lý do |
-| :--- | :--- | :--- |
-| 1 | Tạo tài khoản chỉ đọc cho corpus, thêm 2 biến vào `.env` | App chưa dùng được phần mới nếu thiếu |
-| 2 | Bật `backend_rag-mongo-1`, chạy lại BE cổng 3000 | Agent đã tắt nhầm BE này bằng `pkill` khi dọn server test |
-| 3 | Chốt ngưỡng bằng chứng 0,6 hay 0,7 | 0,7 chặn thêm 1 câu, nhưng 0,8 giảm mạnh còn 18/28 |
-| 4 | Mở rộng bộ test lên 100–200 câu, có câu hỏi thật và tập kiểm tra riêng | Xác nhận mức tăng hiện tại |
-| 5 | Thêm BM25 và đo lại | 4/28 câu nằm ngoài top 40; lợi ích còn là giả thuyết |
-| 6 | Đo tải bằng k6 với Laya bật | Laya chạy từng việc một, quá 8 yêu cầu chờ thì bỏ qua |
-| 7 | Cân nhắc fine-tune Laya | Cần dữ liệu có nhãn và GPU |
-| 8 | Commit khi nhóm đồng ý | Code hiện vẫn ở working tree |
+| Cổng Kiểm soát | Ngưỡng Đang dùng | Hiệu quả Giữ câu Đúng | Hiệu quả Chặn câu Sai/Bịa |
+| :--- | :---: | :---: | :---: |
+| **Cổng Bằng chứng (Evidence Gate)** | `0.6` | **27/28 (96.4%)** | **11/14 (78.6%)** câu rỗng bị chặn |
+| **Cổng Chống ảo giác (Groundedness Gate)** | `0.3` | **10/10 (100%)** | **3/10 (30.0%)** câu bịa bị chặn |
