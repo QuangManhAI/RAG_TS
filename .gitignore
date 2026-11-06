@@ -6,7 +6,11 @@
 
 # Environment & Dependencies
 .env
+.env.*
+!.env.example
 node_modules/
 dist/
 coverage/
 .DS_Store
+# Local git worktrees
+.worktrees/
