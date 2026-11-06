@@ -4,9 +4,9 @@
 - **Purpose**: Ghi lại hiện trạng FE, lịch sử quy trình prompt, các chỗ lệch token đo được và tình trạng Liquid Glass.
 - **Overview Pipeline**: Đọc `git log`, `PROGRESS.md`, `ASSUMPTIONS.md`, `prompt_fe_3d.md` → grep giá trị bo góc/blur/alpha/cỡ chữ/màu trong `src/` → đối chiếu với `tokens.ts`.
 - **Detailed Plan**: Tóm tắt; §1 Hiện trạng; §2 Quy trình prompt (3 giai đoạn); §3 Quy chuẩn thiết kế (có gì, thiếu gì, lỗi cụ thể); §4 Liquid Glass; §5 Đề xuất; Phụ lục lệnh đo lại.
-- **References**: [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`frontend_rag/PROGRESS.md`](../frontend_rag/PROGRESS.md), [`frontend_rag/src/index.css`](../frontend_rag/src/index.css).
+- **References**: [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md), [`FE3d_prompt_v2.md`](../prompts/FE3d_prompt_v2.md), [`prompt_fe_3d.md`](../prompts/prompt_fe_3d.md), [`frontend_rag/PROGRESS.md`](../../frontend_rag/PROGRESS.md), [`frontend_rag/src/index.css`](../../frontend_rag/src/index.css).
 - **Created**: 2026-10-29T22:46:54+07:00
-- **Last Updated**: 2026-10-29T23:05:00+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ACTIVE]
 
@@ -51,7 +51,7 @@ Phần 3D, logic và test thì vững. Lớp UI (DOM) thì **không có quy chu�
 
 ### Giai đoạn 1 — Có spec: P1 → P11
 
-Làm theo `docs/prompt_fe_3d.md` (936 dòng). Mỗi prompt có **Đặc tả → Pseudocode → Prompt gửi AI → Quy trình kiểm chứng**. Phần hướng dẫn cho AI quy định:
+Làm theo `docs/prompts/prompt_fe_3d.md` (936 dòng). Mỗi prompt có **Đặc tả → Pseudocode → Prompt gửi AI → Quy trình kiểm chứng**. Phần hướng dẫn cho AI quy định:
 
 1. Làm tuần tự P1 → P11, không nhảy bước.
 2. Kiểm chứng đạt mới sang prompt tiếp theo.
@@ -106,7 +106,7 @@ Quy trình đã **trượt từ "spec-driven" sang "prompt theo cảm hứng"**.
 
 ### Đã có: token màu
 
-`src/theme/tokens.ts` định nghĩa `ThemeTokens` (chỉ còn theme `dark`). `applyCssVars.ts` ghi chúng ra CSS variable trên `:root`:
+`src/shared/theme/tokens.ts` định nghĩa `ThemeTokens` (chỉ còn theme `dark`). `applyCssVars.ts` ghi chúng ra CSS variable trên `:root`:
 
 | Token | Giá trị | CSS var |
 | :-- | :-- | :-- |
@@ -229,7 +229,7 @@ Dù chọn hướng nào, cũng **phải có design token trước** (mục 5, b
 
 ### Bước 1 — Chốt bộ design token (trước mọi chỉnh sửa UI)
 
-Mở rộng `src/theme/tokens.ts`, xuất ra CSS variable qua `applyCssVars.ts` và khai báo vào `@theme` của Tailwind v4 trong `index.css`. Ví dụ khung (các con số cụ thể cần nhóm và thầy chốt):
+Mở rộng `src/shared/theme/tokens.ts`, xuất ra CSS variable qua `applyCssVars.ts` và khai báo vào `@theme` của Tailwind v4 trong `index.css`. Ví dụ khung (các con số cụ thể cần nhóm và thầy chốt):
 
 | Nhóm | Ví dụ thang |
 | :-- | :-- |
@@ -254,13 +254,13 @@ Kèm **lint rule** (ESLint hoặc stylelint) chặn `rounded-[…]`, `text-[…p
 
 ### Bước 3 — Đưa quy trình về spec-driven như P1–P11
 
-- Thêm vào `docs/prompt_fe_3d.md`:
+- Thêm vào `docs/prompts/prompt_fe_3d.md`:
   - đặc tả cho P12–P14 (đã làm nhưng chưa có spec);
   - **P15 — Design System** (bước 1 và 2);
   - **P16 — Liquid Glass** (chọn hướng, ngân sách FPS, fallback).
 - Thêm vào phần "Hướng dẫn dành cho AI" quy tắc: **đọc `tokens.ts` trước mọi prompt UI; không tạo CSS variable hay giá trị mới ngoài token.**
 - Cập nhật `PROGRESS.md` và `ASSUMPTIONS.md` cho giai đoạn 2026-10-20 → 2026-10-28.
-- `AGENTS.md`: xoá khối Next.js còn sót, thêm bất biến về design token và phép quay (xem [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md) P15).
+- `AGENTS.md`: xoá khối Next.js còn sót, thêm bất biến về design token và phép quay (xem [`FE3d_prompt_v2.md`](../prompts/FE3d_prompt_v2.md) P15).
 - Dọn CSS chết của theme sáng.
 
 ---

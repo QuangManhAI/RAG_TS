@@ -4,9 +4,9 @@
 - **Purpose**: Liệt kê các lỗi của thiết kế cũ, các cải thiện của thiết kế hiện tại và toàn bộ API đang có.
 - **Overview Pipeline**: Bản cũ đọc từ commit `987a97d~1` của `backend_rag`. Bản mới đọc từ các controller hiện tại, rồi đối chiếu với test `API contract (OpenAPI)`.
 - **Detailed Plan**: §1 Tóm tắt; §2 Lỗi của thiết kế cũ; §3 Nội dung 8 nguyên tắc, đánh giá và cải thiện; §4 Toàn bộ API hiện tại; §5 Bảng đổi route; §6 Hạn chế và việc còn mở.
-- **References**: [docs/API_DESIGN.md](docs/API_DESIGN.md), [docs/API_SPECIFICATION.md](docs/API_SPECIFICATION.md), [docs/AI_chat_log/Vuong_chat_logs.md](docs/AI_chat_log/Vuong_chat_logs.md) (D-047 đến D-053), [backend_rag/test/flow.e2e-spec.ts](backend_rag/test/flow.e2e-spec.ts), [backend_rag/src/common/pagination.ts](backend_rag/src/common/pagination.ts), [backend_rag/src/common/xml.ts](backend_rag/src/common/xml.ts), [backend_rag/src/common/hateoas.ts](backend_rag/src/common/hateoas.ts).
+- **References**: [docs/api/API_DESIGN.md](API_DESIGN.md), [docs/api/API_SPECIFICATION.md](API_SPECIFICATION.md), [docs/AI_chat_log/Vuong_chat_logs.md](../AI_chat_log/Vuong_chat_logs.md) (D-047 đến D-053), [backend_rag/test/flow.e2e-spec.ts](../../backend_rag/test/flow.e2e-spec.ts), [backend_rag/src/common/pagination/pagination.ts](../../backend_rag/src/common/pagination/pagination.ts), [backend_rag/src/common/http/xml.ts](../../backend_rag/src/common/http/xml.ts), [backend_rag/src/common/http/hateoas.ts](../../backend_rag/src/common/http/hateoas.ts).
 - **Created**: 2026-11-04T23:58:56+07:00
-- **Last Updated**: 2026-11-05T00:01:07+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ACTIVE]
 
@@ -26,7 +26,7 @@ Thiết kế API đã xong và đã khớp giữa BE và FE, nhưng **`POST /rag
 | Chống chạy lặp chat | Không có | `Idempotency-Key` |
 | Trả 405 khi sai method | Không | Có, kèm header `Allow` |
 
-Trong 30 route cũ, 17 route giữ nguyên path và 13 route đổi thành 12 route mới. Có thêm 5 route mới hoàn toàn. Không giữ alias cho route cũ, vì FE là client duy nhất và được phát hành cùng BE ([D-047](docs/AI_chat_log/Vuong_chat_logs.md)).
+Trong 30 route cũ, 17 route giữ nguyên path và 13 route đổi thành 12 route mới. Có thêm 5 route mới hoàn toàn. Không giữ alias cho route cũ, vì FE là client duy nhất và được phát hành cùng BE ([D-047](../AI_chat_log/Vuong_chat_logs.md)).
 
 ---
 
@@ -74,7 +74,7 @@ Trong 30 route cũ, 17 route giữ nguyên path và 13 route đổi thành 12 ro
 | :--- | :--- | :--- | :--- |
 | L17 | Chỉ hỗ trợ JSON | Không có xử lý XML | Không đạt nguyên tắc 4. |
 | L18 | Không có HATEOAS | Không có `_links` và không có điểm vào `GET /api/v1` | Client phải hard-code mọi đường dẫn. |
-| L19 | FE không xoay vòng token | [`authStore`](frontend_rag/src/store/authStore.ts) cũ chỉ gọi `login`, `register`, `logout` | BE có refresh token nhưng store này không dùng. |
+| L19 | FE không xoay vòng token | [`authStore`](../../frontend_rag/src/features/auth/authStore.ts) cũ chỉ gọi `login`, `register`, `logout` | BE có refresh token nhưng store này không dùng. |
 | L20 | Test contract còn hẹp | Test OpenAPI cũ chỉ liệt kê 17 route, không có 13 route admin, và không kiểm tra cách đặt tên | Admin và quy tắc đặt tên có thể lệch mà test không phát hiện. |
 
 ---
@@ -119,10 +119,10 @@ Trong 30 route cũ, 17 route giữ nguyên path và 13 route đổi thành 12 ro
 
 ### 3.3 Cải thiện ngoài 8 nguyên tắc
 
-- **Chat không chạy lặp:** gửi lại cùng `Idempotency-Key` sẽ phát lại câu trả lời đã lưu và không chạy LLM. Nếu lượt trước đang chạy hoặc body khác thì trả 409. Nếu lượt trước lỗi thì được chạy lại. Sửa L15 ([D-050](docs/AI_chat_log/Vuong_chat_logs.md)).
+- **Chat không chạy lặp:** gửi lại cùng `Idempotency-Key` sẽ phát lại câu trả lời đã lưu và không chạy LLM. Nếu lượt trước đang chạy hoặc body khác thì trả 409. Nếu lượt trước lỗi thì được chạy lại. Sửa L15 ([D-050](../AI_chat_log/Vuong_chat_logs.md)).
 - **`PUT` và `DELETE` gọi lặp không gây tác dụng phụ:** nếu trạng thái không đổi thì không ghi gì, không tăng `token_version` và không thêm audit. Sửa L16.
-- **`PATCH` cho sửa một phần, `PUT` cho thay toàn bộ** ([D-048](docs/AI_chat_log/Vuong_chat_logs.md)).
-- **Test contract phủ đủ route:** [`flow.e2e-spec.ts`](backend_rag/test/flow.e2e-spec.ts) giờ so đủ 34 route, kể cả admin, và kiểm tra URL không chứa động từ. Sửa L20.
+- **`PATCH` cho sửa một phần, `PUT` cho thay toàn bộ** ([D-048](../AI_chat_log/Vuong_chat_logs.md)).
+- **Test contract phủ đủ route:** [`flow.e2e-spec.ts`](../../backend_rag/test/flow.e2e-spec.ts) giờ so đủ 34 route, kể cả admin, và kiểm tra URL không chứa động từ. Sửa L20.
 
 ---
 
@@ -272,14 +272,14 @@ Các route cũ không còn tồn tại, và không có alias.
 
 ### 6.1 Chưa dùng được đầy đủ
 
-- **Chat và paper chưa có nội dung thật:** payload Qdrant không còn `text`, nên [`vector-store.service.ts`](backend_rag/src/vector-store/vector-store.service.ts) bỏ qua mọi kết quả. Chat đang trả câu trả lời "không có ngữ cảnh" thay vì trích dẫn. BE cần đọc từ `rag_ts_corpus`, sau khi đã bù dữ liệu còn thiếu.
-- **Chưa chạy k6 trên thiết kế mới:** kết quả 400 CU trước đây không còn giá trị, vì đổi tiêu đề giờ làm mới toàn bộ cache danh sách của user ([D-051](docs/AI_chat_log/Vuong_chat_logs.md)).
+- **Chat và paper chưa có nội dung thật:** payload Qdrant không còn `text`, nên [`vector-store.service.ts`](../../backend_rag/src/engines/vector-store/vector-store.service.ts) bỏ qua mọi kết quả. Chat đang trả câu trả lời "không có ngữ cảnh" thay vì trích dẫn. BE cần đọc từ `rag_ts_corpus`, sau khi đã bù dữ liệu còn thiếu.
+- **Chưa chạy k6 trên thiết kế mới:** kết quả 400 CU trước đây không còn giá trị, vì đổi tiêu đề giờ làm mới toàn bộ cache danh sách của user ([D-051](../AI_chat_log/Vuong_chat_logs.md)).
 
 ### 6.2 Điểm cố ý lệch khỏi nguyên tắc
 
 | Điểm lệch | Lý do |
 | :--- | :--- |
-| Dùng `limit` và `cursor` thay vì `page` và `size` | Danh sách phiên chat đổi liên tục, nên offset dễ trùng hoặc sót dòng và chậm dần ở trang sâu ([D-049](docs/AI_chat_log/Vuong_chat_logs.md)). |
+| Dùng `limit` và `cursor` thay vì `page` và `size` | Danh sách phiên chat đổi liên tục, nên offset dễ trùng hoặc sót dòng và chậm dần ở trang sâu ([D-049](../AI_chat_log/Vuong_chat_logs.md)). |
 | `POST /rag/chat` không theo dạng danh từ số nhiều, và `/rag/chat/stream` đặt tên theo cách truyền | Một lượt chat không phải tài nguyên được đọc lại ở route này, và stream chỉ là cách trả khác của cùng thao tác. |
 | `POST /auth/token-revocations` thay vì `DELETE` | Refresh token phải đi trong body. |
 | `POST /auth/token-rotations` không idempotent | Refresh token chỉ dùng một lần, để phát hiện token bị đánh cắp. |
@@ -287,10 +287,10 @@ Các route cũ không còn tồn tại, và không có alias.
 
 ### 6.3 Thiếu sót đã biết
 
-- **HATEOAS mới dừng ở phía server:** FE vẫn hard-code đường dẫn thay vì đi theo `_links` ([D-053](docs/AI_chat_log/Vuong_chat_logs.md)), và schema Swagger chưa mô tả `_links`.
+- **HATEOAS mới dừng ở phía server:** FE vẫn hard-code đường dẫn thay vì đi theo `_links` ([D-053](../AI_chat_log/Vuong_chat_logs.md)), và schema Swagger chưa mô tả `_links`.
 - **`Idempotency-Key` chỉ có tác dụng khi có JWT:** không có JWT thì không lưu gì, nên header bị bỏ qua.
-- **Tài liệu lệch code ở 3 chỗ trong [`API_DESIGN.md`](docs/API_DESIGN.md):**
-  - §2 ghi mật khẩu từ 8 ký tự, nhưng [`common-passwords.ts`](backend_rag/src/auth/common-passwords.ts) yêu cầu 10–200 ký tự.
+- **Tài liệu lệch code ở 3 chỗ trong [`API_DESIGN.md`](API_DESIGN.md):**
+  - §2 ghi mật khẩu từ 8 ký tự, nhưng [`common-passwords.ts`](../../backend_rag/src/modules/auth/common-passwords.ts) yêu cầu 10–200 ký tự.
   - §1.7 không liệt kê `DELETE /admin/users/:id/tokens` trong các route không có `_links`.
   - §5 và §7 còn mô tả dữ liệu paper lấy từ payload Qdrant.
 

@@ -4,9 +4,9 @@
 - **Purpose**: Document the end-to-end system topology, request lifecycles, data-store boundaries, and performance/resilience envelopes across `frontend_rag` and `backend_rag`.
 - **Overview Pipeline**: Client UI & 3D Scene (`frontend_rag`) → Cache-First IndexedDB (`chatDb.ts`) → REST / SSE Gateway (`backend_rag` `/api/v1`) → In-Memory `LRUCache` & `Singleflight` → MongoDB (`localhost:27018`) + Qdrant (`scientific_papers_gold`) + Mining Reranker + GGUF LLM (`Qwen2.5-7B`).
 - **Detailed Plan**: Section 1 presents the High-Level System Topology Diagram; Section 2 walks through the End-to-End Scientific RAG Query & Streaming Lifecycle; Section 3 explains the Dual-Persistence & Offline-First Architecture; Section 4 summarizes Certified Capacity & SLA Envelopes.
-- **References**: [../AGENTS.md](../AGENTS.md), [INDEX.md](INDEX.md), [API_SPECIFICATION.md](API_SPECIFICATION.md), [SCIENTIFIC_RAG_BACKEND.md](SCIENTIFIC_RAG_BACKEND.md), [../backend_rag/AGENTS.md](../backend_rag/AGENTS.md), [../frontend_rag/AGENTS.md](../frontend_rag/AGENTS.md).
+- **References**: [../AGENTS.md](../../AGENTS.md), [INDEX.md](../INDEX.md), [API_SPECIFICATION.md](../api/API_SPECIFICATION.md), [SCIENTIFIC_RAG_BACKEND.md](SCIENTIFIC_RAG_BACKEND.md), [../backend_rag/AGENTS.md](../../backend_rag/AGENTS.md), [../frontend_rag/AGENTS.md](../../frontend_rag/AGENTS.md).
 - **Created**: 2026-10-29T19:45:00+07:00
-- **Last Updated**: 2026-10-29T19:45:00+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ACTIVE]
 
@@ -58,7 +58,7 @@ flowchart TB
 
 ## 2. End-to-End Scientific RAG & Streaming Lifecycle
 
-When a user submits a scientific question in [`ChatPanel.tsx`](../frontend_rag/src/components/chat/ChatPanel.tsx), the system executes a 7-stage pipeline across frontend and backend:
+When a user submits a scientific question in [`ChatPanel.tsx`](../../frontend_rag/src/features/chat/components/ChatPanel.tsx), the system executes a 7-stage pipeline across frontend and backend:
 
 ```mermaid
 sequenceDiagram
@@ -90,9 +90,9 @@ sequenceDiagram
 ```
 
 ### Key Pipeline Guarantees
-1. **Strict Grounding & Citations**: [`RagService`](../backend_rag/src/rag/rag.service.ts) injects retrieved abstracts with explicit `[Paper: <paper_id>]` markers and instructs the LLM never to fabricate ungrounded citations.
-2. **Bounded GPU Queue Shedding (`D-015`, `D-016`)**: [`LlmService`](../backend_rag/src/llm/llm.service.ts) enforces `LLM_CONCURRENCY=1` and `LLM_MAX_QUEUE=8`. When more than 9 concurrent LLM requests arrive simultaneously, request #10 immediately receives `429 Too Many Requests` (`LLM_QUEUE_FULL`) in `< 5ms` rather than exhausting system RAM or hanging sockets.
-3. **Zero Main-Thread Stutter (`D-005`)**: While SSE tokens stream at 30–60 tokens/sec, the `30ms` token batch buffer in [`ragStore.ts`](../frontend_rag/src/store/ragStore.ts) and `useDeferredValue` in [`Markdown.tsx`](../frontend_rag/src/components/chat/Markdown.tsx) decouple expensive Remark/KaTeX AST parsing from the 100+ FPS WebGL render loop.
+1. **Strict Grounding & Citations**: [`RagService`](../../backend_rag/src/modules/rag/rag.service.ts) injects retrieved abstracts with explicit `[Paper: <paper_id>]` markers and instructs the LLM never to fabricate ungrounded citations.
+2. **Bounded GPU Queue Shedding (`D-015`, `D-016`)**: [`LlmService`](../../backend_rag/src/engines/llm/llm.service.ts) enforces `LLM_CONCURRENCY=1` and `LLM_MAX_QUEUE=8`. When more than 9 concurrent LLM requests arrive simultaneously, request #10 immediately receives `429 Too Many Requests` (`LLM_QUEUE_FULL`) in `< 5ms` rather than exhausting system RAM or hanging sockets.
+3. **Zero Main-Thread Stutter (`D-005`)**: While SSE tokens stream at 30–60 tokens/sec, the `30ms` token batch buffer in [`ragStore.ts`](../../frontend_rag/src/features/chat/store/ragStore.ts) and `useDeferredValue` in [`Markdown.tsx`](../../frontend_rag/src/features/chat/components/Markdown.tsx) decouple expensive Remark/KaTeX AST parsing from the 100+ FPS WebGL render loop.
 
 ---
 
@@ -114,8 +114,8 @@ Every layer of the stack has been empirically benchmarked and certified on branc
 
 | Subsystem | Certified Metric / Capacity | Verification Evidence & Reference |
 | :--- | :--- | :--- |
-| **3D WebGL Render Loop (`frontend_rag`)** | **`100+ FPS`** (`0.8ms` median frame time, `1 draw call` tree, `1 draw call` Top-K threads) | `D-006` – `D-013`, [`frontend_rag/docs/perf-chat-report.md`](../frontend_rag/docs/perf-chat-report.md) |
-| **Core Web Vitals (`frontend_rag`)** | **Lighthouse `97 / 100`** (`FCP = 0.9s`, `LCP = 1.0s < 2.5s`, `TBT = 40ms`, `CLS = 0.002`) | `D-014`, `D-018`, [`docs/REPORT.md`](REPORT.md) |
-| **Stateless Fast API (`backend_rag`)** | **`1,600 CUs`** (`3,958.53 RPS`, `P95 = 379.5ms < 500ms`, `0.00%` error over 5-min soak) | `D-016`, [`docs/REPORT.md`](REPORT.md) |
-| **Authenticated Read/Write API (`backend_rag` + MongoDB Tunnel)** | **`400 CUs` (`250 RPS`)** (`48,874` reqs over 3-min Rule L1 hold-out, `P50 = 29.79ms`, `P95 = 265.54ms < 500ms`, `P99 = 475.11ms < 1000ms`, `0.00%` error) | `D-019` – `D-021`, [`backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md`](../backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md) |
-| **`Argon2id` (`64 MB`) Crypto Isolation (`backend_rag`)** | **`P50 = 2.62s`** under burst login with **`0.00%` Event Loop starvation** (`GET /auth/me` `P95 = 48.03ms`) | `D-020`, `D-022`, [`backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md`](../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md) |
+| **3D WebGL Render Loop (`frontend_rag`)** | **`100+ FPS`** (`0.8ms` median frame time, `1 draw call` tree, `1 draw call` Top-K threads) | `D-006` – `D-013`, [`frontend_rag/docs/perf-chat-report.md`](../../frontend_rag/docs/perf-chat-report.md) |
+| **Core Web Vitals (`frontend_rag`)** | **Lighthouse `97 / 100`** (`FCP = 0.9s`, `LCP = 1.0s < 2.5s`, `TBT = 40ms`, `CLS = 0.002`) | `D-014`, `D-018`, [`docs/reports/REPORT.md`](../reports/REPORT.md) |
+| **Stateless Fast API (`backend_rag`)** | **`1,600 CUs`** (`3,958.53 RPS`, `P95 = 379.5ms < 500ms`, `0.00%` error over 5-min soak) | `D-016`, [`docs/reports/REPORT.md`](../reports/REPORT.md) |
+| **Authenticated Read/Write API (`backend_rag` + MongoDB Tunnel)** | **`400 CUs` (`250 RPS`)** (`48,874` reqs over 3-min Rule L1 hold-out, `P50 = 29.79ms`, `P95 = 265.54ms < 500ms`, `P99 = 475.11ms < 1000ms`, `0.00%` error) | `D-019` – `D-021`, [`backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md`](../../backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md) |
+| **`Argon2id` (`64 MB`) Crypto Isolation (`backend_rag`)** | **`P50 = 2.62s`** under burst login with **`0.00%` Event Loop starvation** (`GET /auth/me` `P95 = 48.03ms`) | `D-020`, `D-022`, [`backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md`](../../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md) |

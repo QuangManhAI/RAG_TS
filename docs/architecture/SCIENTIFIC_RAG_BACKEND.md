@@ -4,9 +4,9 @@
 - **Purpose**: Serve as the authoritative engineering documentation for the NestJS 11 TypeScript backend, covering vector retrieval over LanceDB, co-authorship PageRank and association-rules hybrid reranking, local Qwen2.5-7B GGUF acceleration with `node-llama-cpp` on GPU (NVIDIA CUDA / Apple Metal), and production API contracts.
 - **Overview Pipeline**: Ingested and indexed via LanceDB into 913,205 chunks, queried via Nomic Embed Text v1.5 embeddings, augmented with graph data mining authority metrics, and grounded using local quantized LLM inference with strict academic citations (`[Paper: {paper_id}]`).
 - **Detailed Plan**: §1 Executive Architecture; §2 Hardware Acceleration & GPU Profiling; §3 Vector Lakehouse & LanceDB Integration; §4 Data Mining Hybrid Reranker; §5 Local LLM Inference Engine; §6 Production Verification & Benchmarks; §7 References & File Directory.
-- **References**: `agents/rules/MD_CONVENTION.md`, `agents/rules/COMMIT_CONVENTION.md`, `docs/RAG.md`, `docs/prompt.md`, `docs/API_SPECIFICATION.md`.
+- **References**: `agents/rules/MD_CONVENTION.md`, `agents/rules/COMMIT_CONVENTION.md`, `docs/architecture/RAG.md`, `docs/prompts/prompt.md`, `docs/api/API_SPECIFICATION.md`.
 - **Created**: 2026-10-14T17:05:00+07:00
-- **Last Updated**: 2026-10-14T17:05:00+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 ---
 
@@ -179,10 +179,10 @@ The full pipeline was verified live against the complete 913,205-vector dataset 
 
 ## 7. References & File Directory
 
-- **Core Module**: [`backend_rag/src/rag/rag.service.ts`](backend_rag/src/rag/rag.service.ts)
-- **Vector Service**: [`backend_rag/src/vector-store/vector-store.service.ts`](backend_rag/src/vector-store/vector-store.service.ts)
-- **LLM Service**: [`backend_rag/src/llm/llm.service.ts`](backend_rag/src/llm/llm.service.ts)
-- **Mining Service**: [`backend_rag/src/mining/mining.service.ts`](backend_rag/src/mining/mining.service.ts)
+- **Core Module**: [`backend_rag/src/modules/rag/rag.service.ts`](../../backend_rag/src/modules/rag/rag.service.ts)
+- **Vector Service**: [`backend_rag/src/engines/vector-store/vector-store.service.ts`](../../backend_rag/src/engines/vector-store/vector-store.service.ts)
+- **LLM Service**: [`backend_rag/src/engines/llm/llm.service.ts`](../../backend_rag/src/engines/llm/llm.service.ts)
+- **Mining Service**: [`backend_rag/src/engines/mining/mining.service.ts`](../../backend_rag/src/engines/mining/mining.service.ts)
 - **GPU Utility**: [`backend_rag/src/utils/gpu.util.ts`](backend_rag/src/utils/gpu.util.ts)
-- **API Specification**: [`docs/API_SPECIFICATION.md`](docs/API_SPECIFICATION.md)
-- **Conventions**: [`agents/rules/MD_CONVENTION.md`](agents/rules/MD_CONVENTION.md), [`agents/rules/COMMIT_CONVENTION.md`](agents/rules/COMMIT_CONVENTION.md)
+- **API Specification**: [`docs/api/API_SPECIFICATION.md`](../api/API_SPECIFICATION.md)
+- **Conventions**: [`agents/rules/MD_CONVENTION.md`](../../agents/rules/MD_CONVENTION.md), [`agents/rules/COMMIT_CONVENTION.md`](../../agents/rules/COMMIT_CONVENTION.md)

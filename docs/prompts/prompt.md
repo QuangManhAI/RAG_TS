@@ -4,20 +4,20 @@
 - **Purpose**: Historical archive of the initial F1-F6 prompt templates. Must NOT be used by AI agents for current code changes because it references LanceDB instead of Qdrant.
 - **Overview Pipeline**: F1 Types -> F2 Nomic v1.5 Embedding -> F3 LanceDB (Superseded by Qdrant) -> F4 Mining Service -> F5 Local LLM -> F6 Controller.
 - **Detailed Plan**: Retains the original F1-F6 specification and prompt blocks for historical traceability.
-- **References**: [../AGENTS.md](../AGENTS.md), [INDEX.md](INDEX.md), [ARCHITECTURE_OVERVIEW.md](ARCHITECTURE_OVERVIEW.md), [../backend_rag/AGENTS.md](../backend_rag/AGENTS.md).
+- **References**: [../AGENTS.md](../../AGENTS.md), [INDEX.md](../INDEX.md), [ARCHITECTURE_OVERVIEW.md](../architecture/ARCHITECTURE_OVERVIEW.md), [../backend_rag/AGENTS.md](../../backend_rag/AGENTS.md).
 - **Created**: 2026-10-16T10:00:00+07:00
-- **Last Updated**: 2026-10-29T19:47:00+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ARCHIVED]
 
 > [!WARNING]
-> **Archived Prototype Prompt**: This document references an early LanceDB prototype and /api/rag/chat routes that have been superseded by Qdrant and /api/v1/*. AI agents must read [ackend_rag/AGENTS.md](../backend_rag/AGENTS.md) and [docs/ARCHITECTURE_OVERVIEW.md](ARCHITECTURE_OVERVIEW.md) instead.
+> **Archived Prototype Prompt**: This document references an early LanceDB prototype and /api/rag/chat routes that have been superseded by Qdrant and /api/v1/*. AI agents must read [ackend_rag/AGENTS.md](../../backend_rag/AGENTS.md) and [docs/architecture/ARCHITECTURE_OVERVIEW.md](../architecture/ARCHITECTURE_OVERVIEW.md) instead.
 
 ---
 
 # Kế hoạch & Danh mục Prompt Phát triển Hệ thống RAG bằng TypeScript/NestJS
 
-Tài liệu này được biên soạn theo nguyên tắc và cấu trúc từ [`docs/lesson_2.md`](lesson_2.md):
+Tài liệu này được biên soạn theo nguyên tắc và cấu trúc từ [`docs/research/lesson_2.md`](../research/lesson_2.md):
 - **Phân rã chức năng (Decomposition)**: Chia nhỏ bài toán tổng thể thành từng chức năng độc lập, đơn nhiệm.
 - **Quy trình chuẩn**: `Yêu cầu ➔ Đặc tả (Input/Output/Edge case) ➔ Pseudocode (Hợp đồng) ➔ Prompt có cấu trúc ➔ Kiểm chứng (Test, Verification)`.
 - **Cấu trúc Prompt chuẩn**: 
@@ -58,7 +58,7 @@ flowchart LR
 - **Output**: File `src/types/scientific-rag.ts` export đầy đủ các interface và type alias đại diện cho tất cả thực thể trong lakehouse (LanceDB chunk, Parquet paper, PageRank influencer, Association rule, Grounded chunk, RAG request/response).
 - **Ràng buộc**:
   - Không chứa logic thực thi hay import thư viện nặng (chỉ dùng pure TypeScript types).
-  - Đúng chuẩn field từ `docs/RAG.md` (bao gồm `chunk_id`, `paper_id`, `context_text`, `_distance`, v.v.).
+  - Đúng chuẩn field từ `docs/architecture/RAG.md` (bao gồm `chunk_id`, `paper_id`, `context_text`, `_distance`, v.v.).
   - Sử dụng Union types cho `section_type` (`"abstract" | "introduction" | "method" | "experiment" | "discussion" | "other"`).
 
 ### 1.2 Prompt gửi AI
@@ -67,7 +67,7 @@ flowchart LR
 Dự án NestJS / TypeScript 5.7 chạy trên Node.js 22. Hệ thống RAG tài liệu khoa học UTH với LanceDB và Data Mining artifacts.
 
 ### Nhiệm vụ:
-Tạo file `src/types/scientific-rag.ts` định nghĩa toàn bộ data models, interfaces và types chuẩn cho hệ thống RAG theo tài liệu đặc tả `docs/RAG.md`.
+Tạo file `src/types/scientific-rag.ts` định nghĩa toàn bộ data models, interfaces và types chuẩn cho hệ thống RAG theo tài liệu đặc tả `docs/architecture/RAG.md`.
 
 ### Ràng buộc:
 1. Định nghĩa đầy đủ 8 interfaces sau:
@@ -92,7 +92,7 @@ Mã nguồn hoàn chỉnh của file `src/types/scientific-rag.ts` kèm comment 
 
 ### 1.3 Quy trình kiểm chứng (Verification)
 - [ ] Chạy `npx tsc --noEmit` không báo bất kỳ lỗi type nào.
-- [ ] Đối chiếu tên field khớp 100% với schema bảng `docs/RAG.md#7-complete-typescript-type-definitions`.
+- [ ] Đối chiếu tên field khớp 100% với schema bảng `docs/architecture/RAG.md#7-complete-typescript-type-definitions`.
 
 ---
 
@@ -290,7 +290,7 @@ Tạo `MiningService` tại `src/mining/mining.service.ts` để đọc và áp 
 - **Output**: `RAGSynthesisResponse` gồm câu trả lời tổng hợp kèm trích dẫn chính xác.
 - **Ràng buộc**:
   - Giao tiếp với LLM: Chạy trực tiếp từ file trọng số local `model/qwen2.5-7b-instruct-q4_k_m.gguf` bằng `node-llama-cpp` (tối ưu Metal GPU trên macOS M-series, không phụ thuộc API ngoài).
-  - Xây dựng **System Prompt Grounding nghiêm ngặt** theo quy chuẩn `docs/RAG.md#82-academic-grounding--citation-prompt-engineering`:
+  - Xây dựng **System Prompt Grounding nghiêm ngặt** theo quy chuẩn `docs/architecture/RAG.md#82-academic-grounding--citation-prompt-engineering`:
     1. Chỉ dựa vào ngữ cảnh được cung cấp. Không tự suy diễn số liệu thực nghiệm.
     2. Nếu ngữ cảnh không đủ thông tin: trả lời rõ `"The provided literature does not contain sufficient details regarding [aspect]."`.
     3. Mọi khẳng định kỹ thuật phải đính kèm trích dẫn `[Paper: {paper_id}]`.
@@ -346,7 +346,7 @@ Tạo `LlmService` (`src/llm/llm.service.ts`) và `RagService` (`src/rag/rag.ser
 2. `RagService`:
    - Inject: `EmbeddingService`, `VectorStoreService`, `MiningService`, `LlmService`.
    - Hàm chính: `executeRagPipeline(request: RAGSearchRequest): Promise<RAGSynthesisResponse>`.
-   - Tuân thủ nghiêm ngặt định dạng System Prompt từ `docs/RAG.md`.
+   - Tuân thủ nghiêm ngặt định dạng System Prompt từ `docs/architecture/RAG.md`.
    - Trích xuất danh sách mã bài báo đã được trích dẫn trong câu trả lời bằng Regex `\[Paper:\s*([^\]]+)\]`.
    - Đo thời gian xử lý `latency_ms`.
 

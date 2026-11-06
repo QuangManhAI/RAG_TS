@@ -4,9 +4,9 @@
 - **Purpose**: Serve as the definitive data dictionary, schema blueprint, vector index guide, and integration manual for developing a TS/JS RAG pipeline over 13,000+ scientific papers and 164,800+ embeddings.
 - **Overview Pipeline**: Analyzed the Medallion lakehouse tiers (Raw -> Silver Parquet -> Gold LanceDB & Mining JSONs) and formulated exact schemas, TypeScript types, retrieval algorithms, and sample code.
 - **Detailed Plan**: §1 Executive Summary & Dataset Architecture; §2 Gold Layer: LanceDB Vector Database (Primary RAG Store); §3 Embedding Model Protocol & Query Requirements (Nomic v1.5); §4 Silver Layer: Parquet Lakehouse (Full-Text & Metadata); §5 Data Mining Artifacts (Authority Boosting & Query Expansion); §6 Raw Bronze Data Layer; §7 Complete TypeScript Type Definitions; §8 Step-by-Step TS/JS RAG Implementation Guide; §9 Recommended npm Ecosystem.
-- **References**: [`src/config/settings.py`](../src/config/settings.py), [`src/indexing/chunker.py`](../src/indexing/chunker.py), [`src/indexing/embedder.py`](../src/indexing/embedder.py), [`backend/app/services/retrieval_service.py`](../backend/app/services/retrieval_service.py), [`backend/app/services/rag_service.py`](../backend/app/services/rag_service.py), [`docs/OVERVIEW.md`](OVERVIEW.md), [`agents/rules/MD_CONVENTION.md`](../agents/rules/MD_CONVENTION.md).
+- **References**: [`src/config/settings.py`](../src/config/settings.py), [`src/indexing/chunker.py`](../src/indexing/chunker.py), [`src/indexing/embedder.py`](../src/indexing/embedder.py), [`backend/app/services/retrieval_service.py`](../backend/app/services/retrieval_service.py), [`backend/app/services/rag_service.py`](../backend/app/services/rag_service.py), [`docs/OVERVIEW.md`](OVERVIEW.md), [`agents/rules/MD_CONVENTION.md`](../../agents/rules/MD_CONVENTION.md).
 - **Created**: 2026-10-12T16:10:00+07:00
-- **Last Updated**: 2026-10-12T16:10:00+07:00
+- **Last Updated**: 2026-11-06T13:00:59+07:00
 
 [STATUS: ACTIVE]
 
@@ -443,7 +443,7 @@ Located in `data/raw/`:
 
 ## 7. Complete TypeScript Type Definitions
 
-Save this into `src/types/scientific-rag.ts` in your TypeScript project:
+Save this into `src/shared/types/scientific-rag.ts` in your TypeScript project:
 
 ```typescript
 /**

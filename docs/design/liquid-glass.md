@@ -4,9 +4,9 @@
 - **Purpose**: Cung cấp nội dung để làm slide về Liquid Glass đã xây dựng trong `frontend_rag`.
 - **Overview Pipeline**: Tổng hợp từ code hiện tại, lịch sử git, báo cáo migration và decision log, rồi sắp xếp theo thứ tự slide.
 - **Detailed Plan**: §1 Thông điệp chính; §2 Nội dung từng slide; §3 Lưu ý trước khi trình bày; §4 Quy chuẩn FE chung: màu sắc, bo góc, chữ, chuyển động, trạng thái.
-- **References**: [Glass.tsx](frontend_rag/src/components/ui/Glass.tsx), [LiquidShell.tsx](frontend_rag/src/components/ui/LiquidShell.tsx), [LiquidFilters.tsx](frontend_rag/src/components/ui/LiquidFilters.tsx), [refractionMap.ts](frontend_rag/src/theme/refractionMap.ts), [liquidGlass.ts](frontend_rag/src/theme/liquidGlass.ts), [useLiquidLight.ts](frontend_rag/src/theme/useLiquidLight.ts), [design-migration-report.md](frontend_rag/docs/design-migration-report.md), [FE_DESIGN_SYSTEM.md](docs/FE_DESIGN_SYSTEM.md), [tokens.ts](frontend_rag/src/theme/tokens.ts), [Vuong_chat_logs.md](docs/AI_chat_log/Vuong_chat_logs.md), [@samasante/liquid-glass](https://github.com/samasante/liquid-glass).
+- **References**: [Glass.tsx](../../frontend_rag/src/shared/ui/Glass.tsx), [LiquidShell.tsx](../../frontend_rag/src/shared/ui/LiquidShell.tsx), [LiquidFilters.tsx](../../frontend_rag/src/shared/ui/LiquidFilters.tsx), [refractionMap.ts](../../frontend_rag/src/shared/theme/refractionMap.ts), [liquidGlass.ts](../../frontend_rag/src/shared/theme/liquidGlass.ts), [useLiquidLight.ts](../../frontend_rag/src/shared/theme/useLiquidLight.ts), [design-migration-report.md](../../frontend_rag/docs/design-migration-report.md), [FE_DESIGN_SYSTEM.md](FE_DESIGN_SYSTEM.md), [tokens.ts](../../frontend_rag/src/shared/theme/tokens.ts), [Vuong_chat_logs.md](../AI_chat_log/Vuong_chat_logs.md), [@samasante/liquid-glass](https://github.com/samasante/liquid-glass).
 - **Created**: 2026-11-05T00:22:57+07:00
-- **Last Updated**: 2026-11-05T00:26:44+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ACTIVE]
 
@@ -50,7 +50,7 @@
 - Cài đặt có 4 lựa chọn: Tự động, Đục, Mờ, Liquid.
 - **Cấp 4** dùng kính WebGL mới nằm trong thiết kế, chưa làm.
 
-**Ảnh gợi ý:** cùng một panel trên nền sọc, so sánh `glass-backdrop-frosted` và `glass-backdrop-liquid` trong [ảnh mốc visual test](frontend_rag/e2e/visual.spec.ts-snapshots/).
+**Ảnh gợi ý:** cùng một panel trên nền sọc, so sánh `glass-backdrop-frosted` và `glass-backdrop-liquid` trong [ảnh mốc visual test](../../frontend_rag/e2e/visual.spec.ts-snapshots).
 
 ### Slide 4 — Kiến trúc
 
@@ -181,7 +181,7 @@ Các số lớp `backdrop-filter` được đo ở bước tạo component `Glas
 
 ## 4. Quy chuẩn FE chung
 
-Nguồn chuẩn là [docs/FE_DESIGN_SYSTEM.md](docs/FE_DESIGN_SYSTEM.md). Giá trị dưới đây đã đối chiếu với [tokens.ts](frontend_rag/src/theme/tokens.ts) và [index.css](frontend_rag/src/index.css). Lần chạy `npm run check:design` ngày 2026-11-05 cho 0 vi phạm ở cả 14 quy tắc.
+Nguồn chuẩn là [docs/design/FE_DESIGN_SYSTEM.md](FE_DESIGN_SYSTEM.md). Giá trị dưới đây đã đối chiếu với [tokens.ts](../../frontend_rag/src/shared/theme/tokens.ts) và [index.css](../../frontend_rag/src/index.css). Lần chạy `npm run check:design` ngày 2026-11-05 cho 0 vi phạm ở cả 14 quy tắc.
 
 ### 4.1 Quy tắc vàng
 
@@ -246,7 +246,7 @@ Bảng còn 2 màu dự phòng (`#e8ff5a`, `#d9e6ff`) và màu `#8a7fa8` cho cat
 | Viền màu khi hover hoặc focus | 55% |
 | Glow | 45% hoặc 70% |
 
-**Độ tương phản trên `--bg`,** được kiểm tra bằng [contrast.test.ts](frontend_rag/src/theme/contrast.test.ts):
+**Độ tương phản trên `--bg`,** được kiểm tra bằng [contrast.test.ts](../../frontend_rag/src/shared/theme/contrast.test.ts):
 
 | Cặp màu | Yêu cầu |
 | :--- | :--- |

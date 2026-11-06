@@ -4,14 +4,14 @@
 - **Purpose**: Historical pedagogical reference for human-AI pair programming principles. Superseded for active repository engineering by AGENTS.md and docs/INDEX.md.
 - **Overview Pipeline**: Requirement Clarification -> Input/Output Specification -> Pseudocode Contract -> Structured AI Prompt -> Test & Trace Verification -> Human Decision Log.
 - **Detailed Plan**: Preserves original Vietnamese lecture notes on developer roles, AI safety rules, specification tables, and verification loops.
-- **References**: [../AGENTS.md](../AGENTS.md), [INDEX.md](INDEX.md), [AI_chat_log/Vuong_chat_logs.md](AI_chat_log/Vuong_chat_logs.md).
+- **References**: [../AGENTS.md](../../AGENTS.md), [INDEX.md](../INDEX.md), [AI_chat_log/Vuong_chat_logs.md](../AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-15T09:00:00+07:00
 - **Last Updated**: 2026-10-29T19:47:00+07:00
 
 [STATUS: ARCHIVED]
 
 > [!WARNING]
-> **Archived Historical Notes**: Do not use this file as an active architectural specification. Refer to [AGENTS.md](../AGENTS.md) and [docs/INDEX.md](INDEX.md) for current production contracts.
+> **Archived Historical Notes**: Do not use this file as an active architectural specification. Refer to [AGENTS.md](../../AGENTS.md) and [docs/INDEX.md](../INDEX.md) for current production contracts.
 
 ---
 

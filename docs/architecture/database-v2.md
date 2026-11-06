@@ -4,9 +4,9 @@
 - **Purpose**: Tóm tắt thiết kế mới, điểm khác so với thiết kế cũ và điểm mạnh mang lại.
 - **Overview Pipeline**: Dữ liệu đi từ MinIO sang MongoDB để lưu nội dung và sang Qdrant để tìm kiếm; `backend_rag` tìm ở Qdrant rồi đọc nội dung ở MongoDB.
 - **Detailed Plan**: §1 Thiết kế mới; §2 Khác gì so với cũ; §3 Điểm mạnh; §4 Trạng thái.
-- **References**: [docs/API_DESIGN.md](docs/API_DESIGN.md), [backend_rag/src/vector-store/vector-store.service.ts](backend_rag/src/vector-store/vector-store.service.ts).
+- **References**: [docs/api/API_DESIGN.md](../api/API_DESIGN.md), [backend_rag/src/engines/vector-store/vector-store.service.ts](../../backend_rag/src/engines/vector-store/vector-store.service.ts).
 - **Created**: 2026-11-05T00:06:57+07:00
-- **Last Updated**: 2026-11-05T03:06:00+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: IN_PROGRESS]
 

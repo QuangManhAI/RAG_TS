@@ -4,9 +4,9 @@
 - **Purpose**: Ghi lại Jev và Laya là gì, cách tích hợp, kết quả đo, giới hạn và việc còn lại.
 - **Overview Pipeline**: Câu hỏi → vector search → Laya chấm → trộn RRF → cổng bằng chứng → LLM → cổng groundedness → trả lời hoặc từ chối.
 - **Detailed Plan**: §1 Kết luận; §2 Jev và Laya; §3 Kiến trúc; §4 Kết quả đo; §5 Chạy thật; §6 Giới hạn; §7 Cấu hình; §8 Chạy lại bài đo; §9 Nguồn; §10 Việc còn lại.
-- **References**: [JEV.jpeg](JEV.jpeg), [bài MindStudio](JEV%20as%20a%20Steerable%20Reranker:%20A%20Practical%20RAG%20Guide%20%7C%20MindStudio.pdf), [backend_rag/src/judge/judge.service.ts](backend_rag/src/judge/judge.service.ts), [backend_rag/src/rag/rag.service.ts](backend_rag/src/rag/rag.service.ts), [backend_rag/benchmark/laya-eval-set.json](backend_rag/benchmark/laya-eval-set.json), [docs/AI_chat_log/Vuong_chat_logs.md](docs/AI_chat_log/Vuong_chat_logs.md) (D-058, D-059).
+- **References**: [JEV.jpeg](JEV.jpeg), [bài MindStudio](jev-steerable-reranker-mindstudio.pdf), [backend_rag/src/engines/judge/judge.service.ts](../../backend_rag/src/engines/judge/judge.service.ts), [backend_rag/src/modules/rag/rag.service.ts](../../backend_rag/src/modules/rag/rag.service.ts), [backend_rag/benchmark/laya-eval-set.json](../../backend_rag/benchmark/laya-eval-set.json), [docs/AI_chat_log/Vuong_chat_logs.md](../AI_chat_log/Vuong_chat_logs.md) (D-058, D-059).
 - **Created**: 2026-11-05T03:47:43+07:00
-- **Last Updated**: 2026-11-05T03:47:43+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: IN_PROGRESS]
 

@@ -150,9 +150,9 @@ flowchart TD
 
 TypeScript được dùng ở các điểm then chốt sau:
 
-- **Ports & Adapters**: `RagService` phụ thuộc vào interface `SessionStorePort` ([`session-store.port.ts`](../backend_rag/src/chat-sessions/session-store.port.ts)) thay vì class cụ thể, nên khi test có thể thay bằng bản fake.
+- **Ports & Adapters**: `RagService` phụ thuộc vào interface `SessionStorePort` ([`session-store.port.ts`](../../backend_rag/src/modules/chat-sessions/session-store.port.ts)) thay vì class cụ thể, nên khi test có thể thay bằng bản fake.
 - **Cấu hình có kiểu**: `AppConfigService.get<K extends keyof AppConfig>(key)` trả về đúng kiểu của từng biến môi trường (generic có ràng buộc).
-- **Thiếu biến môi trường thì dừng ngay**: [`main.ts`](../backend_rag/src/main.ts) gọi `parseEnv(process.env)` trước khi tạo app và in rõ tên biến bị thiếu hoặc sai.
+- **Thiếu biến môi trường thì dừng ngay**: [`main.ts`](../../backend_rag/src/main.ts) gọi `parseEnv(process.env)` trước khi tạo app và in rõ tên biến bị thiếu hoặc sai.
 
 ### 4.2 Sequence — RAG streaming chat
 
@@ -294,7 +294,7 @@ Tất cả route nằm dưới tiền tố `/api/v1`, có Swagger tại `/api/v1
 
 ### 5.1 Giao thức SSE
 
-Sự kiện stream được định nghĩa bằng **discriminated union** của TypeScript ([`types/rag.ts`](../frontend_rag/src/types/rag.ts)). Nhờ đó reducer phía FE xử lý đủ mọi loại sự kiện và TypeScript tự thu hẹp kiểu theo trường `type`:
+Sự kiện stream được định nghĩa bằng **discriminated union** của TypeScript ([`types/rag.ts`](../../frontend_rag/src/shared/types/rag.ts)). Nhờ đó reducer phía FE xử lý đủ mọi loại sự kiện và TypeScript tự thu hẹp kiểu theo trường `type`:
 
 ```ts
 export type RagStreamEvent =
@@ -321,7 +321,7 @@ Mọi lỗi trả về cùng một hình dạng và kèm `request_id` (cũng có
 
 ### 6.1 DTO & validation
 
-DTO là class TypeScript gắn decorator. `ValidationPipe` kiểm tra request **trước khi** vào controller; cùng bộ decorator đó cũng sinh tài liệu Swagger. Ví dụ [`ChatRequestDto`](../backend_rag/src/rag/dto/chat-request.dto.ts):
+DTO là class TypeScript gắn decorator. `ValidationPipe` kiểm tra request **trước khi** vào controller; cùng bộ decorator đó cũng sinh tài liệu Swagger. Ví dụ [`ChatRequestDto`](../../backend_rag/src/modules/rag/dto/chat-request.dto.ts):
 
 ```ts
 export class ChatRequestDto {
@@ -436,7 +436,7 @@ erDiagram
 | `chat_sessions` / `chat_messages` | TTL trên `deleted_at` (3 ngày) | Xóa mềm rồi Mongo tự xóa cứng |
 | `chat_messages` | `{session_id, deleted_at, created_at, _id}` | Lấy tin nhắn của một session theo thời gian |
 
-- **UUIDv7** cho session/message: sinh được ở cả client lẫn server, có thứ tự thời gian nên dùng tốt cho index và cursor. Frontend tự cài `uuidv7()` ([`utils/uuid.ts`](../frontend_rag/src/utils/uuid.ts)) khớp regex `UUID_RE` của backend.
+- **UUIDv7** cho session/message: sinh được ở cả client lẫn server, có thứ tự thời gian nên dùng tốt cho index và cursor. Frontend tự cài `uuidv7()` ([`utils/uuid.ts`](../../frontend_rag/src/shared/lib/uuid.ts)) khớp regex `UUID_RE` của backend.
 - **Ghi tuần tự khi không có transaction**: MongoDB standalone không hỗ trợ transaction. `saveExchange` phát hiện lỗi (code 20) một lần rồi chuyển sang ghi tin nhắn trước, cập nhật đếm sau. Nếu hỏng giữa chừng thì cùng lắm còn sót tin nhắn mồ côi, không bao giờ có `message_count` vượt số tin nhắn thật.
 
 ---
@@ -465,9 +465,9 @@ Thử nghiệm kiểm định độ bền liên tục (5-Minute Certified Endura
 | 2,000 VUs (soak 5 phút) | ~950,000 | ~3,150 req/s | 390.0 ms | 520.4 ms | 0.00 % | ⚠️ Trôi độ trễ ở phút thứ 5 (vượt SLA 500 ms) |
 | 2,500 VUs (1 phút) | 230,214 | 3,798.9 req/s | — | 599.1 ms | — | ❌ Vượt ngưỡng SLA độ trễ phản hồi |
 
-![Throughput bền vững 5 phút](../backend_rag/benchmark/results/qualification_5min_sustained_throughput.png)
+![Throughput bền vững 5 phút](../../backend_rag/benchmark/results/qualification_5min_sustained_throughput.png)
 
-![Timeline 5 phút liên tục](../backend_rag/benchmark/results/qualification_5min_continuous_timeline.png)
+![Timeline 5 phút liên tục](../../backend_rag/benchmark/results/qualification_5min_continuous_timeline.png)
 
 Ở mức **1,600 Concurrent Users (CU)**, hệ thống duy trì thông lượng ổn định xấp xỉ **3,959 req/s** với 100% request thành công trong suốt 300 giây. Khi tăng tải lên 2,000 và 2,500 users, độ trễ P95 tăng dần do hiện tượng CPU Event Loop bão hòa (~91%), xác định rõ ranh giới chịu tải tối đa của phần cứng máy trạm.
 
@@ -481,11 +481,11 @@ Thử nghiệm kiểm định độ bền liên tục (5-Minute Certified Endura
 | Ngưỡng hàng đợi | 8–9 VU (`LLM_MAX_QUEUE=8`); vượt mức này trả **429 trong ~200 ms** (fail-fast) |
 | Lỗi ngoài dự kiến | 0 |
 
-![Queue depth trade-off](../backend_rag/benchmark/results/queue_depth_comparison_tradeoff.png)
+![Queue depth trade-off](../../backend_rag/benchmark/results/queue_depth_comparison_tradeoff.png)
 
 **Thí nghiệm burst K=5**: gửi đồng loạt một loạt request vào hàng đợi. Các slot 7–9 nhận **HTTP 200** nhưng turnaround lên tới **79.2 s**, vượt SLA 60 s. Nguyên nhân là `LLM_TIMEOUT_MS` chỉ bắt đầu đếm **sau khi** request lấy được slot GPU: thời gian suy luận thực tế (~24.1 s) vẫn dưới timeout, nhưng thời gian chờ trong hàng đợi không được tính. Trên biểu đồ, các slot này được tô màu hổ phách `[200* SLA Breach]`.
 
-![Burst turnaround](../backend_rag/benchmark/results/empirical_k_fold_burst_turnaround.png)
+![Burst turnaround](../../backend_rag/benchmark/results/empirical_k_fold_burst_turnaround.png)
 
 ### 7.4 Đánh giá chất lượng RAG (Retrieval & Generation Quality)
 
@@ -627,7 +627,7 @@ Hệ thống đã hoàn thiện luồng RAG có trích dẫn với streaming SSE
 
 ### Phụ lục — Tài liệu tham chiếu trong repo
 
-- Hướng dẫn chạy: [`README.md`](../README.md), [`docs/RUN_GUIDE.md`](RUN_GUIDE.md)
-- Hợp đồng API: [`docs/API_DESIGN.md`](API_DESIGN.md)
-- Benchmark: [`backend_rag/benchmark/`](../backend_rag/benchmark/) (script k6, notebook, `results/benchmark_report.html`)
-- Nhật ký quyết định: [`docs/AI_chat_log/Vuong_chat_logs.md`](AI_chat_log/Vuong_chat_logs.md)
+- Hướng dẫn chạy: [`README.md`](../../README.md), [`docs/guides/RUN_GUIDE.md`](../guides/RUN_GUIDE.md)
+- Hợp đồng API: [`docs/api/API_DESIGN.md`](../api/API_DESIGN.md)
+- Benchmark: [`backend_rag/benchmark/`](../../backend_rag/benchmark) (script k6, notebook, `results/benchmark_report.html`)
+- Nhật ký quyết định: [`docs/AI_chat_log/Vuong_chat_logs.md`](../AI_chat_log/Vuong_chat_logs.md)

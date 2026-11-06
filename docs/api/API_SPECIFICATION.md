@@ -4,9 +4,9 @@
 - **Purpose**: Document all request schemas, query parameters, response structures, HTTP status codes, and Swagger UI routes for the backend service.
 - **Overview Pipeline**: Documented from the NestJS 11 `RagController`, `QueryDto`, `AdminController`, and OpenAPI decorators, aligned with interactive Swagger UI served at `/api/v1/docs`.
 - **Detailed Plan**: §1 Endpoint Inventory; §2 POST /api/v1/rag/chat; §3 GET /api/v1/health; §4 OpenAPI & Swagger UI Access; §5 Error Handling; §6 References.
-- **References**: `agents/rules/MD_CONVENTION.md`, `agents/rules/COMMIT_CONVENTION.md`, `docs/SCIENTIFIC_RAG_BACKEND.md`, `docs/prompt_security.md`, `backend_rag/src/rag/rag.controller.ts`, `backend_rag/src/admin/admin.controller.ts`.
+- **References**: `agents/rules/MD_CONVENTION.md`, `agents/rules/COMMIT_CONVENTION.md`, `docs/architecture/SCIENTIFIC_RAG_BACKEND.md`, `docs/prompts/prompt_security.md`, `backend_rag/src/modules/rag/rag.controller.ts`, `backend_rag/src/modules/admin/admin.controller.ts`.
 - **Created**: 2026-10-14T17:05:00+07:00
-- **Last Updated**: 2026-11-05T01:48:40+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 ---
 
@@ -66,7 +66,7 @@
 > All `/api/v1/admin/*` routes require a Bearer access token whose account holds the `admin` role.
 > The guard verifies the account's `is_active` and `token_version` on every request, so a disabled
 > account or a demoted admin loses access immediately, not at token expiry.
-> See [`docs/prompt_security.md`](prompt_security.md) for the full RBAC specification.
+> See [`docs/prompts/prompt_security.md`](../prompts/prompt_security.md) for the full RBAC specification.
 
 ---
 
@@ -137,7 +137,7 @@ Executes the full RAG pipeline: embedding generation, Qdrant nearest neighbor se
 
 Reports the live readiness of all system components including Qdrant, the local LLM, and GPU hardware acceleration.
 
-> In production the component details are masked (see [`docs/prompt_security.md`](prompt_security.md) § S1);
+> In production the component details are masked (see [`docs/prompts/prompt_security.md`](../prompts/prompt_security.md) § S1);
 > the full payload below is what development and staging return.
 
 ### Response Body (`application/json` - HTTP 200 OK)
@@ -171,7 +171,7 @@ When the backend server is running, the interactive documentation is accessible 
 - **OpenAPI 3.0 Schema**: `http://localhost:8000/api/v1/docs-json`
 
 > Swagger is **disabled in production** (`NODE_ENV=production`), so these routes only exist in
-> development and staging. See [`docs/prompt_security.md`](prompt_security.md) § S1.
+> development and staging. See [`docs/prompts/prompt_security.md`](../prompts/prompt_security.md) § S1.
 
 Features supported in the Swagger UI:
 - Interactive "Try it out" execution for `POST /api/v1/rag/chat` and `GET /api/v1/health`.
@@ -203,9 +203,9 @@ Standard HTTP status codes are returned:
 
 ## 6. References
 
-- [`backend_rag/src/rag/rag.controller.ts`](backend_rag/src/rag/rag.controller.ts)
-- [`backend_rag/src/rag/dto/query.dto.ts`](backend_rag/src/rag/dto/query.dto.ts)
-- [`backend_rag/src/admin/admin.controller.ts`](backend_rag/src/admin/admin.controller.ts)
-- [`backend_rag/src/admin/admin.dto.ts`](backend_rag/src/admin/admin.dto.ts)
-- [`docs/SCIENTIFIC_RAG_BACKEND.md`](docs/SCIENTIFIC_RAG_BACKEND.md)
-- [`docs/prompt_security.md`](docs/prompt_security.md)
+- [`backend_rag/src/modules/rag/rag.controller.ts`](../../backend_rag/src/modules/rag/rag.controller.ts)
+- [`backend_rag/src/modules/rag/dto/query.dto.ts`](backend_rag/src/modules/rag/dto/query.dto.ts)
+- [`backend_rag/src/modules/admin/admin.controller.ts`](../../backend_rag/src/modules/admin/admin.controller.ts)
+- [`backend_rag/src/modules/admin/dto/admin.dto.ts`](../../backend_rag/src/modules/admin/dto/admin.dto.ts)
+- [`docs/architecture/SCIENTIFIC_RAG_BACKEND.md`](../architecture/SCIENTIFIC_RAG_BACKEND.md)
+- [`docs/prompts/prompt_security.md`](../prompts/prompt_security.md)

@@ -4,9 +4,9 @@
 - **Purpose**: Chốt bộ design token, vật liệu kính, đặc tả component, quy tắc toán 3D (số phức/quaternion) và lộ trình Liquid Glass, dựa trên giá trị đang dùng để FE sửa ít nhất.
 - **Overview Pipeline**: Đo hiện trạng bằng grep trên `src/` → chọn bậc từ giá trị dùng nhiều nhất → gộp giá trị lạc thang về bậc gần nhất → kiểm cú pháp `@theme` với Tailwind 4.3.3 của dự án.
 - **Detailed Plan**: §0 Quy tắc vàng; §1 Kiến trúc token; §2 Màu; §3 Bo góc; §4 Vật liệu kính; §5 Chữ; §6 Khoảng cách/icon/lớp; §7 Chuyển động; §8 Component; §9 Toán Web3D; §10 Liquid Glass; §11 Kiểm soát; §12 Lộ trình; Phụ lục A code token; Phụ lục B bảng quy đổi.
-- **References**: [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md), [`frontend_rag/src/theme/tokens.ts`](../frontend_rag/src/theme/tokens.ts), [`frontend_rag/src/utils/rotation.ts`](../frontend_rag/src/utils/rotation.ts), Tailwind CSS 4.3, Apple Human Interface Guidelines (Liquid Glass).
+- **References**: [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md), [`FE3d_prompt_v2.md`](../prompts/FE3d_prompt_v2.md), [`prompt_fe_3d.md`](../prompts/prompt_fe_3d.md), [`frontend_rag/docs/trig-audit.md`](../../frontend_rag/docs/trig-audit.md), [`frontend_rag/src/shared/theme/tokens.ts`](../../frontend_rag/src/shared/theme/tokens.ts), [`frontend_rag/src/shared/lib/rotation.ts`](../../frontend_rag/src/shared/lib/rotation.ts), Tailwind CSS 4.3, Apple Human Interface Guidelines (Liquid Glass).
 - **Created**: 2026-10-29T22:46:54+07:00
-- **Last Updated**: 2026-10-30T15:20:00+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ACTIVE]
 
@@ -56,7 +56,7 @@
 ## 1. Kiến trúc token
 
 ```
-src/theme/tokens.ts ──(applyCssVars)──► :root CSS variables ──► CSS thuần (index.css) & class Tailwind
+src/shared/theme/tokens.ts ──(applyCssVars)──► :root CSS variables ──► CSS thuần (index.css) & class Tailwind
         │                                      ▲
         │                                      └── index.css :root   (giá trị fallback cho lần vẽ đầu)
         └──► three.js / shader (đọc trực tiếp ThemeTokens, bỏ alpha bằng opaqueHex)
@@ -66,7 +66,7 @@ index.css @theme ──► thang tĩnh: bo góc, blur, cỡ chữ, easing  →  
 
 | Loại token | Nơi khai báo | Lý do |
 | :-- | :-- | :-- |
-| **Màu** (gồm màu kính có alpha) | `src/theme/tokens.ts` (giữ như hiện tại) | Dùng chung với three.js; đổi theme lúc chạy |
+| **Màu** (gồm màu kính có alpha) | `src/shared/theme/tokens.ts` (giữ như hiện tại) | Dùng chung với three.js; đổi theme lúc chạy |
 | **Thang tĩnh** (bo góc, blur, chữ, easing, thời gian, bóng) | `@theme` trong `src/index.css` | Không đổi theo theme. Tailwind 4 sinh class và xuất CSS variable khi biến có được dùng (đã kiểm tra với Tailwind 4.3.3) |
 | **Liquid Glass** (khúc xạ, phản chiếu…) | `@theme` + `:root`, mặc định **tắt** | Bật theo cấp ở §10, không phải sửa component |
 
@@ -371,7 +371,7 @@ Animation lặp (`pulse`, `blink`, `shimmer`, `twinkle`, `grow`) giữ nhịp ri
 Gộp `.glass`, `.glass-strong` và `.liquid-*` thành **một** component, như vậy §10 chỉ phải sửa ở một chỗ:
 
 ```tsx
-// src/components/ui/Glass.tsx
+// src/shared/ui/Glass.tsx
 type GlassProps = {
   material?: 'regular' | 'strong' | 'clear'; // §4.1
   shape?: 'panel' | 'control' | 'chip';      // → radius lg | md | full
@@ -413,7 +413,7 @@ Lý do:
 - **Nội suy hướng đúng** bằng `slerp`.
 - **Sinh N điểm đều trên vòng tròn** chỉ cần 1 cặp `cos/sin` thay vì N cặp.
 
-Thư viện chuẩn đã có sẵn và đã có test: **`src/utils/rotation.ts`**.
+Thư viện chuẩn đã có sẵn và đã có test: **`src/shared/lib/rotation.ts`**.
 
 | Hàm | Ý nghĩa |
 | :-- | :-- |
@@ -530,7 +530,7 @@ Muốn bỏ một ngoại lệ, phải đo lại theo phương pháp ở `trig-a
 
 Góc Euler: hiện **không có** chỗ nào dùng `rotation.x|y|z` theo thời gian. Quy chuẩn này giữ cho điều đó tiếp tục đúng.
 
-**Trạng thái (P20, 2026-10-30):** mọi chỗ "Đổi" ở bảng trên đã chuyển sang rotor. Thêm 3 helper `ringRotors`, `powRotor`, `randomDirection` vào `rotation.ts`. Không chỗ nào chậm hơn (ống 2.96×, thân 1.57×, đĩa 1.65× nhanh hơn), sai lệch tối đa 1.4e-14. `npm run lint` chặn lượng giác không có chú thích. Chi tiết ở [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md) §7.
+**Trạng thái (P20, 2026-10-30):** mọi chỗ "Đổi" ở bảng trên đã chuyển sang rotor. Thêm 3 helper `ringRotors`, `powRotor`, `randomDirection` vào `rotation.ts`. Không chỗ nào chậm hơn (ống 2.96×, thân 1.57×, đĩa 1.65× nhanh hơn), sai lệch tối đa 1.4e-14. `npm run lint` chặn lượng giác không có chú thích. Chi tiết ở [`frontend_rag/docs/trig-audit.md`](../../frontend_rag/docs/trig-audit.md) §7.
 
 Các chỗ thuộc nhóm A chạy một lần lúc dựng cảnh, nên đổi sang rotor là để **code thống nhất**, không kỳ vọng tăng FPS. Đổi xong phải chạy lại `treeGeometry.test.ts` và chụp ảnh so sánh trước/sau.
 
@@ -648,7 +648,7 @@ Các chỗ thuộc nhóm A chạy một lần lúc dựng cảnh, nên đổi sa
 
 ### 11.1 Script kiểm tra (đề xuất `frontend_rag/scripts/check-design.cjs`, chạy trong `npm run lint` và CI)
 
-Báo lỗi khi file `.tsx` trong `src/components` (trừ `*.test.*` và `PerfHUD.tsx`) có:
+Báo lỗi khi file `.tsx` trong `src/` (trừ `*.test.*` và `PerfHUD.tsx`) có:
 
 | Mẫu bị cấm | Regex gợi ý |
 | :-- | :-- |
@@ -674,8 +674,8 @@ Trong `index.css`: ngoài khối `:root`/`@theme`, không có `border-radius`, `
 
 ### 11.3 Quy tắc thêm vào "Hướng dẫn dành cho AI" trong `prompt_fe_3d.md`
 
-> 9. **Trước mọi prompt giao diện, đọc `docs/FE_DESIGN_SYSTEM.md` và `src/theme/tokens.ts`.** Chỉ dùng token đã có. Không tạo CSS variable, màu, bo góc, blur hay cỡ chữ mới. Nếu thật sự cần token mới, dừng lại và ghi vào `ASSUMPTIONS.md` để người duyệt quyết định.
-> 10. **3D: phép quay dùng `src/utils/rotation.ts`** (số phức/quaternion). `Math.sin/cos` chỉ được dùng trong các ngoại lệ ở §9.4, kèm comment `// trig-ok: <lý do>`.
+> 9. **Trước mọi prompt giao diện, đọc `docs/design/FE_DESIGN_SYSTEM.md` và `src/shared/theme/tokens.ts`.** Chỉ dùng token đã có. Không tạo CSS variable, màu, bo góc, blur hay cỡ chữ mới. Nếu thật sự cần token mới, dừng lại và ghi vào `ASSUMPTIONS.md` để người duyệt quyết định.
+> 10. **3D: phép quay dùng `src/shared/lib/rotation.ts`** (số phức/quaternion). `Math.sin/cos` chỉ được dùng trong các ngoại lệ ở §9.4, kèm comment `// trig-ok: <lý do>`.
 > 11. Cuối mỗi prompt giao diện: chạy script kiểm tra thiết kế và đính kèm ảnh chụp trước/sau.
 
 ---
@@ -698,12 +698,12 @@ Mỗi bước là một PR riêng, đều nhỏ và dễ hoàn tác.
 
 ## Phụ lục A — Code token
 
-### A.1 `src/theme/tokens.ts` (thêm vào `ThemeTokens` và `darkTheme`)
+### A.1 `src/shared/theme/tokens.ts` (thêm vào `ThemeTokens` và `darkTheme`)
 
 ```ts
   /** Faint ink: placeholders, timestamps, disabled — never body text (~3:1). */
   uiInkFaint: string;
-  /** Glass material (see docs/FE_DESIGN_SYSTEM.md §4). */
+  /** Glass material (see docs/design/FE_DESIGN_SYSTEM.md §4). */
   glassTint: string;
   glassFill: string;
   glassFillHover: string;
@@ -725,7 +725,7 @@ Mỗi bước là một PR riêng, đều nhỏ và dễ hoàn tác.
   glassStrokeStrong: '#ffffff38', // 0.22
 ```
 
-### A.2 `src/theme/applyCssVars.ts` (thêm vào `CSS_VARS`)
+### A.2 `src/shared/theme/applyCssVars.ts` (thêm vào `CSS_VARS`)
 
 ```ts
   ['--ink-faint', 'uiInkFaint'],

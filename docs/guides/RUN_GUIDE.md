@@ -102,4 +102,4 @@ Chấm **Route** đỏ trên thanh trạng thái là bình thường: pipeline c
 
 - MongoDB trên máy chủ là **standalone** (không replica set). Backend tự chuyển sang ghi tuần tự khi lưu lịch sử chat (log `MONGO_NO_TRANSACTIONS` một lần), không cần cấu hình gì thêm.
 - Lịch sử chat chỉ được lưu khi request có JWT. Frontend chưa có màn đăng nhập nên hiện chat ẩn danh; thử luồng có JWT qua Swagger.
-- Hợp đồng API: [`API_DESIGN.md`](API_DESIGN.md). Chi tiết backend: [`../backend_rag/README.md`](../backend_rag/README.md).
+- Hợp đồng API: [`API_DESIGN.md`](../api/API_DESIGN.md). Chi tiết backend: [`../backend_rag/README.md`](../../backend_rag/README.md).

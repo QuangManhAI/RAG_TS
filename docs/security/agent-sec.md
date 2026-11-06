@@ -4,9 +4,9 @@
 - **Purpose**: Ghi lại các lỗi đã tìm thấy, cách sửa, bằng chứng kiểm tra và những việc chủ dự án còn phải làm.
 - **Overview Pipeline**: Cài skill `cloudflare/security-audit-skill` → review có trọng tâm do một agent thực hiện → sửa code và cấu hình → kiểm tra bằng test và chạy BE thật.
 - **Detailed Plan**: §1 Kết luận và danh sách lỗi theo mức độ; §2 Việc phải làm; §3 Phạm vi; §4 Chi tiết từng lỗi; §5 Kiểm tra; §6 Không thấy lỗi; §7 Chưa kiểm tra và giới hạn.
-- **References**: [AGENTS.md](AGENTS.md), [docs/prompt_security.md](docs/prompt_security.md), [docs/AI_chat_log/Vuong_chat_logs.md](docs/AI_chat_log/Vuong_chat_logs.md) (D-054 đến D-057), [backend_rag/docker-compose.yml](backend_rag/docker-compose.yml), [.claude/skills/security-audit/SKILL.md](.claude/skills/security-audit/SKILL.md).
+- **References**: [AGENTS.md](../../AGENTS.md), [docs/prompts/prompt_security.md](../prompts/prompt_security.md), [docs/AI_chat_log/Vuong_chat_logs.md](../AI_chat_log/Vuong_chat_logs.md) (D-054 đến D-057), [backend_rag/docker-compose.yml](../../backend_rag/docker-compose.yml), [.claude/skills/security-audit/SKILL.md](../../.claude/skills/security-audit/SKILL.md).
 - **Created**: 2026-11-05T02:11:58+07:00
-- **Last Updated**: 2026-11-05T02:14:05+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: IN_PROGRESS]
 
@@ -92,7 +92,7 @@ Số mục khớp với số thứ tự ở bảng §1.
 - **Lỗi:** mật khẩu của `app_user` nằm trong lịch sử GitHub public (3 commit ở `RAG_TS`, 2 commit ở `backend_rag`). Tài khoản này có quyền `readWriteAnyDatabase` trên `mongo_service`, là instance chứa `rag_ts_corpus`.
 - **Hậu quả nếu mật khẩu còn dùng được:** kẻ tấn công vào được cổng 27017 có thể đọc và ghi mọi db, kể cả source of truth. Khi đó mức độ là **Critical**.
 - **Chưa kiểm tra:** agent không thử đăng nhập bằng mật khẩu này. Hãy coi như nó vẫn dùng được.
-- **Đã làm:** thay bằng placeholder trong `README.md`, `docs/RUN_GUIDE.md` và `docs/prompt_security.md`.
+- **Đã làm:** thay bằng placeholder trong `README.md`, `docs/guides/RUN_GUIDE.md` và `docs/prompts/prompt_security.md`.
 - **Còn mở:** đổi mật khẩu theo §2.1. Lịch sử git không được viết lại.
 - **Hai sự cố trong quá trình review:**
   - Báo cáo review đầu tiên sai khi xem mật khẩu này chỉ còn trong lịch sử git. Thực tế lúc đó nó vẫn nằm trong file hiện tại.
@@ -100,7 +100,7 @@ Số mục khớp với số thứ tự ở bảng §1.
 
 ### 4.3 Medium: API key Qdrant bị lộ trên repo public
 
-- **Lỗi:** key read-only đang dùng từng nằm trong `README.md` và `docs/RUN_GUIDE.md`, có trên `origin/main` từ 2026-10-20. Qdrant mở `0.0.0.0:6333`.
+- **Lỗi:** key read-only đang dùng từng nằm trong `README.md` và `docs/guides/RUN_GUIDE.md`, có trên `origin/main` từ 2026-10-20. Qdrant mở `0.0.0.0:6333`.
 - **Hậu quả:** key chỉ đọc được vector và metadata, không ghi được.
 - **Đã làm:** thay bằng placeholder trong file hiện tại.
 - **Còn mở:** đổi key theo §2.2, vì key vẫn còn trong lịch sử git.

@@ -1,8 +1,8 @@
 # FE3d_prompt_v2.md — Danh mục Prompt Nâng cấp Design System, Toán 3D & Liquid Glass cho Frontend "Cây Tri Thức Vector"
 
-- **Motivation/Background**: Sau giai đoạn P1–P14 ([`prompt_fe_3d.md`](prompt_fe_3d.md)) và khoảng 20 commit prompt rời rạc không có spec, giao diện `frontend_rag` bị lệch chuẩn. Số đo trong [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md): 8 mức bo góc, 5 mức blur, 11 mức độ trong, khoảng 14 cỡ chữ, 4 CSS variable không tồn tại, 2 hệ kính song song. Thầy nhận xét cần một quy chuẩn chung. Quy chuẩn đó đã được chốt trong [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md).
+- **Motivation/Background**: Sau giai đoạn P1–P14 ([`prompt_fe_3d.md`](prompt_fe_3d.md)) và khoảng 20 commit prompt rời rạc không có spec, giao diện `frontend_rag` bị lệch chuẩn. Số đo trong [`FE_DESIGN_AUDIT.md`](../design/FE_DESIGN_AUDIT.md): 8 mức bo góc, 5 mức blur, 11 mức độ trong, khoảng 14 cỡ chữ, 4 CSS variable không tồn tại, 2 hệ kính song song. Thầy nhận xét cần một quy chuẩn chung. Quy chuẩn đó đã được chốt trong [`FE_DESIGN_SYSTEM.md`](../design/FE_DESIGN_SYSTEM.md).
 - **Purpose**: Biến quy chuẩn thiết kế thành chuỗi prompt tuần tự P15–P23 có đặc tả, pseudocode, ràng buộc và kiểm chứng, để AI coding agent nâng cấp mạnh FE mà không phá hành vi, hiệu năng hay 6 bất biến hiện có.
-- **Overview Pipeline**: Rà soát hiện trạng ([`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md)) → Chốt quy chuẩn ([`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md)) → Phân rã theo phương pháp Lesson 2 (Yêu cầu → Đặc tả → Pseudocode → Prompt có cấu trúc → Kiểm chứng → Quyết định), cùng khuôn với [`prompt_fe_3d.md`](prompt_fe_3d.md).
+- **Overview Pipeline**: Rà soát hiện trạng ([`FE_DESIGN_AUDIT.md`](../design/FE_DESIGN_AUDIT.md)) → Chốt quy chuẩn ([`FE_DESIGN_SYSTEM.md`](../design/FE_DESIGN_SYSTEM.md)) → Phân rã theo phương pháp Lesson 2 (Yêu cầu → Đặc tả → Pseudocode → Prompt có cấu trúc → Kiểm chứng → Quyết định), cùng khuôn với [`prompt_fe_3d.md`](prompt_fe_3d.md).
 - **Detailed Plan**:
   - §Hướng dẫn dành cho AI: luật thực thi.
   - §1 Mục tiêu & chỉ số đo được.
@@ -21,15 +21,15 @@
   - Phụ lục A: Quyết định cần người duyệt.
   - Phụ lục B: Lệnh kiểm chứng.
   - Bảng Checklist.
-- **References**: [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md), [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`lesson_2.md`](lesson_2.md), [`frontend_rag/AGENTS.md`](../frontend_rag/AGENTS.md), [`frontend_rag/docs/trig-audit.md`](../frontend_rag/docs/trig-audit.md), [`frontend_rag/docs/perf-report.md`](../frontend_rag/docs/perf-report.md), [`agents/rules/MD_CONVENTION.md`](../agents/rules/MD_CONVENTION.md), [`agents/rules/COMMIT_CONVENTION.md`](../agents/rules/COMMIT_CONVENTION.md), [`agents/template/DECISION_LOG_TEMPLATE.md`](../agents/template/DECISION_LOG_TEMPLATE.md), Tailwind CSS 4.3, React 19, React Three Fiber 9, three.js 0.186, Playwright, Vitest.
+- **References**: [`FE_DESIGN_SYSTEM.md`](../design/FE_DESIGN_SYSTEM.md), [`FE_DESIGN_AUDIT.md`](../design/FE_DESIGN_AUDIT.md), [`prompt_fe_3d.md`](prompt_fe_3d.md), [`lesson_2.md`](../research/lesson_2.md), [`frontend_rag/AGENTS.md`](../../frontend_rag/AGENTS.md), [`frontend_rag/docs/trig-audit.md`](../../frontend_rag/docs/trig-audit.md), [`frontend_rag/docs/perf-report.md`](../../frontend_rag/docs/perf-report.md), [`agents/rules/MD_CONVENTION.md`](../../agents/rules/MD_CONVENTION.md), [`agents/rules/COMMIT_CONVENTION.md`](../../agents/rules/COMMIT_CONVENTION.md), [`agents/template/DECISION_LOG_TEMPLATE.md`](../../agents/template/DECISION_LOG_TEMPLATE.md), Tailwind CSS 4.3, React 19, React Three Fiber 9, three.js 0.186, Playwright, Vitest.
 - **Created**: 2026-10-29T23:05:00+07:00
-- **Last Updated**: 2026-10-30T10:55:00+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ACTIVE]
 
 ---
 
-Tài liệu này theo đúng nguyên tắc và cấu trúc của [`lesson_2.md`](lesson_2.md) và [`prompt_fe_3d.md`](prompt_fe_3d.md):
+Tài liệu này theo đúng nguyên tắc và cấu trúc của [`lesson_2.md`](../research/lesson_2.md) và [`prompt_fe_3d.md`](prompt_fe_3d.md):
 
 - **Phân rã chức năng (Decomposition):** mỗi prompt là một thay đổi độc lập, đơn nhiệm, hoàn tác được (một PR/commit).
 - **Quy trình chuẩn:** `Yêu cầu ➔ Đặc tả (Input/Output/Edge case) ➔ Pseudocode (Hợp đồng) ➔ Prompt có cấu trúc ➔ Kiểm chứng (Test, Ảnh, Hiệu năng) ➔ Quyết định`.
@@ -46,11 +46,11 @@ Tài liệu này theo đúng nguyên tắc và cấu trúc của [`lesson_2.md`]
 
 Bạn (AI coding agent) làm việc trong `frontend_rag/`. Tuân thủ tuyệt đối:
 
-1. **Làm tuần tự P15 → P22.** P23 là tuỳ chọn và chỉ làm khi người duyệt đồng ý (Phụ lục A). Không nhảy bước. Mỗi prompt là **một commit riêng** theo [`COMMIT_CONVENTION.md`](../agents/rules/COMMIT_CONVENTION.md), để hoàn tác được từng bước.
+1. **Làm tuần tự P15 → P22.** P23 là tuỳ chọn và chỉ làm khi người duyệt đồng ý (Phụ lục A). Không nhảy bước. Mỗi prompt là **một commit riêng** theo [`COMMIT_CONVENTION.md`](../../agents/rules/COMMIT_CONVENTION.md), để hoàn tác được từng bước.
 2. **Sau mỗi prompt, chạy toàn bộ mục "Kiểm chứng".** Chỉ sang prompt tiếp theo khi đạt. Không đạt thì sửa rồi chạy lại. Đã sửa 3 lần vẫn không đạt thì **dừng lại và báo người duyệt**, không ép cho qua.
-3. **Nguồn chân lý duy nhất cho mọi giá trị thiết kế là [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md)** (Mục 3 bên dưới). Không tự đặt màu, bo góc, blur, alpha, cỡ chữ, thời gian hay CSS variable mới. Thiếu thông tin hoặc hai tài liệu mâu thuẫn thì **DỪNG**, ghi vào `ASSUMPTIONS.md` dạng `[P<số>] <giả định> — <lý do>` và hỏi người. **Không đoán.**
+3. **Nguồn chân lý duy nhất cho mọi giá trị thiết kế là [`FE_DESIGN_SYSTEM.md`](../design/FE_DESIGN_SYSTEM.md)** (Mục 3 bên dưới). Không tự đặt màu, bo góc, blur, alpha, cỡ chữ, thời gian hay CSS variable mới. Thiếu thông tin hoặc hai tài liệu mâu thuẫn thì **DỪNG**, ghi vào `ASSUMPTIONS.md` dạng `[P<số>] <giả định> — <lý do>` và hỏi người. **Không đoán.**
 4. **Giữ nguyên hành vi.** Không sửa logic store, API, SSE, Dexie hay cảnh 3D ngoài phạm vi của prompt. Toàn bộ unit test hiện có (202+) và 6 test E2E (`e2e/knowledge-tree.spec.ts`) phải tiếp tục pass.
-5. **Tôn trọng 6 bất biến trong [`frontend_rag/AGENTS.md`](../frontend_rag/AGENTS.md) §2:**
+5. **Tôn trọng 6 bất biến trong [`frontend_rag/AGENTS.md`](../../frontend_rag/AGENTS.md) §2:**
    - ranh giới R3F (không có DOM trong `<Canvas>`);
    - stream Markdown qua buffer 30ms + `useDeferredValue`;
    - Offline-First Dexie;
@@ -58,14 +58,14 @@ Bạn (AI coding agent) làm việc trong `frontend_rag/`. Tuân thủ tuyệt �
    - Core Web Vitals (KaTeX CSS không nằm trong `index.css`);
    - chuỗi tiếng Việt dạng Unicode NFC.
 6. **Mọi prompt có thay đổi hiển thị** phải chạy so sánh ảnh với baseline tạo ở P15 (`npm run test:visual`). Chênh lệch phải nằm trong ngưỡng ghi ở prompt đó. Baseline chỉ được cập nhật (`--update-snapshots`) **sau khi người duyệt xem ảnh diff**. Ghi lại điều này vào báo cáo chuyển đổi.
-7. **Mọi prompt chạm vào cảnh 3D hoặc `backdrop-filter`** phải đo `npm run test:perf` trước và sau, cùng máy, cùng kịch bản, theo phương pháp trong [`trig-audit.md`](../frontend_rag/docs/trig-audit.md) §1.
+7. **Mọi prompt chạm vào cảnh 3D hoặc `backdrop-filter`** phải đo `npm run test:perf` trước và sau, cùng máy, cùng kịch bản, theo phương pháp trong [`trig-audit.md`](../../frontend_rag/docs/trig-audit.md) §1.
 8. **Cuối mỗi prompt**, làm đủ các việc sau:
    - Cập nhật `PROGRESS.md` (bảng như các mục P12–P14 cũ).
    - Ghi giả định vào `ASSUMPTIONS.md`.
    - Thêm một dòng vào `frontend_rag/docs/design-migration-report.md` (tạo ở P15).
-   - Quyết định quan trọng (chấp nhận/hoàn tác một thay đổi, cập nhật baseline) ghi thành `D-0xx` trong [`Vuong_chat_logs.md`](AI_chat_log/Vuong_chat_logs.md) theo [`DECISION_LOG_TEMPLATE.md`](../agents/template/DECISION_LOG_TEMPLATE.md).
+   - Quyết định quan trọng (chấp nhận/hoàn tác một thay đổi, cập nhật baseline) ghi thành `D-0xx` trong [`Vuong_chat_logs.md`](../AI_chat_log/Vuong_chat_logs.md) theo [`DECISION_LOG_TEMPLATE.md`](../../agents/template/DECISION_LOG_TEMPLATE.md).
 9. Không dùng `any`. Không dùng `dangerouslySetInnerHTML`. Không có giá trị thô trong component (Quy tắc vàng §0 của Design System).
-10. Mọi file `.md` tạo mới hoặc sửa phải theo [`MD_CONVENTION.md`](../agents/rules/MD_CONVENTION.md): header 7 trường, `Last Updated` theo ISO 8601 `+07:00`, đường dẫn là link.
+10. Mọi file `.md` tạo mới hoặc sửa phải theo [`MD_CONVENTION.md`](../../agents/rules/MD_CONVENTION.md): header 7 trường, `Last Updated` theo ISO 8601 `+07:00`, đường dẫn là link.
 
 ---
 
@@ -89,12 +89,12 @@ Bạn (AI coding agent) làm việc trong `frontend_rag/`. Tuân thủ tuyệt �
 ## 2. Baseline
 
 - **Commit xuất phát:** `frontend_rag@6d54674` (con trỏ submodule trong `RAG_TS@36ed7cc`).
-- **Hiện trạng chi tiết:** [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md) §3–§4.
+- **Hiện trạng chi tiết:** [`FE_DESIGN_AUDIT.md`](../design/FE_DESIGN_AUDIT.md) §3–§4.
 - **Hạ tầng sẵn có:**
   - Vitest (`npm test`);
   - Playwright (`playwright.config.ts`, cổng 5198, mock, Chromium + Metal);
   - `npm run test:perf` (`scripts/perf-chat-benchmark.cjs`);
-  - `npm run bench` (`src/utils/*.bench.ts`);
+  - `npm run bench` (`src/shared/lib/*.bench.ts`);
   - `?vectors=N`, `?nofx`, `?perf`.
 - **ESLint hiện không có rule nào** (`eslint.config.mjs` chỉ khai báo `globalIgnores`). Vì vậy việc kiểm tra thiết kế ở P15 dùng script Node riêng, không dựa vào ESLint.
 
@@ -102,7 +102,7 @@ Bạn (AI coding agent) làm việc trong `frontend_rag/`. Tuân thủ tuyệt �
 
 ## 3. Hợp đồng thiết kế — NGUỒN CHÂN LÝ DUY NHẤT
 
-**Mọi giá trị nằm trong [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md).** Bảng dưới chỉ dẫn mục cần đọc cho từng prompt. Nếu tóm tắt ở đây lệch với Design System thì **Design System thắng**.
+**Mọi giá trị nằm trong [`FE_DESIGN_SYSTEM.md`](../design/FE_DESIGN_SYSTEM.md).** Bảng dưới chỉ dẫn mục cần đọc cho từng prompt. Nếu tóm tắt ở đây lệch với Design System thì **Design System thắng**.
 
 | Prompt | Mục cần đọc trong Design System |
 | :-- | :-- |
@@ -125,7 +125,7 @@ Bạn (AI coding agent) làm việc trong `frontend_rag/`. Tuân thủ tuyệt �
 | Vật liệu kính | Regular (`--glass-tint` α 0.24) · Strong (`--ui-surface-strong`) · Clear (`--glass-fill` α 0.04, không blur khi nằm trong kính) |
 | Chữ | `micro` 10 · `caption` 11 · `xs` 12 · `control` 13 · `sm` 14 · `base` 16 · `display` 22 |
 | Chuyển động | `press` 120 · `hover` 160 · `enter` 240 · `reveal` 480 · `scene` 1500 ms; `ease-standard`, `ease-spring`, `ease-scene` |
-| Toán 3D | Quay bằng `src/utils/rotation.ts`; `sin/cos` chỉ dùng trong `makeRotor` hoặc ngoại lệ §9.4 |
+| Toán 3D | Quay bằng `src/shared/lib/rotation.ts`; `sin/cos` chỉ dùng trong `makeRotor` hoặc ngoại lệ §9.4 |
 
 ---
 
@@ -162,7 +162,7 @@ flowchart LR
 
 ### 15.1 Đặc tả (Specification)
 
-- **Input:** code tại `frontend_rag@6d54674`; [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md) §0 và §11.
+- **Input:** code tại `frontend_rag@6d54674`; [`FE_DESIGN_SYSTEM.md`](../design/FE_DESIGN_SYSTEM.md) §0 và §11.
 - **Output:**
   1. Bộ test ảnh `e2e/visual.spec.ts`, chụp 8 trạng thái giao diện làm baseline.
   2. Script `scripts/check-design.cjs` với 2 chế độ: `--report` (đếm, thoát 0) và `--strict` (thoát 1 nếu có vi phạm).
@@ -171,7 +171,7 @@ flowchart LR
 - **Ràng buộc:**
   - **Không sửa bất kỳ dòng nào trong `src/`.** Ngoại lệ duy nhất: thêm `data-testid` nếu cần để chụp ảnh (ghi ASSUMPTIONS).
   - Ảnh chụp phải **ổn định**: chạy 2 lần liên tiếp cho kết quả giống hệt. Canvas WebGL không xác định từng pixel nên **được che (mask)** trong ảnh UI. 3D được kiểm tra riêng ở P20.
-  - Kết quả của script phải khớp số liệu trong [`FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md) (sai lệch phải giải thích được).
+  - Kết quả của script phải khớp số liệu trong [`FE_DESIGN_AUDIT.md`](../design/FE_DESIGN_AUDIT.md) (sai lệch phải giải thích được).
 
 ### 15.2 Pseudocode (Hợp đồng xử lý)
 
@@ -194,10 +194,10 @@ for shot in SHOTS:
 THRESHOLD = env VISUAL_THRESHOLD ?? 0          # mỗi prompt đặt ngưỡng riêng khi chạy
 
 # scripts/check-design.cjs
-KNOWN_VARS = tên trong src/theme/applyCssVars.ts (mẫu "['--x'")
+KNOWN_VARS = tên trong src/shared/theme/applyCssVars.ts (mẫu "['--x'")
            ∪ khai báo "--x:" trong src/index.css (:root và @theme)
            ∪ /^--cat-\d+$/ ∪ /^--tw-/ ∪ biến cục bộ khai báo trong cùng rule CSS (vd --stem, --lift, --glow, --intro-delay)
-EXEMPT_FILES = [**/*.test.*, src/components/world/overlay/PerfHUD.tsx]
+EXEMPT_FILES = [**/*.test.*, src/features/world/scene/overlay/PerfHUD.tsx]
 RULES (file .tsx trong src/components):
   raw-color      : /#[0-9a-fA-F]{3,8}\b/ hoặc /rgba?\(/
   tw-palette     : /\b(bg|text|border|ring|from|to)-(white|black|(red|amber|gray|slate|neutral|zinc|indigo|green|emerald|yellow|blue|sky|cyan|rose|orange)-\d{2,3})/
@@ -220,7 +220,7 @@ exit 1 nếu --strict và có vi phạm thuộc các rule được bật cho bư
 
 ```markdown
 ### Ngữ cảnh:
-`frontend_rag` (Vite 6 + React 19 + TypeScript 5 + Tailwind 4.3 + R3F 9). Playwright đã cấu hình trong `playwright.config.ts` (cổng 5198, VITE_USE_MOCK=true). E2E hiện có ở `e2e/knowledge-tree.spec.ts` (helper `openWorld`, `ask`, `askAndFinish`). Script Node đặt ở `scripts/*.cjs`. Quy chuẩn ở `../docs/FE_DESIGN_SYSTEM.md`.
+`frontend_rag` (Vite 6 + React 19 + TypeScript 5 + Tailwind 4.3 + R3F 9). Playwright đã cấu hình trong `playwright.config.ts` (cổng 5198, VITE_USE_MOCK=true). E2E hiện có ở `e2e/knowledge-tree.spec.ts` (helper `openWorld`, `ask`, `askAndFinish`). Script Node đặt ở `scripts/*.cjs`. Quy chuẩn ở `../docs/design/FE_DESIGN_SYSTEM.md`.
 
 ### Nhiệm vụ:
 1. Tạo `e2e/visual.spec.ts` đúng pseudocode 15.2. Dùng lại helper của `knowledge-tree.spec.ts` (tách ra `e2e/helpers.ts` nếu cần, không đổi hành vi test cũ).
@@ -233,7 +233,7 @@ exit 1 nếu --strict và có vi phạm thuộc các rule được bật cho bư
 5. Đo baseline hiệu năng bằng `npm run test:perf` (150k vector, overview) và ghi vào báo cáo.
 6. Quản trị tài liệu:
    a. `../docs/INDEX.md` §4: thêm 3 dòng ACTIVE cho FE_DESIGN_SYSTEM.md, FE_DESIGN_AUDIT.md, FE3d_prompt_v2.md; §5: thêm prompt_fe_3d.md là ARCHIVED (ghi chú: phần UI được thay bằng FE_DESIGN_SYSTEM.md).
-   b. `AGENTS.md` của frontend: thêm bất biến 7 "Design tokens — đọc FE_DESIGN_SYSTEM.md trước mọi thay đổi UI; chạy check:design" và bất biến 8 "Phép quay dùng src/utils/rotation.ts; sin/cos chỉ trong ngoại lệ có // trig-ok:"; thêm `npm run check:design` và `npm run test:visual` vào mục Verification Commands; xoá khối `<!-- BEGIN:nextjs-agent-rules --> … <!-- END -->` (dự án không dùng Next.js).
+   b. `AGENTS.md` của frontend: thêm bất biến 7 "Design tokens — đọc FE_DESIGN_SYSTEM.md trước mọi thay đổi UI; chạy check:design" và bất biến 8 "Phép quay dùng src/shared/lib/rotation.ts; sin/cos chỉ trong ngoại lệ có // trig-ok:"; thêm `npm run check:design` và `npm run test:visual` vào mục Verification Commands; xoá khối `<!-- BEGIN:nextjs-agent-rules --> … <!-- END -->` (dự án không dùng Next.js).
    c. `../AGENTS.md` (gốc): thêm một dòng vào bảng định tuyến: "UI tokens, glass, Liquid Glass, rotation math" → FE_DESIGN_SYSTEM.md.
    d. `PROGRESS.md`: bổ sung mục tóm tắt giai đoạn 2026-10-20 → 2026-10-28 (theo `git log`), rồi mục P15.
 
@@ -270,7 +270,7 @@ exit 1 nếu --strict và có vi phạm thuộc các rule được bật cho bư
 
 ### 16.1 Đặc tả (Specification)
 
-- **Input:** [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md) §1, §2.2, Phụ lục A.1–A.3.
+- **Input:** [`FE_DESIGN_SYSTEM.md`](../design/FE_DESIGN_SYSTEM.md) §1, §2.2, Phụ lục A.1–A.3.
 - **Output:** token mới trong `tokens.ts`, `applyCssVars.ts`, `index.css`; hàm thuần `contrastRatio`; test.
 - **Ràng buộc:**
   - **Không đổi một pixel nào** (`VISUAL_THRESHOLD=0`). Vì vậy prompt này **chưa**:
@@ -278,12 +278,12 @@ exit 1 nếu --strict và có vi phạm thuộc các rule được bật cho bư
     - đổi `uiBorder`;
     - sửa component nào.
   - Chỉ **thêm** các tên mới, không trùng tên Tailwind đang được dùng: `text-micro`, `text-caption`, `text-control`, `text-display`, `ease-standard`, `ease-spring`, `ease-scene`, `--dur-*`, `--glass-*`, `--lg-*`, `--ink-faint`, `--shadow-panel`, `--glow-accent`.
-  - Màu kính có alpha ở dạng `#rrggbbaa`, giống quy ước hiện có ([`ASSUMPTIONS.md`](../frontend_rag/ASSUMPTIONS.md) `[P1]`).
+  - Màu kính có alpha ở dạng `#rrggbbaa`, giống quy ước hiện có ([`ASSUMPTIONS.md`](../../frontend_rag/ASSUMPTIONS.md) `[P1]`).
 
 ### 16.2 Pseudocode (Hợp đồng xử lý)
 
 ```
-# src/theme/contrast.ts — hàm thuần, WCAG 2.x
+# src/shared/theme/contrast.ts — hàm thuần, WCAG 2.x
 function srgbToLinear(c):            # c ∈ [0,1]
     return c ≤ 0.04045 ? c/12.92 : ((c+0.055)/1.055)^2.4
 function luminance(hex "#rrggbb"):
@@ -300,7 +300,7 @@ function contrastRatio(fg, bg):
 
 ```markdown
 ### Ngữ cảnh:
-Theme hiện tại: `src/theme/tokens.ts` (interface ThemeTokens, darkTheme), `src/theme/applyCssVars.ts` (bảng CSS_VARS), `src/index.css` (:root fallback + @theme font). Tailwind 4.3: biến trong @theme sinh class (vd `--text-caption` → `text-caption`) và được xuất ra :root khi có dùng. Đã kiểm tra: `--radius-*: initial` xoá thang mặc định — CHƯA làm ở prompt này.
+Theme hiện tại: `src/shared/theme/tokens.ts` (interface ThemeTokens, darkTheme), `src/shared/theme/applyCssVars.ts` (bảng CSS_VARS), `src/index.css` (:root fallback + @theme font). Tailwind 4.3: biến trong @theme sinh class (vd `--text-caption` → `text-caption`) và được xuất ra :root khi có dùng. Đã kiểm tra: `--radius-*: initial` xoá thang mặc định — CHƯA làm ở prompt này.
 
 ### Nhiệm vụ:
 1. `tokens.ts`: thêm `uiInkFaint`, `glassTint`, `glassFill`, `glassFillHover`, `glassHighlight`, `glassHighlightStrong`, `glassLowlight`, `glassStrokeStrong` (giá trị đúng Phụ lục A.1, mỗi key có comment một dòng). KHÔNG đổi `uiBorder`.
@@ -308,8 +308,8 @@ Theme hiện tại: `src/theme/tokens.ts` (interface ThemeTokens, darkTheme), `s
 3. `index.css`:
    - :root thêm fallback màu mới, alias semantic (`--glass-stroke`, `--glass-saturate`, `--glass-edge`, `--glass-edge-strong`, `--shadow-panel`, `--glow-accent`), `--dur-*` và `--lg-*` (giá trị Cấp 1) theo Phụ lục A.3;
    - @theme thêm `--text-micro|caption|control|display` (+ line-height) và `--ease-standard|spring|scene`.
-4. Tạo `src/theme/contrast.ts` theo pseudocode 16.2 và `src/theme/contrast.test.ts`.
-5. Mở rộng `src/theme/tokens.test.ts`.
+4. Tạo `src/shared/theme/contrast.ts` theo pseudocode 16.2 và `src/shared/theme/contrast.test.ts`.
+5. Mở rộng `src/shared/theme/tokens.test.ts`.
 
 ### Ràng buộc:
 1. Không sửa component, không sửa class CSS đang có.
@@ -333,7 +333,7 @@ Theme hiện tại: `src/theme/tokens.ts` (interface ThemeTokens, darkTheme), `s
 
 ### 16.4 Quy trình kiểm chứng
 
-- [ ] `npm run typecheck` 0 lỗi; `npm test -- --run src/theme` pass.
+- [ ] `npm run typecheck` 0 lỗi; `npm test -- --run src/shared/theme` pass.
 - [ ] `npm run test:visual` (ngưỡng 0) pass.
 - [ ] `document.documentElement.style.getPropertyValue('--glass-tint')` trên trang = `#0c0a183d`.
 - [ ] Build: class `text-caption`, `ease-standard` có trong CSS output khi được dùng (tạm thêm vào một file test hoặc kiểm tra bằng `@tailwindcss/node` như ở Design System Phụ lục A).
@@ -382,7 +382,7 @@ for each violation in check-design --json (rule ∈ {unknown-var, var-fallback, 
 
 ```markdown
 ### Ngữ cảnh:
-Sau P16 đã có token `--ink-faint`, `--glass-*`. Vi phạm hiện tập trung ở `src/components/chat/HistoryDrawer.tsx`, `src/components/chat/ChatPanel.tsx` và `.glass` trong `src/index.css`. `PerfHUD.tsx` được miễn (công cụ dev).
+Sau P16 đã có token `--ink-faint`, `--glass-*`. Vi phạm hiện tập trung ở `src/features/chat/components/HistoryDrawer.tsx`, `src/features/chat/components/ChatPanel.tsx` và `.glass` trong `src/index.css`. `PerfHUD.tsx` được miễn (công cụ dev).
 
 ### Nhiệm vụ:
 1. Thay biến không tồn tại và bỏ fallback theo MAP_VAR.
@@ -460,13 +460,13 @@ Sau P17 màu đã sạch. Còn giá trị thô ở bo góc, blur, alpha, cỡ ch
 
 ### Nhiệm vụ:
 1. Quy đổi theo pseudocode 18.2, đúng thứ tự 1 → 5.
-2. Export `CHAT_SLIDE_S` từ `CameraDirector.tsx` (hoặc chuyển vào `src/utils/animationConfig.ts`), viết test `src/theme/motionSync.test.ts` đọc `src/index.css` bằng `fs` và khẳng định `--dur-scene` = CHAT_SLIDE_S × 1000 ms.
-3. Viết `src/theme/scale.test.ts`: đọc `index.css`, khẳng định @theme có đúng 5 bậc radius, 3 bậc blur, 4 cỡ chữ tuỳ biến, và không còn giá trị thô ngoài :root/@theme (gọi lại logic của check-design hoặc regex tương đương).
+2. Export `CHAT_SLIDE_S` từ `CameraDirector.tsx` (hoặc chuyển vào `src/features/world/lib/animationConfig.ts`), viết test `src/shared/theme/motionSync.test.ts` đọc `src/index.css` bằng `fs` và khẳng định `--dur-scene` = CHAT_SLIDE_S × 1000 ms.
+3. Viết `src/shared/theme/scale.test.ts`: đọc `index.css`, khẳng định @theme có đúng 5 bậc radius, 3 bậc blur, 4 cỡ chữ tuỳ biến, và không còn giá trị thô ngoài :root/@theme (gọi lại logic của check-design hoặc regex tương đương).
 
 ### Ràng buộc:
 1. Không đổi bố cục (vị trí, kích thước khung) — chỉ đổi giá trị trên thang.
 2. Không đổi hành vi animation ngoài thời lượng/easing đã quy đổi; `prefers-reduced-motion` và `data-reduce-motion` vẫn hoạt động.
-3. Không đụng `src/components/world/**` trừ nhãn DOM overlay dùng class CSS.
+3. Không đụng `src/features/world/scene/**` trừ nhãn DOM overlay dùng class CSS.
 4. Giá trị không có trong Phụ lục B → DỪNG, ghi ASSUMPTIONS, hỏi.
 
 ### Ví dụ:
@@ -498,7 +498,7 @@ Sau P17 màu đã sạch. Còn giá trị thô ở bo góc, blur, alpha, cỡ ch
 
 - **Input:** Design System §4.1, §8.3, §10.4, Phụ lục A.4.
 - **Output:**
-  - `src/components/ui/Glass.tsx` và CSS `.glass` viết lại theo cấu trúc `::before` (nền/khúc xạ) / `::after` (specular);
+  - `src/shared/ui/Glass.tsx` và CSS `.glass` viết lại theo cấu trúc `::before` (nền/khúc xạ) / `::after` (specular);
   - mọi bề mặt kính chuyển sang `Glass`;
   - `.liquid-*` bị xoá;
   - kính lồng nhau không còn `backdrop-filter`.
@@ -544,7 +544,7 @@ Danh sách chuyển (đọc lại bằng grep "glass\|liquid-" trước khi làm
 Sau P18 mọi giá trị đã trên thang. Hai hệ kính còn song song: `.glass`/`.glass-strong` và `.liquid-*` (src/index.css). Design System §10.4 cố định cấu trúc lớp để Liquid Glass Cấp 2–4 chỉ cần đổi token hoặc thêm filter.
 
 ### Nhiệm vụ:
-1. Tạo `src/components/ui/Glass.tsx` (props như §8.3, forwardRef, `as` đa hình có type đúng) và `src/components/ui/Glass.test.tsx`.
+1. Tạo `src/shared/ui/Glass.tsx` (props như §8.3, forwardRef, `as` đa hình có type đúng) và `src/shared/ui/Glass.test.tsx`.
 2. Viết lại `.glass` theo Phụ lục A.4 + các selector `data-*` ở 19.2.
 3. Chuyển toàn bộ danh sách 19.2 sang `<Glass …>`; xoá CSS `.liquid-*`.
 4. Thêm vào `e2e/visual.spec.ts` một test đếm phần tử đang hiển thị có `backdrop-filter` ≠ none ở trạng thái 03-answer-done; ghi số trước/sau vào báo cáo.
@@ -581,7 +581,7 @@ Sau P18 mọi giá trị đã trên thang. Hai hệ kính còn song song: `.glas
 
 ### 20.1 Đặc tả (Specification)
 
-- **Input:** Design System §9 (đặc biệt §9.5 "Hiện trạng các chỗ gọi lượng giác"); [`trig-audit.md`](../frontend_rag/docs/trig-audit.md); `src/utils/rotation.ts` (đã có test).
+- **Input:** Design System §9 (đặc biệt §9.5 "Hiện trạng các chỗ gọi lượng giác"); [`trig-audit.md`](../../frontend_rag/docs/trig-audit.md); `src/shared/lib/rotation.ts` (đã có test).
 - **Output:**
   - Các chỗ đánh dấu **"Đổi"** ở §9.5 dùng rotor/quaternion.
   - Ngoại lệ có comment `// trig-ok: <lý do>`.
@@ -631,13 +631,13 @@ FOCUS_ROTOR = makeRotor(35°);  PITCH_ROTOR = makeRotor(30°)   # module scope
 
 ```markdown
 ### Ngữ cảnh:
-`src/utils/rotation.ts` có `makeRotor`, `rotateComplex`, `mulRotor`, `stepRotation` (renorm mỗi 64 bước), `makeFixedStepper`, `advanceStepper`, `slerpQuat` + test. `docs/trig-audit.md` đã đo: thay sin bằng rotor cho dao động (QueryFlight, GroundGrid) không lợi → giữ. Bảng các chỗ cần đổi ở FE_DESIGN_SYSTEM.md §9.5.
+`src/shared/lib/rotation.ts` có `makeRotor`, `rotateComplex`, `mulRotor`, `stepRotation` (renorm mỗi 64 bước), `makeFixedStepper`, `advanceStepper`, `slerpQuat` + test. `docs/trig-audit.md` đã đo: thay sin bằng rotor cho dao động (QueryFlight, GroundGrid) không lợi → giữ. Bảng các chỗ cần đổi ở FE_DESIGN_SYSTEM.md §9.5.
 
 ### Nhiệm vụ:
 1. Đổi các chỗ "Đổi" ở §9.5 theo pseudocode 20.2, ưu tiên: FeedCables.tsx (runtime) → feedCables.ts → cameraPresets.ts → treeGeometry.ts → Fireflies.tsx → mockWorld.ts.
-2. Thêm `randomInDisk` vào `src/utils/rotation.ts` (hoặc `src/utils/sampling.ts`) + test.
+2. Thêm `randomInDisk` vào `src/shared/lib/rotation.ts` (hoặc `src/shared/lib/sampling.ts`) + test.
 3. Gắn `// trig-ok: <lý do ngắn + tham chiếu trig-audit>` cho mọi ngoại lệ §9.4 còn lại.
-4. Thêm case vào `src/utils/trig.bench.ts`: vòng 16/32/64 điểm (cos/sin vs rotor), lấy mẫu đĩa (polar vs rejection) ×1000.
+4. Thêm case vào `src/test/trig.bench.ts`: vòng 16/32/64 điểm (cos/sin vs rotor), lấy mẫu đĩa (polar vs rejection) ×1000.
 5. Đo frame time theo trig-audit §1 (600 frame, 150k, overview, 3–5 lần, median) trước/sau.
 6. Thêm mục §7 "Chuyển sang rotor (P20)" vào `docs/trig-audit.md` với bảng số đo; bật `trig-in-frame` trong `check:design:strict`.
 
@@ -662,7 +662,7 @@ FOCUS_ROTOR = makeRotor(35°);  PITCH_ROTOR = makeRotor(30°)   # module scope
 
 ### 20.4 Quy trình kiểm chứng
 
-- [ ] `npm test -- --run src/utils` pass (oracle + thống kê + rotation cũ).
+- [ ] `npm test -- --run src/shared/lib` pass (oracle + thống kê + rotation cũ).
 - [ ] `npm run bench`: không chỗ B/C nào chậm hơn; nhóm A trong ngưỡng.
 - [ ] Frame time median ±3% so với P19.
 - [ ] `grep -rnE "Math\.(sin|cos)\(" src --include=*.ts --include=*.tsx | grep -v "trig-ok\|test\|bench\|rotation.ts"` rỗng.
@@ -692,7 +692,7 @@ FOCUS_ROTOR = makeRotor(35°);  PITCH_ROTOR = makeRotor(30°)   # module scope
 type LgLevel = 0 | 1 | 2 | 3 | 4
 type GlassSetting = "auto" | "off" | "frosted" | "liquid"      # off=0, frosted=1, liquid=max hỗ trợ
 
-function detectLevel(env, setting): LgLevel          # hàm thuần, src/theme/liquidGlass.ts
+function detectLevel(env, setting): LgLevel          # hàm thuần, src/shared/theme/liquidGlass.ts
     if setting == "off" or env.reducedTransparency: return 0
     if setting == "frosted": return 1
     max = env.chromium ? 3 : 2                       # Cấp 4 chỉ khi P23 bật
@@ -721,11 +721,11 @@ hook useLiquidLight():                               # gắn một lần ở App
 
 ```markdown
 ### Ngữ cảnh:
-Sau P19 mọi bề mặt kính là `<Glass>` với `::after` specular vô hình (`--lg-specular: 0`). `uiStore.settings` có `quality`, `reduceMotion` và được lưu qua `src/utils/storage.ts`. AdaptiveQuality có tier 0–3.
+Sau P19 mọi bề mặt kính là `<Glass>` với `::after` specular vô hình (`--lg-specular: 0`). `uiStore.settings` có `quality`, `reduceMotion` và được lưu qua `src/shared/lib/storage.ts`. AdaptiveQuality có tier 0–3.
 
 ### Nhiệm vụ:
-1. `src/theme/liquidGlass.ts`: `detectLevel`, `lightFromPointer`, `nlerp`, `readEnv()` (matchMedia `prefers-reduced-transparency`, `prefers-contrast: more`; phát hiện Chromium qua `navigator.userAgentData?.brands`, có fallback) + `liquidGlass.test.ts`.
-2. `src/theme/useLiquidLight.ts` theo pseudocode; gắn trong AppShell.
+1. `src/shared/theme/liquidGlass.ts`: `detectLevel`, `lightFromPointer`, `nlerp`, `readEnv()` (matchMedia `prefers-reduced-transparency`, `prefers-contrast: more`; phát hiện Chromium qua `navigator.userAgentData?.brands`, có fallback) + `liquidGlass.test.ts`.
+2. `src/shared/theme/useLiquidLight.ts` theo pseudocode; gắn trong AppShell.
 3. `uiStore.settings.glass: GlassSetting` (mặc định `"auto"`, migrate an toàn khi localStorage cũ không có key); SettingsPanel thêm nhóm "Hiệu ứng kính": Tự động / Đục / Mờ / Liquid.
 4. Ghi `data-lg-level` lên `<html>` khi level đổi; CSS:
    - `[data-lg-level="0"] .glass::before` → nền `--ui-surface-strong`, `backdrop-filter: none`.
@@ -783,7 +783,7 @@ Sau P19 mọi bề mặt kính là `<Glass>` với `::after` specular vô hình 
 ### 22.2 Pseudocode (Hợp đồng xử lý)
 
 ```
-# src/theme/refractionMap.ts — hàm thuần, trả Uint8ClampedArray RGBA (w × h)
+# src/shared/theme/refractionMap.ts — hàm thuần, trả Uint8ClampedArray RGBA (w × h)
 function sdRoundRect(px, py, hw, hh, r):              # tâm ở (0,0); <0 bên trong
     qx = |px| − (hw − r);  qy = |py| − (hh − r)
     return hypot(max(qx,0), max(qy,0)) + min(max(qx,qy), 0) − r
@@ -827,8 +827,8 @@ CSS: [data-lg-level="3"] .glass[data-refract="chat"]::before {
 Sau P21: `detectLevel` trả 3 trên Chromium; `.glass::before` giữ backdrop-filter; token `--lg-refraction`, `--lg-bezel`, `--lg-chroma` đang = 0. Cột Chat là `<Glass>` trong `AppShell.tsx` (rộng 32vw, 340–520px, cao toàn màn).
 
 ### Nhiệm vụ:
-1. `src/theme/refractionMap.ts` (sdRoundRect, normalRoundRect, buildRefractionMap, toDataURL qua OffscreenCanvas hoặc canvas 2D) + `refractionMap.test.ts`.
-2. `src/components/ui/LiquidFilters.tsx`: render filter theo pseudocode; đọc `--lg-refraction|bezel|chroma` và `--radius-lg` bằng getComputedStyle một lần khi mount và khi level đổi; ResizeObserver trên phần tử `[data-refract="chat"]`.
+1. `src/shared/theme/refractionMap.ts` (sdRoundRect, normalRoundRect, buildRefractionMap, toDataURL qua OffscreenCanvas hoặc canvas 2D) + `refractionMap.test.ts`.
+2. `src/shared/ui/LiquidFilters.tsx`: render filter theo pseudocode; đọc `--lg-refraction|bezel|chroma` và `--radius-lg` bằng getComputedStyle một lần khi mount và khi level đổi; ResizeObserver trên phần tử `[data-refract="chat"]`.
 3. Gắn `data-refract="chat"` vào `<Glass>` của cột Chat; mount `<LiquidFilters/>` ngoài `<Canvas>` trong AppShell.
 4. CSS Cấp 3: `[data-lg-level="3"] { --lg-refraction: 18px; --lg-bezel: var(--radius-lg); --lg-chroma: 0.5px; }` (giá trị đề xuất từ §10.3 — nếu người duyệt muốn khác, đổi tại đây).
 5. Đo hiệu năng Cấp 1 / 2 / 3 (cùng kịch bản) và ghi bảng vào báo cáo; nếu Cấp 3 vượt ngân sách → `detectLevel` chỉ trả 3 khi setting = "liquid" (không phải "auto").
@@ -897,10 +897,10 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 
 ```markdown
 ### Ngữ cảnh:
-`src/components/world/PostFX.tsx` dùng `@react-three/postprocessing` (bloom). Bất biến draw call/fill-rate ở frontend_rag/AGENTS.md §2.4. SDF bo góc đã có trong `src/theme/refractionMap.ts` (P22).
+`src/features/world/scene/PostFX.tsx` dùng `@react-three/postprocessing` (bloom). Bất biến draw call/fill-rate ở frontend_rag/AGENTS.md §2.4. SDF bo góc đã có trong `src/shared/theme/refractionMap.ts` (P22).
 
 ### Nhiệm vụ:
-1. `src/components/world/fx/LiquidGlassEffect.ts` (class Effect của `postprocessing`) + wrapper R3F; thêm vào PostFX sau bloom khi level = 4.
+1. `src/features/world/scene/fx/LiquidGlassEffect.ts` (class Effect của `postprocessing`) + wrapper R3F; thêm vào PostFX sau bloom khi level = 4.
 2. Store nhỏ (hoặc mở rộng uiStore) giữ rect cột Chat (pixel thiết bị, đã nhân dpr), cập nhật từ ResizeObserver ngoài Canvas.
 3. `detectLevel`: trả 4 khi setting = "liquid", có WebGL2, tier ≤ 1, và người duyệt đã bật cờ `VITE_LG_WEBGL=true`.
 4. Đo Cấp 3 vs Cấp 4 (Chromium) và Cấp 2 vs Cấp 4 (Safari).

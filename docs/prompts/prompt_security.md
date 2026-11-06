@@ -1,12 +1,12 @@
 # prompt_security.md — Security Hardening & RBAC (admin/user) Scaffolding Prompts
 
-- **Motivation/Background**: `backend_rag` đã có nền tảng xác thực vững (`Argon2id 64 MB`, JWT access 15 phút, refresh token xoay vòng 1-RTT có phát hiện tái sử dụng, khoá tiến trình 5 lần/15 phút), nhưng khả năng phân quyền mới chỉ là "vỏ": `RolesGuard` + `@Roles('admin')` tồn tại trong `src/auth/guards/roles.guard.ts` nhưng **chưa được dùng ở bất kỳ route production nào**, `users.roles` luôn là `['user']` khi đăng ký, và không tồn tại bất kỳ API quản trị nào. Song song đó, điều tra bảo mật phát hiện các lỗ hổng cụ thể: user enumeration qua timing attack (`argon2.verify` bị bỏ qua khi email không tồn tại), credential MongoDB plaintext nằm trong `README.md` và `benchmark/seed_prod_auth_data.js`, không có rate limit trên `POST /auth/register`, `trust proxy` chưa bật nên `@Ip()` trả IP proxy khiến mọi người dùng dùng chung một bucket lockout, Swagger bật cả ở production, và `/rag/chat` công khai có thể chiếm hết hàng đợi LLM (concurrency 1, queue 8).
+- **Motivation/Background**: `backend_rag` đã có nền tảng xác thực vững (`Argon2id 64 MB`, JWT access 15 phút, refresh token xoay vòng 1-RTT có phát hiện tái sử dụng, khoá tiến trình 5 lần/15 phút), nhưng khả năng phân quyền mới chỉ là "vỏ": `RolesGuard` + `@Roles('admin')` tồn tại trong `src/modules/auth/guards/roles.guard.ts` nhưng **chưa được dùng ở bất kỳ route production nào**, `users.roles` luôn là `['user']` khi đăng ký, và không tồn tại bất kỳ API quản trị nào. Song song đó, điều tra bảo mật phát hiện các lỗ hổng cụ thể: user enumeration qua timing attack (`argon2.verify` bị bỏ qua khi email không tồn tại), credential MongoDB plaintext nằm trong `README.md` và `benchmark/seed_prod_auth_data.js`, không có rate limit trên `POST /auth/register`, `trust proxy` chưa bật nên `@Ip()` trả IP proxy khiến mọi người dùng dùng chung một bucket lockout, Swagger bật cả ở production, và `/rag/chat` công khai có thể chiếm hết hàng đợi LLM (concurrency 1, queue 8).
 - **Purpose**: Đặc tả chuẩn, tuần tự và có thể kiểm chứng cho toàn bộ công trình **Security Hardening + RBAC hai vai trò `admin` / `user`** của `backend_rag`, gồm: hạ tầng bảo mật cơ sở, vòng đời tài khoản, làm cứng token, `AdminModule` với audit log bất biến, bộ API quản trị, CLI bootstrap admin đầu tiên và ma trận kiểm thử.
 - **Overview Pipeline**: `Yêu cầu ➔ Đặc tả (Input/Output/Edge case) ➔ Pseudocode (Hợp đồng) ➔ Prompt có cấu trúc ➔ Kiểm chứng (Test, Verification)` — cùng nguyên tắc phân rã của [`prompt_backend.md`](prompt_backend.md) và [`prompt_fe_3d.md`](prompt_fe_3d.md), áp dụng cho miền bảo mật.
 - **Detailed Plan**: §1 Kiến trúc tổng thể & luồng bảo mật 3 lớp; §2 Bản đồ chức năng S1–S8; §3 Quyền Admin (nhóm A–E) và quy tắc tự bảo vệ; §4 PROMPT S1 Security Baseline; §5 PROMPT S2 User Schema & Account Lifecycle; §6 PROMPT S3 Token Hardening; §7 PROMPT S4 AdminModule Core & Audit Log; §8 PROMPT S5 Admin — Quản lý danh tính; §9 PROMPT S6 Admin — Nội dung & Vận hành; §10 PROMPT S7 Admin Bootstrap CLI; §11 PROMPT S8 Test Matrix & Doc Sync; §12 Phụ lục A đồng bộ FE & Golden Invariants; §13 Phụ lục B bảng quyền đầy đủ; §14 Checklist Quyết Định & Dò Vết; §15 Báo cáo triển khai (Implementation Report).
-- **References**: [../AGENTS.md](../AGENTS.md), [../docs/INDEX.md](INDEX.md), [../backend_rag/AGENTS.md](../backend_rag/AGENTS.md), [../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md](../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md), [../backend_rag/docs/MONGODB_SCHEMA_DESIGN.md](../backend_rag/docs/MONGODB_SCHEMA_DESIGN.md), [../backend_rag/docs/PERFORMANCE_AND_CACHING.md](../backend_rag/docs/PERFORMANCE_AND_CACHING.md), [../docs/API_DESIGN.md](API_DESIGN.md), [../agents/rules/MD_CONVENTION.md](../agents/rules/MD_CONVENTION.md), [../agents/rules/COMMIT_CONVENTION.md](../agents/rules/COMMIT_CONVENTION.md), [../docs/AI_chat_log/Vuong_chat_logs.md](AI_chat_log/Vuong_chat_logs.md), [prompt_backend.md](prompt_backend.md).
+- **References**: [../AGENTS.md](../../AGENTS.md), [../docs/INDEX.md](../INDEX.md), [../backend_rag/AGENTS.md](../../backend_rag/AGENTS.md), [../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md](../../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md), [../backend_rag/docs/MONGODB_SCHEMA_DESIGN.md](../../backend_rag/docs/MONGODB_SCHEMA_DESIGN.md), [../backend_rag/docs/PERFORMANCE_AND_CACHING.md](../../backend_rag/docs/PERFORMANCE_AND_CACHING.md), [../docs/api/API_DESIGN.md](../api/API_DESIGN.md), [../agents/rules/MD_CONVENTION.md](../../agents/rules/MD_CONVENTION.md), [../agents/rules/COMMIT_CONVENTION.md](../../agents/rules/COMMIT_CONVENTION.md), [../docs/AI_chat_log/Vuong_chat_logs.md](../AI_chat_log/Vuong_chat_logs.md), [prompt_backend.md](prompt_backend.md).
 - **Created**: 2026-11-02T10:05:00+07:00
-- **Last Updated**: 2026-11-05T01:48:40+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ACTIVE]
 
@@ -14,7 +14,7 @@
 > **Toàn bộ PROMPT S1–S8 đã được triển khai** (2026-11-02). Xem [§ Báo cáo triển khai](#-báo-cáo-triển-khai-implementation-report) ở cuối file để đối chiếu đặc tả với mã nguồn thật.
 > File này giữ vai trò **đặc tả gốc (source of truth)** cho công trình bảo mật: khi sửa mã nguồn, cập nhật mục tương ứng trong file này và `backend_rag/ASSUMPTIONS.md` + `backend_rag/PROGRESS.md`.
 
-> **Route names superseded (D-047):** the plan below keeps the route names it was written with. The current routes are in [API_DESIGN.md](API_DESIGN.md): §2 for `/auth/*` and `/users/*`, §9 for `/admin/*` (`disable`/`enable` ➔ `PUT .../status`, `revoke-tokens` ➔ `DELETE .../tokens`, `/admin/sessions` ➔ `/admin/chat-sessions`).
+> **Route names superseded (D-047):** the plan below keeps the route names it was written with. The current routes are in [API_DESIGN.md](../api/API_DESIGN.md): §2 for `/auth/*` and `/users/*`, §9 for `/admin/*` (`disable`/`enable` ➔ `PUT .../status`, `revoke-tokens` ➔ `DELETE .../tokens`, `/admin/sessions` ➔ `/admin/chat-sessions`).
 
 ---
 
@@ -25,10 +25,10 @@
 3. **Mọi giả định** ghi vào `backend_rag/ASSUMPTIONS.md` dạng `[S<số>] <giả định> — <lý do>`. Không bịa route, field, status code ngoài §3 của file này.
 4. **Cập nhật `backend_rag/PROGRESS.md`** sau mỗi prompt: module xong, test pass, vấn đề tồn tại.
 5. **Không gọi dịch vụ thật trong unit test.** Mongo dùng `mongodb-memory-server`; Qdrant, model embedding và LLM được mock qua interface.
-6. **Không dùng `any`.** Mọi DTO có decorator `class-validator`. Mọi lỗi trả về đúng định dạng §1.2 của [`API_DESIGN.md`](API_DESIGN.md).
+6. **Không dùng `any`.** Mọi DTO có decorator `class-validator`. Mọi lỗi trả về đúng định dạng §1.2 của [`API_DESIGN.md`](../api/API_DESIGN.md).
 7. **Không log** password, token, nội dung câu hỏi, hay nội dung chat của user (chỉ log `query_len`, `message_count`, `session_id`).
 8. **RAG_TS chỉ ĐỌC Qdrant.** Không ghi, không tạo collection. Admin cũng **không** có quyền này.
-9. **Không phá vỡ 7 Golden Invariant** của [`../AGENTS.md`](../AGENTS.md) §3 — đặc biệt Invariant 2 (không N+1 query MongoDB qua Cloudflare tunnel), Invariant 3 (không nới lỏng `Argon2id`), Invariant 5 (UUIDv7 + soft-delete + ownership trả `404`).
+9. **Không phá vỡ 7 Golden Invariant** của [`../AGENTS.md`](../../AGENTS.md) §3 — đặc biệt Invariant 2 (không N+1 query MongoDB qua Cloudflare tunnel), Invariant 3 (không nới lỏng `Argon2id`), Invariant 5 (UUIDv7 + soft-delete + ownership trả `404`).
 10. **Mọi route admin bắt buộc qua 3 lớp**: `JwtAuthGuard` → `RolesGuard` → scope trong service. Guard không bao giờ đủ.
 
 ---
@@ -256,18 +256,18 @@ login(dto, ip):
 NestJS 11, TypeScript 5.7 strict, Node 22+. Thêm 2 dependency: `helmet` 8.3.0 và `@nestjs/throttler` 6.7.1
 (`npm i helmet@^8.3.0 @nestjs/throttler@^6.7.1`). App đang chạy sau reverse proxy của nhóm; MongoDB đi qua
 Cloudflare TCP tunnel nên mọi query phải song song (`Promise.all`), không tuần tự.
-Hợp đồng chung ở `docs/API_DESIGN.md` §1; hạ tầng hiện tại ở `backend_rag/src/app.setup.ts`,
-`backend_rag/src/config/env.schema.ts`, `backend_rag/src/auth/auth.service.ts`.
+Hợp đồng chung ở `docs/api/API_DESIGN.md` §1; hạ tầng hiện tại ở `backend_rag/src/app.setup.ts`,
+`backend_rag/src/config/env.schema.ts`, `backend_rag/src/modules/auth/auth.service.ts`.
 
 ### Nhiệm vụ:
 1. `backend_rag/src/app.setup.ts`: thêm `helmet` + `app.set('trust proxy', ...)`, tắt Swagger ở production.
 2. `backend_rag/src/config/env.schema.ts`: thêm `superRefine` chặn secret placeholder / secret trùng nhau /
    MONGO_URI không có credential ở production.
-3. `backend_rag/src/common/throttler.ts`: `ThrottlerModule.forRoot` + helper decorator `@Throttle({...})`; gắn
+3. `backend_rag/src/common/security/throttler.ts`: `ThrottlerModule.forRoot` + helper decorator `@Throttle({...})`; gắn
    limit cho register / login / refresh / change-password / rag chat.
-4. `backend_rag/src/auth/auth.service.ts`: sinh `DUMMY_HASH` lúc module init và luôn chạy `argon2.verify`
+4. `backend_rag/src/modules/auth/auth.service.ts`: sinh `DUMMY_HASH` lúc module init và luôn chạy `argon2.verify`
    khi email không tồn tại (chống user enumeration qua timing).
-5. `backend_rag/src/health/health.controller.ts`: ở production `/health` chỉ trả `{ status }`, `/health/ready`
+5. `backend_rag/src/modules/health/health.controller.ts`: ở production `/health` chỉ trả `{ status }`, `/health/ready`
    không kèm chi tiết component.
 6. `README.md` + `backend_rag/benchmark/seed_prod_auth_data.js`: bỏ mật khẩu MongoDB plaintext, dùng env.
 
@@ -290,7 +290,7 @@ Hợp đồng chung ở `docs/API_DESIGN.md` §1; hạ tầng hiện tại ở `
 
 ### Output mong muốn:
 1. Các file trên.
-2. Unit test (`src/config/env.schema.spec.ts` mở rộng + `src/common/security.spec.ts`): env production với secret
+2. Unit test (`src/config/env.schema.spec.ts` mở rộng + `src/common/security/security.spec.ts`): env production với secret
    placeholder bị reject; secret trùng bị reject; `helmet` trả đúng header (`x-content-type-options`,
    `x-frame-options`, `referrer-policy`); Swagger route không tồn tại ở production.
 3. Cập nhật `backend_rag/ASSUMPTIONS.md` (`[S1]…`) và `.env.example`.
@@ -298,7 +298,7 @@ Hợp đồng chung ở `docs/API_DESIGN.md` §1; hạ tầng hiện tại ở `
 
 ### S1.4 Quy trình kiểm chứng
 
-- [ ] `npm run build` sạch; `npx jest src/config/env.schema.spec.ts src/common/security.spec.ts --runInBand` pass.
+- [ ] `npm run build` sạch; `npx jest src/config/env.schema.spec.ts src/common/security/security.spec.ts --runInBand` pass.
 - [ ] `npm test` không regression (146 test cũ vẫn xanh).
 - [ ] `curl -i http://localhost:3000/api/v1/health` có header `x-content-type-options: nosniff`, `x-frame-options: DENY`, `referrer-policy: no-referrer`.
 - [ ] `NODE_ENV=production npm run start:prod` ⇒ `curl http://localhost:3000/api/v1/docs` trả 404.
@@ -324,8 +324,8 @@ Hợp đồng chung ở `docs/API_DESIGN.md` §1; hạ tầng hiện tại ở `
     | `disabled_reason` | `string \| null` | `null` | lý do khoá (tối đa 200 ký tự) |
     | `token_version` | `number` | `0` | tăng mỗi lần đổi quyền / khoá / thu hồi token |
     | `last_login_at` | `Date \| null` | `null` | lần đăng nhập thành công gần nhất |
-  - `roles` mặc định `['user']`; giá trị hợp lệ chỉ `'user' | 'admin'` (`Role` type hiện có ở `src/types/auth-user.ts`).
-  - **Password policy** (áp dụng cho `register` và `change-password`): tối thiểu **10** ký tự, tối đa 200; **không chứa** chuỗi email (case-insensitive, bỏ ký tự `.`/`-`/`_`); **không nằm trong** top-1000 mật khẩu phổ biến (danh sách rút gọn 200 mục nhúng sẵn trong `src/auth/common-passwords.ts`). Sai ⇒ `400` với message `password too short` / `password too common` / `password contains email`.
+  - `roles` mặc định `['user']`; giá trị hợp lệ chỉ `'user' | 'admin'` (`Role` type hiện có ở `src/shared/types/auth-user.ts`).
+  - **Password policy** (áp dụng cho `register` và `change-password`): tối thiểu **10** ký tự, tối đa 200; **không chứa** chuỗi email (case-insensitive, bỏ ký tự `.`/`-`/`_`); **không nằm trong** top-1000 mật khẩu phổ biến (danh sách rút gọn 200 mục nhúng sẵn trong `src/modules/auth/common-passwords.ts`). Sai ⇒ `400` với message `password too short` / `password too common` / `password contains email`.
   - `display_name` 1–60 ký tự (giữ nguyên).
   - **Index**: `users.email` unique (đã có), thêm `users.roles` + `users.is_active` phục vụ truy vấn admin A1.
   - `toUserDto()` **không** được trả `is_active` / `disabled_at` / `token_version` cho client tự nhiên — chỉ `AdminUserDto` (S5) mới có các field này.
@@ -382,15 +382,15 @@ enableUser(actorId, targetId):
 
 ```markdown
 ### Ngữ cảnh:
-NestJS 11, @nestjs/mongoose 11, mongoose 8. Schema hiện tại: `backend_rag/src/auth/schemas/user.schema.ts`.
+NestJS 11, @nestjs/mongoose 11, mongoose 8. Schema hiện tại: `backend_rag/src/modules/auth/schemas/user.schema.ts`.
 `Role` type ở `backend_rag/src/types/auth-user.ts`. Mật khẩu băm bằng `argon2` với
 `{ type: argon2id, memoryCost: 65536, timeCost: 3, parallelism: 4 }` — KHÔNG đổi.
-Quy ước DTO: `backend_rag/src/auth/dto/auth.dto.ts`.
+Quy ước DTO: `backend_rag/src/modules/auth/dto/auth.dto.ts`.
 
 ### Nhiệm vụ:
 1. Mở rộng `UserSchema` với `is_active`, `disabled_at`, `disabled_by`, `disabled_reason`, `token_version`,
    `last_login_at`; thêm index `{ roles: 1, is_active: 1 }`.
-2. Tạo `backend_rag/src/auth/common-passwords.ts`: tập `Set<string>` 200 mật khẩu phổ biến + hàm
+2. Tạo `backend_rag/src/modules/auth/common-passwords.ts`: tập `Set<string>` 200 mật khẩu phổ biến + hàm
    `validatePassword(password, email): void` ném `BadRequestException` với message đúng ở S2.1.
 3. Áp `validatePassword` vào `RegisterDto` ( qua service `register()`) và `ChangePasswordDto` (qua
    `changePassword()`); message lỗi theo đặc tả.
@@ -417,15 +417,15 @@ Quy ước DTO: `backend_rag/src/auth/dto/auth.dto.ts`.
 
 ### Output mong muốn:
 1. Các file trên.
-2. Unit test `src/auth/password-policy.spec.ts`: 6 trường hợp ở "Ví dụ" + mật khẩu hợp lệ.
-3. Integration test trong `src/auth/auth.spec.ts`: register trả `roles: ['user']` và KHÔNG có `is_active` trong body;
+2. Unit test `src/modules/auth/password-policy.spec.ts`: 6 trường hợp ở "Ví dụ" + mật khẩu hợp lệ.
+3. Integration test trong `src/modules/auth/auth.spec.ts`: register trả `roles: ['user']` và KHÔNG có `is_active` trong body;
    login cập nhật `last_login_at`; khoá user ⇒ `POST /auth/refresh` trả 401.
 4. Cập nhật `backend_rag/ASSUMPTIONS.md` (`[S2]…`).
 ```
 
 ### S2.4 Quy trình kiểm chứng
 
-- [ ] `npm run build` sạch; `npx jest src/auth --runInBand` pass.
+- [ ] `npm run build` sạch; `npx jest src/modules/auth --runInBand` pass.
 - [ ] `npm test` không regression.
 - [ ] Mongo: `db.users.findOne({}, {email:1, is_active:1, token_version:1})` — user cũ có `is_active` lấy giá trị mặc định `true` khi đọc qua Mongoose.
 - [ ] `POST /api/v1/auth/register` với `password: "123456"` ⇒ 400 `password too common`.
@@ -491,14 +491,14 @@ revokeAllForUser(userId):
 
 ```markdown
 ### Ngữ cảnh:
-NestJS 11, @nestjs/jwt 11. `TokenService` ở `backend_rag/src/auth/token.service.ts` hiện ký claims
-`{ sub, roles }`. `JwtAuthGuard` ở `backend_rag/src/auth/guards/jwt-auth.guard.ts`. MongoDB đi qua Cloudflare
+NestJS 11, @nestjs/jwt 11. `TokenService` ở `backend_rag/src/modules/auth/token.service.ts` hiện ký claims
+`{ sub, roles }`. `JwtAuthGuard` ở `backend_rag/src/modules/auth/guards/jwt-auth.guard.ts`. MongoDB đi qua Cloudflare
 TCP tunnel (~15–25 ms RTT) — mọi truy vấn phải song song hoặc cache, không tuần tự.
 Quyết định D-021 (`1-RTT atomic refresh rotation`) và D-022 (`UV_THREADPOOL_SIZE=4`) là bất biến.
 
 ### Nhiệm vụ:
 1. `AccessClaims` thêm `ver: number`. `TokenService.issue()` nhận `ver` và ghi vào claims.
-2. `AuthUser` (src/types/auth-user.ts) thêm `ver?: number` (optional để không phá test cũ).
+2. `AuthUser` (src/shared/types/auth-user.ts) thêm `ver?: number` (optional để không phá test cũ).
 3. `JwtAuthGuard`: sau khi verify JWT, gọi `AuthService.getActiveUser(id)` để đối chiếu `is_active` và
    `token_version` với claim `ver`. Không có token ⇒ 401; token hết hạn ⇒ 401 `token expired`.
 4. `AuthService`: thêm `tokenVersionCache` (LRUCache, max 5000, ttl 60_000, updateAgeOnGet) + `getActiveUser()`.
@@ -513,7 +513,7 @@ Quyết định D-021 (`1-RTT atomic refresh rotation`) và D-022 (`UV_THREADPOO
 3. Cache `tokenVersionCache` phải invalidate khi `token_version` thay đổi (admin đổi quyền, khoá, đổi mật khẩu).
 4. Tài khoản bị khoá trả **401** (không phải 403) vì access token không còn hợp lệ.
 5. `changePassword()` phải gọi `revokeAllForUser` ⇒ mọi refresh token cũ chết ngay.
-6. Test cũ trong `src/auth/auth.spec.ts` ký JWT thủ công (`sign({ sub, roles })`) — cần cập nhật để kèm `ver`,
+6. Test cũ trong `src/modules/auth/auth.spec.ts` ký JWT thủ công (`sign({ sub, roles })`) — cần cập nhật để kèm `ver`,
    hoặc cho phép `ver` thiếu ⇒ coi như `0` (tương thích ngược), `token_version` mặc định 0.
 7. Không log token, `ver` hay `password_hash`.
 
@@ -525,14 +525,14 @@ Quyết định D-021 (`1-RTT atomic refresh rotation`) và D-022 (`UV_THREADPOO
 
 ### Output mong muốn:
 1. Các file trên.
-2. Integration test trong `src/auth/auth.spec.ts`: token cũ sau khi `token_version` tăng ⇒ 401; user `is_active: false`
+2. Integration test trong `src/modules/auth/auth.spec.ts`: token cũ sau khi `token_version` tăng ⇒ 401; user `is_active: false`
    ⇒ 401 ở `GET /auth/me` và `POST /auth/refresh`; refresh rotation vẫn 1 lượt thành công khi 2 request đồng thời.
 3. Cập nhật `backend_rag/ASSUMPTIONS.md` (`[S3]…`).
 ```
 
 ### S3.4 Quy trình kiểm chứng
 
-- [ ] `npm run build` sạch; `npx jest src/auth --runInBand` pass; `npm test` không regression.
+- [ ] `npm run build` sạch; `npx jest src/modules/auth --runInBand` pass; `npm test` không regression.
 - [ ] Đăng nhập ⇒ decode access token thấy claim `ver`; đổi `token_version` trong Mongo ⇒ request kế tiếp 401.
 - [ ] Khoá user (`is_active: false`) ⇒ `GET /api/v1/auth/me` trả 401 `unauthorized`.
 - [ ] Benchmark nhẹ: `GET /api/v1/auth/me` liên tục vẫn P95 < 50 ms (cache 60 s, không 1 query/request sau lần đầu).
@@ -544,7 +544,7 @@ Quyết định D-021 (`1-RTT atomic refresh rotation`) và D-022 (`UV_THREADPOO
 ### S4.1 Đặc tả (Specification)
 
 - **Input**: các endpoint admin (S5, S6) cần một lớp service chung + audit log bất biến.
-- **Output**: `backend_rag/src/admin/` gồm module, controller (rỗng ở S4), service, DTO và schema audit log.
+- **Output**: `backend_rag/src/modules/admin/` gồm module, controller (rỗng ở S4), service, DTO và schema audit log.
 - **Ràng buộc**:
   - **Schema `admin_audit_logs`** (collection `admin_audit_logs`, `versionKey: false`):
     | Field | Kiểu | Ý nghĩa |
@@ -617,21 +617,21 @@ applyRoleChange(actor, targetId, nextRoles, req):
 ```markdown
 ### Ngữ cảnh:
 NestJS 11, @nestjs/mongoose 11. `RolesGuard` + decorator `@Roles()` đã có ở
-`backend_rag/src/auth/guards/roles.guard.ts` (chưa dùng ở route production nào). `AuthModule` là `@Global()`,
+`backend_rag/src/modules/auth/guards/roles.guard.ts` (chưa dùng ở route production nào). `AuthModule` là `@Global()`,
 `TokenService` và các guard đã export. `AuthService` giữ 3 cache: `userCache`, `userByEmailCache`,
 `attemptCountCache` (S3 thêm `tokenVersionCache`). Mongo đi qua Cloudflare tunnel (~15–25 ms RTT) — luôn
 `.lean()` + `Promise.all` cho truy vấn độc lập.
 
 ### Nhiệm vụ:
-1. Tạo `backend_rag/src/admin/schemas/admin-audit-log.schema.ts` (schema theo S4.1, 3 index).
-2. Tạo `backend_rag/src/admin/admin.service.ts` với các method:
+1. Tạo `backend_rag/src/modules/admin/schemas/admin-audit-log.schema.ts` (schema theo S4.1, 3 index).
+2. Tạo `backend_rag/src/modules/admin/admin.service.ts` với các method:
    `writeAudit`, `assertAdmin`, `assertNotSelf`, `countActiveAdmins`, `assertNotLastAdmin`,
    `resolveUser`, `invalidateAuthCaches`.
-3. Tạo `backend_rag/src/admin/admin.module.ts` (`@Module` import `MongooseModule.forFeature([AdminAuditLog])`,
+3. Tạo `backend_rag/src/modules/admin/admin.module.ts` (`@Module` import `MongooseModule.forFeature([AdminAuditLog])`,
    import `AuthModule` nếu cần, khai báo `AdminService`, export `AdminService`).
-4. Tạo `backend_rag/src/admin/admin.controller.ts` — class-level `@UseGuards(JwtAuthGuard, RolesGuard)`,
+4. Tạo `backend_rag/src/modules/admin/admin.controller.ts` — class-level `@UseGuards(JwtAuthGuard, RolesGuard)`,
    `@Roles('admin')`, `@ApiBearerAuth()`, `@ApiTags('Admin')`. Ở S4 controller **chưa có route** (S5/S6 thêm vào).
-5. Tạo `backend_rag/src/admin/admin.dto.ts` — khai báo sẵn các DTO dùng chung (không route nào dùng tới ở S4).
+5. Tạo `backend_rag/src/modules/admin/dto/admin.dto.ts` — khai báo sẵn các DTO dùng chung (không route nào dùng tới ở S4).
 6. Đăng ký `AdminModule` trong `backend_rag/src/app.module.ts`.
 
 ### Ràng buộc:
@@ -650,14 +650,14 @@ NestJS 11, @nestjs/mongoose 11. `RolesGuard` + decorator `@Roles()` đã có ở
 
 ### Output mong muốn:
 1. Các file trên.
-2. Integration test `src/admin/admin.spec.ts`: guard chain (401 / 403 / 200); `writeAudit` ghi đúng field;
+2. Integration test `src/modules/admin/admin.spec.ts`: guard chain (401 / 403 / 200); `writeAudit` ghi đúng field;
    `assertNotLastAdmin` ném 409; `assertNotSelf` ném 409.
 3. Cập nhật `backend_rag/ASSUMPTIONS.md` (`[S4]…`).
 ```
 
 ### S4.4 Quy trình kiểm chứng
 
-- [ ] `npm run build` sạch; `npx jest src/admin --runInBand` pass.
+- [ ] `npm run build` sạch; `npx jest src/modules/admin --runInBand` pass.
 - [ ] Mongo: `db.admin_audit_logs.countDocuments()` tăng sau mỗi lần gọi route admin.
 - [ ] `grep -rn "admin_audit_logs" backend_rag/src` không có route nào có `delete`/`update` trên collection này.
 - [ ] `npm test` không regression.
@@ -679,7 +679,7 @@ NestJS 11, @nestjs/mongoose 11. `RolesGuard` + decorator `@Roles()` đã có ở
 | `GET /admin/users/:id/tokens` | JWT+Admin | — | `{ items: TokenFamilyDto[] }` | 200 · 404 | `USER_TOKENS_VIEW` |
 
 - **Ràng buộc**:
-  - **A1** — `q` tìm trong `email` hoặc `display_name`, không phân biệt hoa thường; dùng `escapeRegex` (đã có ở `src/chat-sessions/chat-sessions.service.ts` — **đổi sang import từ `src/common/sanitize.ts`** để dùng chung, hoặc tạo file mới `src/common/sanitize.ts` và sửa chat-sessions import; **không** nhân bản logic). `role` ∈ `user|admin`; `active` ∈ `true|false`. Cursor = (`created_at`, `_id`) giảm dần, mờ (opaque). `limit` 1–50, mặc định 20.
+  - **A1** — `q` tìm trong `email` hoặc `display_name`, không phân biệt hoa thường; dùng `escapeRegex` (đã có ở `src/modules/chat-sessions/chat-sessions.service.ts` — **đổi sang import từ `src/common/security/sanitize.ts`** để dùng chung, hoặc tạo file mới `src/common/security/sanitize.ts` và sửa chat-sessions import; **không** nhân bản logic). `role` ∈ `user|admin`; `active` ∈ `true|false`. Cursor = (`created_at`, `_id`) giảm dần, mờ (opaque). `limit` 1–50, mặc định 20.
   - **A2** — `AdminUserDetailDto` gồm thông tin user + `session_count`, `message_count`, `active_token_count`, `last_login_at`.
   - **A3** — `roles` phải là mảng khác rỗng, mỗi phần tử ∈ `{'user','admin'}`, **không trùng lặp**, và **phải chứa `'user'`** (mọi tài khoản đều là `user` ít nhất). Sai ⇒ `400 validation error`. `token_version` tăng 1, refresh token bị thu hồi.
   - **A4** — `reason` tối đa 200 ký tự. Khoá ⇒ `is_active: false`, `disabled_at`, `disabled_by` (admin đang hành động), `disabled_reason`; `token_version` tăng; **thu hồi toàn bộ refresh token**.
@@ -726,12 +726,12 @@ changeRoles(actor, targetId, nextRoles, req):
 NestJS 11, @nestjs/mongoose 11. `AdminService` (S4) đã có: `writeAudit`, `assertAdmin`, `assertNotSelf`,
 `countActiveAdmins`, `assertNotLastAdmin`, `resolveUser`, `invalidateAuthCaches`. `AuthService` giữ cache
 `userCache` / `userByEmailCache` / `tokenVersionCache`; `TokenService` có `revokeAllForUser(userId)`.
-Cursor helper ở `backend_rag/src/common/pagination.ts` (`encodeCursor` / `decodeCursor`).
-Escape regex: đang nằm trong `src/chat-sessions/chat-sessions.service.ts` — hãy TÁCH ra `src/common/sanitize.ts`
+Cursor helper ở `backend_rag/src/common/pagination/pagination.ts` (`encodeCursor` / `decodeCursor`).
+Escape regex: đang nằm trong `src/modules/chat-sessions/chat-sessions.service.ts` — hãy TÁCH ra `src/common/security/sanitize.ts`
 và sửa import ở chat-sessions (giữ nguyên hành vi), dùng chung cho admin.
 
 ### Nhiệm vụ:
-Tạo route trong `backend_rag/src/admin/admin.controller.ts` + method trong `admin.service.ts`:
+Tạo route trong `backend_rag/src/modules/admin/admin.controller.ts` + method trong `admin.service.ts`:
 A1 `GET /admin/users` · A2 `GET /admin/users/:id` · A3 `PATCH /admin/users/:id/roles` ·
 A4 `POST /admin/users/:id/disable` + `POST /admin/users/:id/enable` · A6 `POST /admin/users/:id/revoke-tokens` ·
 E1 `GET /admin/users/:id/tokens`.
@@ -759,7 +759,7 @@ Kèm DTO trong `admin.dto.ts`: `AdminUserDto`, `AdminUserDetailDto`, `ListAdminU
 
 ### Output mong muốn:
 1. Các file trên.
-2. Integration test `src/admin/admin.spec.ts` (mở rộng): 401 (không token), 403 (user thường), 404 (id sai),
+2. Integration test `src/modules/admin/admin.spec.ts` (mở rộng): 401 (không token), 403 (user thường), 404 (id sai),
    A1 lọc + cursor 2 trang không trùng/sót, A3 đổi quyền ⇒ token cũ 401, A3 `SELF_LOCKOUT_FORBIDDEN`,
    A3/A4 `LAST_ADMIN_PROTECTED`, A4 khoá ⇒ refresh 401, A6 revoke ⇒ refresh 401, E1 không có `token_hash`.
 3. Cập nhật `backend_rag/ASSUMPTIONS.md` (`[S5]…`).
@@ -767,7 +767,7 @@ Kèm DTO trong `admin.dto.ts`: `AdminUserDto`, `AdminUserDetailDto`, `ListAdminU
 
 ### S5.4 Quy trình kiểm chứng
 
-- [ ] `npm run build` sạch; `npx jest src/admin --runInBand` pass; `npm test` không regression.
+- [ ] `npm run build` sạch; `npx jest src/modules/admin --runInBand` pass; `npm test` không regression.
 - [ ] `curl -H "Authorization: Bearer <user-token>" http://localhost:3000/api/v1/admin/users` ⇒ 403 `admin role required`.
 - [ ] `curl http://localhost:3000/api/v1/admin/users` ⇒ 401 `unauthorized`.
 - [ ] Đổi quyền 1 user qua `PATCH /admin/users/:id/roles` ⇒ access token cũ của user đó gọi `/auth/me` trả 401.
@@ -791,7 +791,7 @@ Kèm DTO trong `admin.dto.ts`: `AdminUserDto`, `AdminUserDetailDto`, `ListAdminU
 
 - **Ràng buộc**:
   - **B1** — session của user: filter `user_id: targetId` **và** `deleted_at: null`. `q` tìm trong `title` (escape regex). Cursor = (`last_message_at` hoặc `created_at`, `_id`) giảm dần. Trả `message_count`, `title`, `created_at`, `last_message_at`.
-  - **B1b** — `GET /admin/sessions/:id`: `id` phải là UUIDv7 hợp lệ (`isUuid` ở `src/common/uuid.ts`) ⇒ sai ⇒ `404 session not found`. Trả tối đa **200 message** gần nhất, `deleted_at: null`, sắp `created_at` tăng dần. **Chỉ đọc** — không có route xoá.
+  - **B1b** — `GET /admin/sessions/:id`: `id` phải là UUIDv7 hợp lệ (`isUuid` ở `src/common/utils/uuid.ts`) ⇒ sai ⇒ `404 session not found`. Trả tối đa **200 message** gần nhất, `deleted_at: null`, sắp `created_at` tăng dần. **Chỉ đọc** — không có route xoá.
   - **C1** — `AdminStatsDto`: `users_total`, `users_active`, `users_disabled`, `admins_active`, `sessions_total`, `messages_total`, `llm` (`model_id`, `gpu`, `queue_length`, `running`), `uptime_s`. Đếm bằng `countDocuments` — chạy **song song** (`Promise.all`).
   - **C2** — `login_attempts`: đọc collection `login_attempts`, sắp `created_at` giảm dần, `limit` 1–200 (mặc định 50). Trả `key` đã hash (đã là hash sẵn, an toàn), `created_at`. **Không** có endpoint xoá.
   - **C3** — `GET /admin/health` trả `HealthService.health()` đầy đủ (khác `/health` public ở production chỉ trả `{status}`).
@@ -827,13 +827,13 @@ getSession(actor, sessionId, req):
 ```markdown
 ### Ngữ cảnh:
 NestJS 11, @nestjs/mongoose 11. Schema `chat_sessions` / `chat_messages` ở
-`backend_rag/src/chat-sessions/schemas/`. Cursor helper `src/common/pagination.ts`.
-`HealthService.health()` ở `backend_rag/src/health/health.service.ts` trả `Health` đầy đủ.
-`LlmPort.status()` trả `{ ready, model_id, gpu, queue_length }` — xem `backend_rag/src/llm/llm.service.ts`.
+`backend_rag/src/modules/chat-sessions/schemas/`. Cursor helper `src/common/pagination/pagination.ts`.
+`HealthService.health()` ở `backend_rag/src/modules/health/health.service.ts` trả `Health` đầy đủ.
+`LlmPort.status()` trả `{ ready, model_id, gpu, queue_length }` — xem `backend_rag/src/engines/llm/llm.service.ts`.
 `AdminService` (S4) đã có `writeAudit`, `resolveUser`.
 
 ### Nhiệm vụ:
-Thêm vào `backend_rag/src/admin/admin.controller.ts` + `admin.service.ts`:
+Thêm vào `backend_rag/src/modules/admin/admin.controller.ts` + `admin.service.ts`:
 B1 `GET /admin/users/:id/sessions` · B1b `GET /admin/sessions/:id` ·
 C1 `GET /admin/stats` · C2 `GET /admin/login-attempts` · C3 `GET /admin/health` · D2 `GET /admin/audit-logs`.
 Kèm DTO: `AdminSessionDto`, `AdminSessionDetailDto`, `AdminStatsDto`, `LoginAttemptDto`, `AuditLogDto`.
@@ -856,7 +856,7 @@ Kèm DTO: `AdminSessionDto`, `AdminSessionDetailDto`, `AdminStatsDto`, `LoginAtt
 
 ### Output mong muốn:
 1. Các file trên.
-2. Integration test `src/admin/admin.spec.ts` (mở rộng): B1 chỉ thấy session của đúng user; B1b 404 với id không hợp lệ;
+2. Integration test `src/modules/admin/admin.spec.ts` (mở rộng): B1 chỉ thấy session của đúng user; B1b 404 với id không hợp lệ;
    C1 số liệu khớp dữ liệu seed; C2 trả danh sách attempt; C3 trả `status`; D2 lọc theo `action`/`actor_id`;
    audit log ghi đủ 13 mã hành động sau khi gọi hết route.
 3. Cập nhật `backend_rag/ASSUMPTIONS.md` (`[S6]…`).
@@ -864,7 +864,7 @@ Kèm DTO: `AdminSessionDto`, `AdminSessionDetailDto`, `AdminStatsDto`, `LoginAtt
 
 ### S6.4 Quy trình kiểm chứng
 
-- [ ] `npm run build` sạch; `npx jest src/admin --runInBand` pass; `npm test` không regression.
+- [ ] `npm run build` sạch; `npx jest src/modules/admin --runInBand` pass; `npm test` không regression.
 - [ ] `GET /api/v1/admin/sessions/<uuid-của-user-khác>` trả nội dung (admin đọc được) nhưng `GET /api/v1/admin/users` vẫn chỉ trả user thật.
 - [ ] `GET /api/v1/admin/stats` trả đủ 8 trường thống kê, số khớp với `countDocuments` thủ công.
 - [ ] `GET /api/v1/admin/audit-logs?action=USER_ROLE_CHANGE` lọc đúng.
@@ -922,8 +922,8 @@ main():
 ### Ngữ cảnh:
 NestJS 11 + TypeScript 5.7, `mongoose` 8, `argon2` 0.45. `MONGO_URI` và các secret đọc qua
 `backend_rag/src/config/env.schema.ts` (`AppConfigService`). Schema `User` ở
-`backend_rag/src/auth/schemas/user.schema.ts` — đã có `is_active`, `disabled_at`, `token_version` (S2).
-`validatePassword` ở `backend_rag/src/auth/common-passwords.ts`. Script khác trong repo dùng `ts-node`
+`backend_rag/src/modules/auth/schemas/user.schema.ts` — đã có `is_active`, `disabled_at`, `token_version` (S2).
+`validatePassword` ở `backend_rag/src/modules/auth/common-passwords.ts`. Script khác trong repo dùng `ts-node`
 (ví dụ `backend_rag/scripts/seed-qdrant.ts`, `npm run migrate:qdrant`).
 
 ### Nhiệm vụ:
@@ -948,14 +948,14 @@ NestJS 11 + TypeScript 5.7, `mongoose` 8, `argon2` 0.45. `MONGO_URI` và các se
 
 ### Output mong muốn:
 1. Script + cập nhật `package.json`.
-2. Test: `src/admin/create-admin.spec.ts` chạy script với Mongo memory server và env riêng, assert user tạo có
+2. Test: `src/modules/admin/create-admin.spec.ts` chạy script với Mongo memory server và env riêng, assert user tạo có
    `roles: ["user","admin"]` và `is_active: true`; chạy lần 2 không tạo user trùng.
 3. Cập nhật `backend_rag/README.md` (mục bootstrap admin) và `backend_rag/ASSUMPTIONS.md` (`[S7]…`).
 ```
 
 ### S7.4 Quy trình kiểm chứng
 
-- [ ] `npm run build` sạch; `npx jest src/admin --runInBand` pass.
+- [ ] `npm run build` sạch; `npx jest src/modules/admin --runInBand` pass.
 - [ ] `cd backend_rag && npm run create:admin` (với env) ⇒ in `Created admin: <id>`; đăng nhập được bằng tài khoản đó.
 - [ ] Tài khoản tạo có `roles: ["user","admin"]` trong Mongo.
 - [ ] `grep -rn "ADMIN_PASSWORD=" backend_rag/.env.example` ⇒ chỉ có dòng giải thích, **không** có giá trị thật.
@@ -969,14 +969,14 @@ NestJS 11 + TypeScript 5.7, `mongoose` 8, `argon2` 0.45. `MONGO_URI` và các se
 - **Input**: toàn bộ code S1–S7.
 - **Output**: bộ test tích hợp đầy đủ + tài liệu đồng bộ.
 - **Ràng buộc**:
-  - **`backend_rag/src/admin/admin.spec.ts`** — dùng `mongodb-memory-server` + `createTestApp` (`src/testing/test-app.ts`).
+  - **`backend_rag/src/modules/admin/admin.spec.ts`** — dùng `mongodb-memory-server` + `createTestApp` (`src/testing/test-app.ts`).
     - Ma trận RBAC (bắt buộc đủ): không token ⇒ 401; user thường ⇒ 403; admin ⇒ 200.
     - Ma trận self-protection: `SELF_LOCKOUT_FORBIDDEN`, `LAST_ADMIN_PROTECTED` (cả 2 biến thể thu quyền và khoá).
     - Ma trận vòng đời: khoá ⇒ refresh 401; mở khoá ⇒ đăng nhập lại được; đổi quyền ⇒ token cũ 401.
     - Ma trận audit: mỗi route ghi đúng `action`; `before`/`after` đúng ở `USER_ROLE_CHANGE`.
     - Ma trận phân trang: 2 trang không trùng/sót (dùng 25 user).
     - Ma trận rò rỉ: `GET /admin/users/:id/tokens` không có `token_hash`; `GET /admin/users/:id` không có `password_hash`.
-  - **Ma trận kiểm thử bảo mật bổ sung** (đưa vào `src/admin/admin.spec.ts` hoặc file riêng `src/common/security.spec.ts`):
+  - **Ma trận kiểm thử bảo mật bổ sung** (đưa vào `src/modules/admin/admin.spec.ts` hoặc file riêng `src/common/security/security.spec.ts`):
     - Env production với secret placeholder ⇒ `EnvValidationError`.
     - `helmet` trả đủ header.
     - Swagger không mount ở production.
@@ -988,8 +988,8 @@ NestJS 11 + TypeScript 5.7, `mongoose` 8, `argon2` 0.45. `MONGO_URI` và các se
     | `backend_rag/ASSUMPTIONS.md` | `[S1]…[S8]` — mọi giả định đã dùng |
     | `backend_rag/PROGRESS.md` | Bảng trạng thái S1–S8 kèm số test |
     | `backend_rag/AGENTS.md` | Thêm `admin/` vào Module Map; thêm invariant về audit log bất biến + self-protection |
-    | `docs/API_DESIGN.md` | §9 mới: hợp đồng Admin API (bảng route) |
-    | `docs/INDEX.md` | Thêm `docs/prompt_security.md` vào §2, trạng thái `ACTIVE` |
+    | `docs/api/API_DESIGN.md` | §9 mới: hợp đồng Admin API (bảng route) |
+    | `docs/INDEX.md` | Thêm `docs/prompts/prompt_security.md` vào §2, trạng thái `ACTIVE` |
     | `AGENTS.md` | Thêm 1 dòng vào Progressive-Disclosure Routing Table (task bảo mật / RBAC) |
     | `docs/AI_chat_log/Vuong_chat_logs.md` | Decision log `D-039`+ theo `agents/template/DECISION_LOG_TEMPLATE.md` |
     | `backend_rag/README.md` | Mục bootstrap admin + danh sách route admin |
@@ -1030,14 +1030,14 @@ describe("Admin (integration)"):
 ```markdown
 ### Ngữ cảnh:
 Toàn bộ S1–S7 đã triển khai trong `backend_rag`. Test hiện có dùng `mongodb-memory-server` +
-`createTestApp` từ `backend_rag/src/testing/test-app.ts` (xem `src/auth/auth.spec.ts` làm mẫu).
+`createTestApp` từ `backend_rag/src/testing/test-app.ts` (xem `src/modules/auth/auth.spec.ts` làm mẫu).
 Quy ước tài liệu: `agents/rules/MD_CONVENTION.md` (header 7 field + `[STATUS]`),
 `agents/rules/COMMIT_CONVENTION.md` (commit + trailer `Companion-Doc:`),
 `agents/template/DECISION_LOG_TEMPLATE.md` (decision log 12 dòng).
 
 ### Nhiệm vụ:
-1. Hoàn thiện `backend_rag/src/admin/admin.spec.ts` theo ma trận S8.1.
-2. Bổ sung test bảo mật vào `src/common/security.spec.ts` và `src/config/env.schema.spec.ts`.
+1. Hoàn thiện `backend_rag/src/modules/admin/admin.spec.ts` theo ma trận S8.1.
+2. Bổ sung test bảo mật vào `src/common/security/security.spec.ts` và `src/config/env.schema.spec.ts`.
 3. Cập nhật **toàn bộ** tài liệu trong bảng S8.1 (8 file).
 4. Cập nhật `docs/AI_chat_log/Vuong_chat_logs.md` với `D-039`+ theo template 12 dòng.
 
@@ -1050,7 +1050,7 @@ Quy ước tài liệu: `agents/rules/MD_CONVENTION.md` (header 7 field + `[STAT
 6. Không dùng `any` trong test (eslint có rule riêng cho file test — giữ nguyên cấu hình hiện có).
 
 ### Ví dụ:
-- `npx jest src/admin --runInBand` ⇒ toàn bộ test xanh, in ra số test đã chạy.
+- `npx jest src/modules/admin --runInBand` ⇒ toàn bộ test xanh, in ra số test đã chạy.
 - `npm test` ⇒ không regression so với baseline (146 test cũ).
 - `npm run build` ⇒ 0 lỗi.
 
@@ -1063,13 +1063,13 @@ Quy ước tài liệu: `agents/rules/MD_CONVENTION.md` (header 7 field + `[STAT
 ### S8.4 Quy trình kiểm chứng
 
 - [ ] `npm run build` sạch (0 lỗi TypeScript).
-- [ ] `npx jest src/admin src/auth src/common --runInBand` pass.
+- [ ] `npx jest src/modules/admin src/modules/auth src/common --runInBand` pass.
 - [ ] `npm test` pass, **không** regression so với baseline 146 test.
 - [ ] `npx eslint "src/**/*.ts"` sạch.
 - [ ] Cả 8 file tài liệu trong bảng S8.1 đã cập nhật, mỗi file có `Last Updated` mới.
 - [ ] `docs/INDEX.md` có dòng `prompt_security.md` với trạng thái `ACTIVE`.
-- [ ] `AGENTS.md` có dòng trỏ tới `docs/prompt_security.md` trong Routing Table.
-- [ ] `git log -1 --format=%B` có trailer `Companion-Doc: docs/prompt_security.md`.
+- [ ] `AGENTS.md` có dòng trỏ tới `docs/prompts/prompt_security.md` trong Routing Table.
+- [ ] `git log -1 --format=%B` có trailer `Companion-Doc: docs/prompts/prompt_security.md`.
 
 ---
 
@@ -1077,9 +1077,9 @@ Quy ước tài liệu: `agents/rules/MD_CONVENTION.md` (header 7 field + `[STAT
 
 | # | Điểm cần đồng bộ | FE hiện tại | Quyết định |
 | :-- | :-- | :-- | :-- |
-| A1 | Access token trong `localStorage` | `frontend_rag/src/store/authStore.ts` persist `accessToken` + `refreshToken` | **Ngoài phạm vi S1–S8.** Ghi backlog: chuyển refresh token sang httpOnly cookie + CSRF. Được chấp nhận rủi ro tạm thời vì backend dùng Bearer token không cookie ⇒ không có CSRF. |
-| A2 | IndexedDB không scope theo user | `frontend_rag/src/store/sessionStore.ts` nạp **toàn bộ** session từ `chatDb` | **Ngoài phạm vi S1–S8** (task chọn backend-only). Ghi backlog: lọc theo `userId`, xoá khi logout. |
-| A3 | FE không tự refresh token | `frontend_rag/src/api/client.ts` không có logic 401 → refresh | **Ngoài phạm vi S1–S8.** Ghi backlog. Hệ quả: user phải đăng nhập lại mỗi 15 phút. |
+| A1 | Access token trong `localStorage` | `frontend_rag/src/features/auth/authStore.ts` persist `accessToken` + `refreshToken` | **Ngoài phạm vi S1–S8.** Ghi backlog: chuyển refresh token sang httpOnly cookie + CSRF. Được chấp nhận rủi ro tạm thời vì backend dùng Bearer token không cookie ⇒ không có CSRF. |
+| A2 | IndexedDB không scope theo user | `frontend_rag/src/features/chat/store/sessionStore.ts` nạp **toàn bộ** session từ `chatDb` | **Ngoài phạm vi S1–S8** (task chọn backend-only). Ghi backlog: lọc theo `userId`, xoá khi logout. |
+| A3 | FE không tự refresh token | `frontend_rag/src/shared/api/client.ts` không có logic 401 → refresh | **Ngoài phạm vi S1–S8.** Ghi backlog. Hệ quả: user phải đăng nhập lại mỗi 15 phút. |
 | A4 | FE chưa có UI admin | Chưa có route/UI nào cho admin | **Ngoài phạm vi S1–S8** (task chọn backend-only). FE chỉ cần hiểu `user.roles` để ẩn/hiện UI sau này. |
 | A5 | `roles` trong `UserDto` | FE đọc `user.roles` (kiểu `string[]`) | Giữ nguyên `UserDto.roles: Role[]` — **không** thêm `is_active`/`token_version` vào DTO công khai (xem S2.1). |
 | A6 | Golden Invariant #1 (Qdrant chỉ đọc) | Admin **không** có quyền ghi/xoá Qdrant | Giữ nguyên; admin API không được import `QDRANT_CLIENT` ở chế độ ghi. |
@@ -1136,19 +1136,19 @@ quota / doanh thu theo user (nhóm chưa thống nhất).
 
 | File | Vai trò |
 | :--- | :--- |
-| `backend_rag/src/common/security.ts` | `helmet` config + `trustProxySetting(nodeEnv)` |
-| `backend_rag/src/common/throttler.ts` | Bảng `RATE_LIMITS` + decorator `@RateLimit(name)` |
-| `backend_rag/src/common/sanitize.ts` | `escapeRegex` dùng chung (chống ReDoS) |
-| `backend_rag/src/auth/common-passwords.ts` | Policy mật khẩu + blacklist 200 mật khẩu phổ biến |
-| `backend_rag/src/auth/common-passwords.spec.ts` | 7 unit test cho policy |
-| `backend_rag/src/admin/admin.controller.ts` | 13 route admin, `@Roles('admin')` + `JwtAuthGuard` + `RolesGuard` |
-| `backend_rag/src/admin/admin-audit.service.ts` | Audit trail append-only |
-| `backend_rag/src/admin/admin-identity.service.ts` | A1–A4, A6, E1 + self-protection |
-| `backend_rag/src/admin/admin-ops.service.ts` | B1, B1b, C1–C3 (chỉ đọc) |
-| `backend_rag/src/admin/admin.dto.ts` | DTO có `class-validator` cho toàn bộ query/body |
-| `backend_rag/src/admin/admin.module.ts` | Module + đăng ký schema `admin_audit_logs` |
-| `backend_rag/src/admin/admin.spec.ts` | 22 integration test |
-| `backend_rag/src/admin/schemas/admin-audit-log.schema.ts` | Schema audit log |
+| `backend_rag/src/common/security/security.ts` | `helmet` config + `trustProxySetting(nodeEnv)` |
+| `backend_rag/src/common/security/throttler.ts` | Bảng `RATE_LIMITS` + decorator `@RateLimit(name)` |
+| `backend_rag/src/common/security/sanitize.ts` | `escapeRegex` dùng chung (chống ReDoS) |
+| `backend_rag/src/modules/auth/common-passwords.ts` | Policy mật khẩu + blacklist 200 mật khẩu phổ biến |
+| `backend_rag/src/modules/auth/common-passwords.spec.ts` | 7 unit test cho policy |
+| `backend_rag/src/modules/admin/admin.controller.ts` | 13 route admin, `@Roles('admin')` + `JwtAuthGuard` + `RolesGuard` |
+| `backend_rag/src/modules/admin/admin-audit.service.ts` | Audit trail append-only |
+| `backend_rag/src/modules/admin/admin-identity.service.ts` | A1–A4, A6, E1 + self-protection |
+| `backend_rag/src/modules/admin/admin-ops.service.ts` | B1, B1b, C1–C3 (chỉ đọc) |
+| `backend_rag/src/modules/admin/dto/admin.dto.ts` | DTO có `class-validator` cho toàn bộ query/body |
+| `backend_rag/src/modules/admin/admin.module.ts` | Module + đăng ký schema `admin_audit_logs` |
+| `backend_rag/src/modules/admin/admin.spec.ts` | 22 integration test |
+| `backend_rag/src/modules/admin/schemas/admin-audit-log.schema.ts` | Schema audit log |
 | `backend_rag/scripts/create-admin.ts` | CLI bootstrap admin (S7) |
 
 ### File đã sửa
@@ -1158,16 +1158,16 @@ quota / doanh thu theo user (nhóm chưa thống nhất).
 | `backend_rag/src/app.setup.ts` | `trust proxy`, `helmet`, Swagger chỉ ở non-production |
 | `backend_rag/src/app.module.ts` | `ThrottlerModule.forRoot([...])` + `APP_GUARD` → `ThrottlerGuard` |
 | `backend_rag/src/config/env.schema.ts` | `superRefine` chặn secret placeholder / secret trùng / URI thiếu credential ở production |
-| `backend_rag/src/auth/auth.service.ts` | `DUMMY_HASH` chống timing attack, `token_version` cache, `revokeAllForUser`, `invalidateUserCaches` |
-| `backend_rag/src/auth/token.service.ts` | Claim `ver` trong access token |
-| `backend_rag/src/auth/guards/jwt-auth.guard.ts` | Đối chiếu `is_active` + `token_version` |
-| `backend_rag/src/auth/schemas/user.schema.ts` | 6 field mới (`is_active`, `disabled_at`, `disabled_by`, `disabled_reason`, `token_version`, `last_login_at`) |
-| `backend_rag/src/auth/auth.controller.ts` | `@RateLimit` trên register / login / refresh / change-password |
-| `backend_rag/src/auth/dto/auth.dto.ts` | Ràng buộc độ dài mật khẩu 10–200 |
-| `backend_rag/src/health/health.controller.ts` | Mask chi tiết ở production |
-| `backend_rag/src/llm/llm.service.ts` | `LlmStatus.running` |
+| `backend_rag/src/modules/auth/auth.service.ts` | `DUMMY_HASH` chống timing attack, `token_version` cache, `revokeAllForUser`, `invalidateUserCaches` |
+| `backend_rag/src/modules/auth/token.service.ts` | Claim `ver` trong access token |
+| `backend_rag/src/modules/auth/guards/jwt-auth.guard.ts` | Đối chiếu `is_active` + `token_version` |
+| `backend_rag/src/modules/auth/schemas/user.schema.ts` | 6 field mới (`is_active`, `disabled_at`, `disabled_by`, `disabled_reason`, `token_version`, `last_login_at`) |
+| `backend_rag/src/modules/auth/auth.controller.ts` | `@RateLimit` trên register / login / refresh / change-password |
+| `backend_rag/src/modules/auth/dto/auth.dto.ts` | Ràng buộc độ dài mật khẩu 10–200 |
+| `backend_rag/src/modules/health/health.controller.ts` | Mask chi tiết ở production |
+| `backend_rag/src/engines/llm/llm.service.ts` | `LlmStatus.running` |
 | `backend_rag/src/testing/test-app.ts` | `seedUser()` + `SEED_PASSWORD` |
-| `backend_rag/src/chat-sessions/chat-sessions.service.ts` | Dùng `escapeRegex` dùng chung |
+| `backend_rag/src/modules/chat-sessions/chat-sessions.service.ts` | Dùng `escapeRegex` dùng chung |
 | `README.md`, `backend_rag/benchmark/seed_prod_auth_data.js` | Dọn credential plaintext |
 
 ### Endpoint admin đã triển khai (13 route)
@@ -1208,10 +1208,10 @@ npm run create:admin -- --email admin@example.com --password 'a strong password'
 | File | Nội dung cập nhật |
 | :--- | :--- |
 | `docs/AI_chat_log/Vuong_chat_logs.md` | D-039 → D-046 (RBAC, token versioning, password policy, audit log, bootstrap CLI) |
-| `docs/API_SPECIFICATION.md` | Bảng endpoint admin + auth, mã lỗi `401/403/404/409/429`, prefix `api/v1` chuẩn hoá |
+| `docs/api/API_SPECIFICATION.md` | Bảng endpoint admin + auth, mã lỗi `401/403/404/409/429`, prefix `api/v1` chuẩn hoá |
 | `AGENTS.md` (root) | Invariant #8 "Security Baseline & RBAC", routing table trỏ tới `prompt_security.md` |
 | `backend_rag/AGENTS.md` | §2.1 Security & RBAC Invariants (15 → đánh số lại 8–15), sửa link `src/common/utils/*` sai |
-| `docs/INDEX.md` | Mục `docs/prompt_security.md` (ACTIVE) |
+| `docs/INDEX.md` | Mục `docs/prompts/prompt_security.md` (ACTIVE) |
 | `.gitignore` | Khôi phục rule `.env` + `.env.*` (bản sửa tạm đã vô hiệu hoá việc ignore `.env`) |
 
 ### Phần còn lại (backlog, đã chốt)

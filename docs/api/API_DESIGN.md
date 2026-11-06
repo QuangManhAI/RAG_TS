@@ -4,9 +4,9 @@
 - **Purpose**: Định nghĩa 8 tiêu chuẩn RESTful của dự án và mọi route của `/api/v1`; test `API contract (OpenAPI)` trong `backend_rag/test/flow.e2e-spec.ts` giữ code khớp với tài liệu này.
 - **Overview Pipeline**: Danh từ cho URL → Status code → Versioning → Nhiều định dạng → Lọc & phân trang → Token auth → Đặt tên thống nhất → Hypermedia.
 - **Detailed Plan**: §1 Quy ước (8 tiêu chuẩn, query language, định dạng, hypermedia); §2 Tài khoản & token; §3 RAG; §4 Phiên chat; §5 Paper; §6 Health; §7 Dữ liệu; §8 Ngoài phạm vi; §9 Admin.
-- **References**: [API_SPECIFICATION.md](API_SPECIFICATION.md), [prompt_security.md](prompt_security.md), [backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md](../backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md).
+- **References**: [API_SPECIFICATION.md](API_SPECIFICATION.md), [prompt_security.md](../prompts/prompt_security.md), [backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md](../../backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md).
 - **Created**: 2026-10-20T18:01:49+07:00
-- **Last Updated**: 2026-11-04T22:47:55+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ACTIVE]
 

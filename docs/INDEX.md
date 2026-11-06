@@ -3,10 +3,10 @@
 - **Motivation/Background**: As `RAG_TS` evolved across multiple sprints (initial RAG bootstrapping, 3D WebGL world optimization, Auth/Chat-Sessions MongoDB persistence, Offline-First IndexedDB sync, 3-Stage Production SRE Stress Testing, and the Frontend Design System / Liquid Glass overhaul), over 30 Markdown files accumulated across `docs/`, `backend_rag/`, `frontend_rag/`, and `agents/`. Without a central registry, AI agents risk reading outdated bootstrap prompts instead of active production specifications.
 - **Purpose**: Provide a complete, status-tagged catalog (`ACTIVE` vs. `ARCHIVED`) of every Markdown document in the `RAG_TS` monorepo so AI agents and human engineers can locate the authoritative source of truth in seconds.
 - **Overview Pipeline**: Domain Classification → File Path & Status Badge Lookup → Progressive-Disclosure Navigation.
-- **Detailed Plan**: Section 1 catalogs AI Agent Entrypoints & Governance Rules; Section 2 catalogs System Architecture & API Specifications; Section 3 catalogs Backend Engineering & SRE Benchmark Docs; Section 4 catalogs Frontend 3D, Design System & Offline Persistence Docs; Section 5 lists Archived Bootstrap Prompts (do not use for active code generation).
+- **Detailed Plan**: Files live under `docs/` by topic: `architecture/`, `api/`, `design/`, `guides/`, `security/`, `research/`, `reports/`, `slides/`, `prompts/`, `assets/`.  Section 1 catalogs AI Agent Entrypoints & Governance Rules; Section 2 catalogs System Architecture & API Specifications; Section 3 catalogs Backend Engineering & SRE Benchmark Docs; Section 4 catalogs Frontend 3D, Design System & Offline Persistence Docs; Section 5 lists Archived Bootstrap Prompts (do not use for active code generation).
 - **References**: [AGENTS.md](../AGENTS.md), [backend_rag/AGENTS.md](../backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](../frontend_rag/AGENTS.md), [agents/rules/MD_CONVENTION.md](../agents/rules/MD_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-29T19:43:00+07:00
-- **Last Updated**: 2026-11-02T11:10:00+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ACTIVE]
 
@@ -31,16 +31,20 @@
 
 | Document | Status | Audience & Scope |
 | :--- | :---: | :--- |
-| [`docs/ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md) | `ACTIVE` | **Full-Stack System Architecture**: End-to-end topology (`frontend_rag` $\leftrightarrow$ `backend_rag` $\leftrightarrow$ MongoDB / Qdrant / LLM), SSE streaming flow, and dual-persistence model. |
+| [`docs/architecture/ARCHITECTURE_OVERVIEW.md`](architecture/ARCHITECTURE_OVERVIEW.md) | `ACTIVE` | **Full-Stack System Architecture**: End-to-end topology (`frontend_rag` $\leftrightarrow$ `backend_rag` $\leftrightarrow$ MongoDB / Qdrant / LLM), SSE streaming flow, and dual-persistence model. |
 | [`README.md`](../README.md) | `ACTIVE` | **Project Overview**: High-level introduction to the RAG 3D Knowledge Tree system and repository layout. |
-| [`docs/RUN_GUIDE.md`](RUN_GUIDE.md) | `ACTIVE` | **Environment & Startup Guide**: How to run `cloudflared` TCP tunnel (`localhost:27018`), Qdrant, Ollama/GGUF model, `backend_rag`, and `frontend_rag`. |
-| [`docs/API_SPECIFICATION.md`](API_SPECIFICATION.md) | `ACTIVE` | **REST & SSE API Reference**: Detailed request/response payloads, status codes, and error envelopes for `/api/v1/*`. |
-| [`docs/API_DESIGN.md`](API_DESIGN.md) | `ACTIVE` | **Core API Design Contract**: Standard error format (`statusCode`, `error`, `message`, `details`), pagination rules, and route conventions. |
-| [`docs/prompt_security.md`](prompt_security.md) | `ACTIVE` | **Security Hardening & RBAC Specification (`admin`/`user`)**: Source of truth for the S1–S8 security work — security baseline (`helmet`, `trust proxy`, `@nestjs/throttler`), password policy, `token_version` token invalidation, the 13-route admin surface, the append-only `admin_audit_logs` trail, and the admin bootstrap CLI. Includes the implementation report. |
-| [`docs/SCIENTIFIC_RAG_BACKEND.md`](SCIENTIFIC_RAG_BACKEND.md) | `ACTIVE` | **Scientific RAG Pipeline**: Nomic v1.5 embeddings (`search_query:` prefix), Qdrant cosine search, PageRank authority boost, FP-Growth query expansion, and LLM citation grounding. |
-| [`docs/RAG.md`](RAG.md) | `ACTIVE` | **RAG Pipeline Concepts & Domain Notes**: Theoretical and practical notes on retrieval, reranking, and prompt grounding. |
-| [`docs/REPORT.md`](REPORT.md) | `ACTIVE` | **Executive Engineering & Performance Report**: Consolidated summary of WebGL 3D optimizations, Lighthouse 97 audit, and backend load qualification. |
-| [`docs/integrated-bench-run-2026-10-23T08-19-38-jjpmf-executive.md`](integrated-bench-run-2026-10-23T08-19-38-jjpmf-executive.md) | `ACTIVE` | **Integrated Benchmark Run Report**: Historical snapshot of early integrated pipeline benchmark metrics. |
+| [`docs/guides/RUN_GUIDE.md`](guides/RUN_GUIDE.md) | `ACTIVE` | **Environment & Startup Guide**: How to run `cloudflared` TCP tunnel (`localhost:27018`), Qdrant, Ollama/GGUF model, `backend_rag`, and `frontend_rag`. |
+| [`docs/api/API_SPECIFICATION.md`](api/API_SPECIFICATION.md) | `ACTIVE` | **REST & SSE API Reference**: Detailed request/response payloads, status codes, and error envelopes for `/api/v1/*`. |
+| [`docs/api/API_DESIGN.md`](api/API_DESIGN.md) | `ACTIVE` | **Core API Design Contract**: Standard error format (`statusCode`, `error`, `message`, `details`), pagination rules, and route conventions. |
+| [`docs/prompts/prompt_security.md`](prompts/prompt_security.md) | `ACTIVE` | **Security Hardening & RBAC Specification (`admin`/`user`)**: Source of truth for the S1–S8 security work — security baseline (`helmet`, `trust proxy`, `@nestjs/throttler`), password policy, `token_version` token invalidation, the 13-route admin surface, the append-only `admin_audit_logs` trail, and the admin bootstrap CLI. Includes the implementation report. |
+| [`docs/architecture/SCIENTIFIC_RAG_BACKEND.md`](architecture/SCIENTIFIC_RAG_BACKEND.md) | `ACTIVE` | **Scientific RAG Pipeline**: Nomic v1.5 embeddings (`search_query:` prefix), Qdrant cosine search, PageRank authority boost, FP-Growth query expansion, and LLM citation grounding. |
+| [`docs/architecture/RAG.md`](architecture/RAG.md) | `ACTIVE` | **RAG Pipeline Concepts & Domain Notes**: Theoretical and practical notes on retrieval, reranking, and prompt grounding. |
+| [`docs/reports/REPORT.md`](reports/REPORT.md) | `ACTIVE` | **Executive Engineering & Performance Report**: Consolidated summary of WebGL 3D optimizations, Lighthouse 97 audit, and backend load qualification. |
+| [`docs/reports/integrated-bench-run-2026-10-23T08-19-38-jjpmf-executive.md`](reports/integrated-bench-run-2026-10-23T08-19-38-jjpmf-executive.md) | `ACTIVE` | **Integrated Benchmark Run Report**: Historical snapshot of early integrated pipeline benchmark metrics. |
+| [`docs/api/API-compare.md`](api/API-compare.md) | `ACTIVE` | **API Before/After Comparison**: The redesign against the 8 API principles. |
+| [`docs/architecture/database-v2.md`](architecture/database-v2.md) | `IN_PROGRESS` | **Storage Redesign**: Qdrant, MongoDB and MinIO after moving chunk content out of Qdrant. |
+| [`docs/security/agent-sec.md`](security/agent-sec.md) | `IN_PROGRESS` | **Backend Security Review**: Findings and fixes before production. |
+| [`docs/research/laya-jev.md`](research/laya-jev.md) | `IN_PROGRESS` | **Laya Evaluation**: Results of adding Laya to the RAG pipeline, with the JEV sources beside it. |
 
 ---
 
@@ -57,7 +61,7 @@
 | [`backend_rag/benchmark/README.md`](../backend_rag/benchmark/README.md) | `ACTIVE` | **Benchmark Suite Manual**: Complete reference for all k6 scripts (`k6_prod_open_breakpoint.ts`, `k6_prod_certified_holdout.ts`, `k6_prod_auth_crypto.ts`), seeders, and Python chart generators. |
 | [`backend_rag/docs/MONGODB_SCHEMA_DESIGN.md`](../backend_rag/docs/MONGODB_SCHEMA_DESIGN.md) | `ACTIVE` | **MongoDB Schema & Index Specification**: Collections (`users`, `refresh_tokens`, `login_attempts`, `chat_sessions`, `chat_messages`), UUIDv7 keys, and compound B-tree indexes. |
 | [`backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md`](../backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md) | `ACTIVE` | **Chat Sessions Functional Spec**: Cursor-based pagination, soft-delete (`deleted_at`), auto-titling, and ownership isolation rules. |
-| [`backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md`](../backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md) | `ACTIVE` | **Chat Sessions Test Matrix**: Specification of integration test cases in `src/chat-sessions/chat-sessions.spec.ts`. |
+| [`backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md`](../backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md) | `ACTIVE` | **Chat Sessions Test Matrix**: Specification of integration test cases in `src/modules/chat-sessions/chat-sessions.spec.ts`. |
 | [`backend_rag/ASSUMPTIONS.md`](../backend_rag/ASSUMPTIONS.md) | `ACTIVE` | **Backend Engineering Assumptions Log**: Documented boundary assumptions `[B1]..[B11]` made during backend implementation. |
 | [`backend_rag/PROGRESS.md`](../backend_rag/PROGRESS.md) | `ACTIVE` | **Backend Module Implementation Tracker**: Status log of completed NestJS modules and test suites. |
 
@@ -69,9 +73,9 @@
 | :--- | :---: | :--- |
 | [`frontend_rag/AGENTS.md`](../frontend_rag/AGENTS.md) | `ACTIVE` | **Frontend AI Manual**: Component map, R3F `<Canvas>` rules, Zustand stores, Dexie.js IndexedDB rules, and Web Vitals guardrails. |
 | [`frontend_rag/README.md`](../frontend_rag/README.md) | `ACTIVE` | **Frontend App Guide**: Vite dev server, environment configuration, and build scripts. |
-| [`docs/FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md) | `ACTIVE` | **Frontend Design System & Liquid Glass Spec**: Single source of truth for design tokens (color, radius, blur, glass materials, typography, motion), complex/quaternion 3D rotation math, and Liquid Glass levels 1–4. |
-| [`docs/FE_DESIGN_AUDIT.md`](FE_DESIGN_AUDIT.md) | `ACTIVE` | **Frontend Token Drift & Design Audit**: Empirical measurement of UI token drift across P1–P14 and post-P14 commits prior to `FE_DESIGN_SYSTEM.md`. |
-| [`docs/FE3d_prompt_v2.md`](FE3d_prompt_v2.md) | `ACTIVE` | **Frontend v2 Prompt Plan (`P15`–`P23`)**: Step-by-step specification, pseudocode, and verification plan for Design System migration, 3D complex/quaternion math, and Liquid Glass. |
+| [`docs/design/FE_DESIGN_SYSTEM.md`](design/FE_DESIGN_SYSTEM.md) | `ACTIVE` | **Frontend Design System & Liquid Glass Spec**: Single source of truth for design tokens (color, radius, blur, glass materials, typography, motion), complex/quaternion 3D rotation math, and Liquid Glass levels 1–4. |
+| [`docs/design/FE_DESIGN_AUDIT.md`](design/FE_DESIGN_AUDIT.md) | `ACTIVE` | **Frontend Token Drift & Design Audit**: Empirical measurement of UI token drift across P1–P14 and post-P14 commits prior to `FE_DESIGN_SYSTEM.md`. |
+| [`docs/prompts/FE3d_prompt_v2.md`](prompts/FE3d_prompt_v2.md) | `ACTIVE` | **Frontend v2 Prompt Plan (`P15`–`P23`)**: Step-by-step specification, pseudocode, and verification plan for Design System migration, 3D complex/quaternion math, and Liquid Glass. |
 | [`frontend_rag/docs/STATE_AND_STREAMING_ARCHITECTURE.md`](../frontend_rag/docs/STATE_AND_STREAMING_ARCHITECTURE.md) | `ACTIVE` | **State, Offline Sync & Streaming Deep Dive**: `ragStore`, `sessionStore`, `Dexie.js` Cache-First persistence, background `/chat-sessions` sync, and `30ms` micro-batched SSE token streaming. |
 | [`frontend_rag/docs/perf-chat-report.md`](../frontend_rag/docs/perf-chat-report.md) | `ACTIVE` | **3D Render & Streaming Chat Performance Report**: Empirical analysis of draw-call batching, frustum clipping, DPR clamping, and `PerfHUD` telemetry (`D-005` – `D-013`). |
 | [`frontend_rag/docs/perf-report.md`](../frontend_rag/docs/perf-report.md) | `ACTIVE` | **WebGL & Core Web Vitals Audit**: Lighthouse performance optimization (`FCP 0.9s`, `LCP 1.0s`, Score `97/100`). |
@@ -79,6 +83,7 @@
 | [`frontend_rag/ASSUMPTIONS.md`](../frontend_rag/ASSUMPTIONS.md) | `ACTIVE` | **Frontend Engineering Assumptions Log**: Documented UI/UX and API boundary assumptions. |
 | [`frontend_rag/PROGRESS.md`](../frontend_rag/PROGRESS.md) | `ACTIVE` | **Frontend Feature Implementation Tracker**: Module completion and Vitest/Playwright verification log. |
 | [`frontend_rag/docs/design-migration-report.md`](../frontend_rag/docs/design-migration-report.md) | `ACTIVE` | **Design Migration Report**: per-prompt `check:design` counts, scale STATS, screenshot diffs and frame-time measurements. |
+| [`docs/design/liquid-glass.md`](design/liquid-glass.md) | `ACTIVE` | **Liquid Glass Write-Up**: How the glass of the knowledge tree UI works and why. |
 
 ---
 
@@ -89,7 +94,7 @@
 
 | Document | Status | Historical Context |
 | :--- | :---: | :--- |
-| [`docs/prompt.md`](prompt.md) | `ARCHIVED` | Early Phase-1 prompt decomposition that referenced LanceDB before the system standardized on Qdrant (`scientific_papers_gold`) and MongoDB. |
-| [`docs/prompt_backend.md`](prompt_backend.md) | `ARCHIVED` | Initial B1–B11 step-by-step scaffolding prompt used to bootstrap `backend_rag`. Superseded by [`backend_rag/AGENTS.md`](../backend_rag/AGENTS.md) and [`docs/ARCHITECTURE_OVERVIEW.md`](ARCHITECTURE_OVERVIEW.md). |
-| [`docs/prompt_fe_3d.md`](prompt_fe_3d.md) | `ARCHIVED` | Initial P1–P11 step-by-step bootstrap prompt and verification checklist for `frontend_rag` (`210/210` Vitest, `6/6` Playwright E2E verified). UI design tokens and glass rules are superseded by [`docs/FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md) and [`docs/FE3d_prompt_v2.md`](FE3d_prompt_v2.md). |
-| [`docs/lesson_2.md`](lesson_2.md) | `ARCHIVED` | General course lecture notes on human-AI pair programming methodology (`Requirement → Spec → Pseudocode → Prompt → Verification`). |
+| [`docs/prompts/prompt.md`](prompts/prompt.md) | `ARCHIVED` | Early Phase-1 prompt decomposition that referenced LanceDB before the system standardized on Qdrant (`scientific_papers_gold`) and MongoDB. |
+| [`docs/prompts/prompt_backend.md`](prompts/prompt_backend.md) | `ARCHIVED` | Initial B1–B11 step-by-step scaffolding prompt used to bootstrap `backend_rag`. Superseded by [`backend_rag/AGENTS.md`](../backend_rag/AGENTS.md) and [`docs/architecture/ARCHITECTURE_OVERVIEW.md`](architecture/ARCHITECTURE_OVERVIEW.md). |
+| [`docs/prompts/prompt_fe_3d.md`](prompts/prompt_fe_3d.md) | `ARCHIVED` | Initial P1–P11 step-by-step bootstrap prompt and verification checklist for `frontend_rag` (`210/210` Vitest, `6/6` Playwright E2E verified). UI design tokens and glass rules are superseded by [`docs/design/FE_DESIGN_SYSTEM.md`](design/FE_DESIGN_SYSTEM.md) and [`docs/prompts/FE3d_prompt_v2.md`](prompts/FE3d_prompt_v2.md). |
+| [`docs/research/lesson_2.md`](research/lesson_2.md) | `ARCHIVED` | General course lecture notes on human-AI pair programming methodology (`Requirement → Spec → Pseudocode → Prompt → Verification`). |

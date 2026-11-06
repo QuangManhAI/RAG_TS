@@ -4,9 +4,9 @@
 - **Purpose**: Provide AI coding agents with the progressive-disclosure documentation routing map, repository topology, non-negotiable architectural invariants, and workflow rules across the entire `RAG_TS` workspace.
 - **Overview Pipeline**: Task Identification → Progressive-Disclosure Doc Lookup (`docs/INDEX.md`) → Subsystem `AGENTS.md` Inspection → Implementation & Invariant Verification → Decision Log & Convention Compliance.
 - **Detailed Plan**: Section 1 defines the Progressive-Disclosure Routing Table; Section 2 maps the Monorepo Topology; Section 3 enforces Golden System Invariants; Section 4 lists Essential Verification Commands; Section 5 enforces Commit & Markdown Conventions.
-- **References**: [docs/INDEX.md](docs/INDEX.md), [docs/ARCHITECTURE_OVERVIEW.md](docs/ARCHITECTURE_OVERVIEW.md), [backend_rag/AGENTS.md](backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](frontend_rag/AGENTS.md), [docs/FE_DESIGN_SYSTEM.md](docs/FE_DESIGN_SYSTEM.md), [docs/FE3d_prompt_v2.md](docs/FE3d_prompt_v2.md), [agents/rules/MD_CONVENTION.md](agents/rules/MD_CONVENTION.md), [agents/rules/COMMIT_CONVENTION.md](agents/rules/COMMIT_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](docs/AI_chat_log/Vuong_chat_logs.md).
+- **References**: [docs/INDEX.md](docs/INDEX.md), [docs/architecture/ARCHITECTURE_OVERVIEW.md](docs/architecture/ARCHITECTURE_OVERVIEW.md), [backend_rag/AGENTS.md](backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](frontend_rag/AGENTS.md), [docs/design/FE_DESIGN_SYSTEM.md](docs/design/FE_DESIGN_SYSTEM.md), [docs/prompts/FE3d_prompt_v2.md](docs/prompts/FE3d_prompt_v2.md), [agents/rules/MD_CONVENTION.md](agents/rules/MD_CONVENTION.md), [agents/rules/COMMIT_CONVENTION.md](agents/rules/COMMIT_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](docs/AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-29T19:42:00+07:00
-- **Last Updated**: 2026-11-05T03:06:00+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ACTIVE]
 
@@ -19,14 +19,14 @@ To avoid flooding your context window, **do not read every `.md` file in the rep
 | If your task involves... | Read First (Entrypoint) | Deep-Dive Reference(s) |
 | :--- | :--- | :--- |
 | **Finding which docs are current vs. archived** | [`docs/INDEX.md`](docs/INDEX.md) | [`docs/AI_chat_log/Vuong_chat_logs.md`](docs/AI_chat_log/Vuong_chat_logs.md) |
-| **Full-stack architecture, data flow, or API contracts** | [`docs/ARCHITECTURE_OVERVIEW.md`](docs/ARCHITECTURE_OVERVIEW.md) | [`docs/API_SPECIFICATION.md`](docs/API_SPECIFICATION.md), [`docs/API_DESIGN.md`](docs/API_DESIGN.md) |
-| **Backend NestJS modules, controllers, or MongoDB schemas** | [`backend_rag/AGENTS.md`](backend_rag/AGENTS.md) | [`backend_rag/docs/MONGODB_SCHEMA_DESIGN.md`](backend_rag/docs/MONGODB_SCHEMA_DESIGN.md), [`docs/SCIENTIFIC_RAG_BACKEND.md`](docs/SCIENTIFIC_RAG_BACKEND.md) |
+| **Full-stack architecture, data flow, or API contracts** | [`docs/architecture/ARCHITECTURE_OVERVIEW.md`](docs/architecture/ARCHITECTURE_OVERVIEW.md) | [`docs/api/API_SPECIFICATION.md`](docs/api/API_SPECIFICATION.md), [`docs/api/API_DESIGN.md`](docs/api/API_DESIGN.md) |
+| **Backend NestJS modules, controllers, or MongoDB schemas** | [`backend_rag/AGENTS.md`](backend_rag/AGENTS.md) | [`backend_rag/docs/MONGODB_SCHEMA_DESIGN.md`](backend_rag/docs/MONGODB_SCHEMA_DESIGN.md), [`docs/architecture/SCIENTIFIC_RAG_BACKEND.md`](docs/architecture/SCIENTIFIC_RAG_BACKEND.md) |
 | **Authentication, JWT, Argon2id, Refresh Rotation, or Logout** | [`backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md`](backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md) | [`backend_rag/docs/AUTH_LOGOUT_DESIGN.md`](backend_rag/docs/AUTH_LOGOUT_DESIGN.md) |
-| **Security hardening, RBAC (`admin`/`user`), rate limiting, or the admin surface** | [`docs/prompt_security.md`](docs/prompt_security.md) | [`backend_rag/AGENTS.md`](backend_rag/AGENTS.md) §2.1 |
+| **Security hardening, RBAC (`admin`/`user`), rate limiting, or the admin surface** | [`docs/prompts/prompt_security.md`](docs/prompts/prompt_security.md) | [`backend_rag/AGENTS.md`](backend_rag/AGENTS.md) §2.1 |
 | **Chat Sessions, UUIDv7 cursor pagination, or soft-delete** | [`backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md`](backend_rag/docs/CHAT_SESSIONS_SPECIFICATION.md) | [`backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md`](backend_rag/docs/CHAT_SESSIONS_SPEC-TESTS.md) |
 | **Backend caching (`LRUCache`), latency optimization, or k6 stress testing** | [`backend_rag/docs/PERFORMANCE_AND_CACHING.md`](backend_rag/docs/PERFORMANCE_AND_CACHING.md) | [`backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md`](backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md), [`backend_rag/benchmark/README.md`](backend_rag/benchmark/README.md) |
 | **Frontend 3D World (`Three.js` / `R3F`), UI, or Web Vitals** | [`frontend_rag/AGENTS.md`](frontend_rag/AGENTS.md) | [`frontend_rag/docs/perf-chat-report.md`](frontend_rag/docs/perf-chat-report.md), [`frontend_rag/docs/perf-report.md`](frontend_rag/docs/perf-report.md) |
-| **UI design tokens, glass materials, Liquid Glass, or 3D rotation math (`P15`–`P23`)** | [`docs/FE_DESIGN_SYSTEM.md`](docs/FE_DESIGN_SYSTEM.md) | [`docs/FE3d_prompt_v2.md`](docs/FE3d_prompt_v2.md), [`docs/FE_DESIGN_AUDIT.md`](docs/FE_DESIGN_AUDIT.md), [`frontend_rag/docs/design-migration-report.md`](frontend_rag/docs/design-migration-report.md) |
+| **UI design tokens, glass materials, Liquid Glass, or 3D rotation math (`P15`–`P23`)** | [`docs/design/FE_DESIGN_SYSTEM.md`](docs/design/FE_DESIGN_SYSTEM.md) | [`docs/prompts/FE3d_prompt_v2.md`](docs/prompts/FE3d_prompt_v2.md), [`docs/design/FE_DESIGN_AUDIT.md`](docs/design/FE_DESIGN_AUDIT.md), [`frontend_rag/docs/design-migration-report.md`](frontend_rag/docs/design-migration-report.md) |
 | **Frontend state (`Zustand`), IndexedDB (`Dexie.js`), or SSE streaming** | [`frontend_rag/docs/STATE_AND_STREAMING_ARCHITECTURE.md`](frontend_rag/docs/STATE_AND_STREAMING_ARCHITECTURE.md) | [`frontend_rag/AGENTS.md`](frontend_rag/AGENTS.md) |
 | **Writing `.md` documentation, Decision Logs, or Git commits** | [`agents/rules/MD_CONVENTION.md`](agents/rules/MD_CONVENTION.md) | [`agents/template/DECISION_LOG_TEMPLATE.md`](agents/template/DECISION_LOG_TEMPLATE.md), [`agents/rules/COMMIT_CONVENTION.md`](agents/rules/COMMIT_CONVENTION.md) |
 
@@ -44,26 +44,31 @@ RAG_TS/                                  # Workspace Root
 │   │   └── MD_CONVENTION.md             # Mandatory 7-field header & [STATUS] rules for all .md files
 │   └── template/
 │       └── DECISION_LOG_TEMPLATE.md     # 12-line decision block schema & attribution workflow
-├── docs/                                # Cross-cutting architecture specs, reports, and decision logs
+├── docs/                                # Cross-cutting docs, grouped by topic
 │   ├── INDEX.md                         # Master catalog of all .md files (ACTIVE vs ARCHIVED)
-│   ├── ARCHITECTURE_OVERVIEW.md         # End-to-end full-stack architecture & request lifecycle
-│   ├── API_SPECIFICATION.md             # REST & SSE API endpoint contracts (/api/v1/*)
-│   ├── SCIENTIFIC_RAG_BACKEND.md        # Vector retrieval, PageRank authority & FP-Growth mining
-│   ├── FE_DESIGN_SYSTEM.md              # Unified UI design tokens, glass materials & 3D rotation rules
-│   ├── FE_DESIGN_AUDIT.md               # Empirical UI token drift & Liquid Glass audit
-│   ├── FE3d_prompt_v2.md                # Sequential P15-P23 prompt plan for Design System & Liquid Glass
-│   ├── RUN_GUIDE.md                     # Local environment startup (Cloudflare tunnel, Qdrant, Ollama)
+│   ├── architecture/                    # System overview, retrieval pipeline, RAG notes, storage redesign
+│   ├── api/                             # REST & SSE contracts, API design, before/after comparison
+│   ├── design/                          # FE design system, audit, Liquid Glass write-up
+│   ├── guides/                          # Local startup (Cloudflare tunnel, Qdrant, Ollama)
+│   ├── security/                        # Backend security review
+│   ├── research/                        # Laya/JEV evaluation, sources, course notes
+│   ├── reports/                         # Engineering and benchmark reports
+│   ├── slides/                          # Self-contained HTML decks
+│   ├── prompts/                         # Implementation prompts and plans (P15-P23, security, archived)
+│   ├── assets/                          # Screenshots
 │   └── AI_chat_log/
-│       └── Vuong_chat_logs.md           # Authoritative Decision Log (D-001 through D-022+)
+│       └── Vuong_chat_logs.md           # Authoritative Decision Log (append-only, keeps historical paths)
 ├── backend_rag/                         # NestJS 11 + TypeScript 5.7 Backend Monolith (Port 3000)
 │   ├── AGENTS.md                        # Backend-specific AI agent guide & module map
-│   ├── src/                             # NestJS modules (auth, chat-sessions, rag, world, vector-store, llm, mining)
+│   ├── src/                             # modules/ (HTTP features), engines/ (retrieval & inference providers), common/, config/
 │   ├── docs/                            # Backend subsystem specs (Auth, Caching, MongoDB, Chat Sessions)
 │   └── benchmark/                       # 3-Stage Production SRE k6 Stress Test Suite & Python Analytics
-└── frontend_rag/                        # React 19 + Vite + Three.js (R3F) + Zustand + Dexie.js (Port 5173)
-    ├── AGENTS.md                        # Frontend-specific AI agent guide & component map
-    ├── src/                             # 3D world canvas, shaders, chat UI, IndexedDB store, API client
-    └── docs/                            # Frontend state/streaming architecture & WebGL/Web Vitals reports
+├── frontend_rag/                        # React 19 + Vite + Three.js (R3F) + Zustand + Dexie.js (Port 5173)
+│   ├── AGENTS.md                        # Frontend-specific AI agent guide & component map
+│   ├── src/                             # app/ (shell), features/ (auth, chat, crawl, result, world), shared/, test/
+│   └── docs/                            # Frontend state/streaming architecture & WebGL/Web Vitals reports
+├── model/                               # Local LLM and Laya models (gitignored, read through backend_rag/.env)
+└── data/                                # Symlink to pipeline data (gitignored, read through backend_rag/.env)
 ```
 
 ---
@@ -76,17 +81,17 @@ RAG_TS/                                  # Workspace Root
    - Remote MongoDB (`mongodb.minio-quangmanh.io.vn`) sits behind Cloudflare Access and must be accessed via a local `cloudflared access tcp` daemon bound to `localhost:27018`. Every network round-trip to MongoDB costs `~15–25ms` over the tunnel — **never introduce sequential N+1 MongoDB queries** when `Promise.all` or write-through `LRUCache` can be used.
 3. **Cryptographic & Auth Security Invariants (`D-021`, `D-022`)**:
    - Passwords use **`Argon2id`** (`memoryCost: 65536` = `64 MB`, `timeCost: 3`, `parallelism: 4`) with `UV_THREADPOOL_SIZE = 4` in [`backend_rag/src/main.ts`](backend_rag/src/main.ts). Never weaken `Argon2id` parameters.
-   - Refresh tokens use **1-RTT optimistic atomic rotation** (`findOneAndUpdate({ token_hash, revoked_at: null })`) in [`backend_rag/src/auth/token.service.ts`](backend_rag/src/auth/token.service.ts) with full `family_id` revocation upon reuse detection.
+   - Refresh tokens use **1-RTT optimistic atomic rotation** (`findOneAndUpdate({ token_hash, revoked_at: null })`) in [`backend_rag/src/modules/auth/token.service.ts`](backend_rag/src/modules/auth/token.service.ts) with full `family_id` revocation upon reuse detection.
 4. **Generation-Versioned Cache Invalidation (`D-021`)**:
-   - [`ChatSessionsService`](backend_rag/src/chat-sessions/chat-sessions.service.ts) caches paginated session lists (`listCache`) and message histories (`sessionDetailCache`) keyed by a per-user generation counter (`userListGen.get(userId)`). Any new endpoint that mutates sessions or messages **must** call `this.bumpUserGen(userId)` (or update the cache in-place) so users never read stale data.
+   - [`ChatSessionsService`](backend_rag/src/modules/chat-sessions/chat-sessions.service.ts) caches paginated session lists (`listCache`) and message histories (`sessionDetailCache`) keyed by a per-user generation counter (`userListGen.get(userId)`). Any new endpoint that mutates sessions or messages **must** call `this.invalidate(userId, ...sessionIds)`, which bumps the generation (or update the cache in-place) so users never read stale data.
 5. **UUIDv7 Primary Keys & Soft-Delete Filtering**:
    - `chat_sessions._id` and `chat_messages._id` use **UUIDv7** strings (time-ordered) generated by the application, never MongoDB `ObjectId`.
    - Every query on `chat_sessions` and `chat_messages` **must** include `deleted_at: null` and enforce ownership (`user_id: userId`), returning `404 Not Found` (never `403 Forbidden`) when a session belongs to another user or is soft-deleted.
 6. **Offline-First Frontend Chat Persistence (`D-017`)**:
-   - [`frontend_rag/src/db/chatDb.ts`](frontend_rag/src/db/chatDb.ts) (`Dexie.js` IndexedDB) is the primary client-side ground truth so chat history remains 100% viewable and navigable even if `backend_rag` is offline.
+   - [`frontend_rag/src/features/chat/db/chatDb.ts`](frontend_rag/src/features/chat/db/chatDb.ts) (`Dexie.js` IndexedDB) is the primary client-side ground truth so chat history remains 100% viewable and navigable even if `backend_rag` is offline.
 7. **3D Render Loop & Streaming Performance (`D-005` – `D-013`)**:
    - Never render raw HTML DOM elements (`<div>`, `<span>`) directly inside R3F `<Canvas>` (`D-013`).
-   - Keep `useDeferredValue` and the `30ms` micro-batched streaming buffer in [`frontend_rag/src/store/ragStore.ts`](frontend_rag/src/store/ragStore.ts) so KaTeX/Markdown AST parsing never freezes the WebGL render loop.
+   - Keep `useDeferredValue` and the `30ms` micro-batched streaming buffer in [`frontend_rag/src/features/chat/store/ragStore.ts`](frontend_rag/src/features/chat/store/ragStore.ts) so KaTeX/Markdown AST parsing never freezes the WebGL render loop.
 8. **Security Baseline & RBAC (`D-039` – `D-046`)**:
    - Roles are exactly `admin` / `user`; every `/api/v1/admin/*` route requires `JwtAuthGuard` + `RolesGuard` (`@Roles('admin')`) **and** a service-level `assertAdmin` re-check. Never expose an admin route without both layers.
    - Access tokens carry a `ver` claim equal to the user's `token_version`. Disabling an account or changing a role **must** bump `token_version` (via `AuthService.revokeAllForUser`) so live access tokens die immediately.
@@ -98,7 +103,7 @@ RAG_TS/                                  # Workspace Root
    - `rag_ts_corpus` is read-only from the app, through `CORPUS_MONGO_URI` on an account that is not root (`D-058`).
 
 9. **API Design Contract (`D-047`)**:
-   - [`docs/API_DESIGN.md`](docs/API_DESIGN.md) is the contract: versioned kebab-case nouns, `PATCH` for partial and `PUT` for full updates, JSON and XML negotiation, `_links` on responses, and the shared `limit`/`cursor`/`sort`/filter language from [`backend_rag/src/common/pagination.ts`](backend_rag/src/common/pagination.ts). A new route must extend the `API contract (OpenAPI)` test in `backend_rag/test/flow.e2e-spec.ts`.
+   - [`docs/api/API_DESIGN.md`](docs/api/API_DESIGN.md) is the contract: versioned kebab-case nouns, `PATCH` for partial and `PUT` for full updates, JSON and XML negotiation, `_links` on responses, and the shared `limit`/`cursor`/`sort`/filter language from [`backend_rag/src/common/pagination/pagination.ts`](backend_rag/src/common/pagination/pagination.ts). A new route must extend the `API contract (OpenAPI)` test in `backend_rag/test/flow.e2e-spec.ts`.
    - `PUT` and `DELETE` must be idempotent: a repeated call that changes nothing writes nothing, bumps no `token_version` and adds no audit record. `POST /rag/chat*` stays idempotent through `Idempotency-Key`.
 
 ---
@@ -108,7 +113,7 @@ RAG_TS/                                  # Workspace Root
 - **Backend Unit & Integration Tests (`backend_rag/`)**:
   ```powershell
   cd backend_rag
-  npx jest src/auth/auth.spec.ts src/chat-sessions/chat-sessions.spec.ts --runInBand
+  npx jest src/modules/auth/auth.spec.ts src/modules/chat-sessions/chat-sessions.spec.ts --runInBand
   npm test
   ```
 - **Backend Production Build & Typecheck (`backend_rag/`)**:

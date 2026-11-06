@@ -1,17 +1,17 @@
 # prompt_fe_3d.md — Initial P1-P11 Frontend 3D Knowledge Tree Prompts (Archived)
 
 - **Motivation/Background**: Step-by-step decomposition prompts (P1 through P11) and Appendices A & B used to bootstrap the 3D Vector Knowledge Tree frontend (`frontend_rag`) following the Lesson 2 methodology (`Requirement -> Spec -> Pseudocode -> Prompt -> Verification`).
-- **Purpose**: Historical record of the initial P1-P11 frontend 3D world and chat implementation and its verification checklist. The UI token and glassmorphism rules in this file have been superseded by [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md) and [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md).
+- **Purpose**: Historical record of the initial P1-P11 frontend 3D world and chat implementation and its verification checklist. The UI token and glassmorphism rules in this file have been superseded by [`FE_DESIGN_SYSTEM.md`](../design/FE_DESIGN_SYSTEM.md) and [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md).
 - **Overview Pipeline**: P1 Types/Theme -> P2 Binary/SSE/Mock -> P3 Zustand Store -> P4 Chat/Citations -> P5 World Canvas/PostFX -> P6 Ground/Crates -> P7 Ancient Tree -> P8 Vector Canopy -> P9 Query Flight -> P10 Result Card/Paper Panel -> P11 Layout/Perf/E2E.
 - **Detailed Plan**: Preserves original P1-P11 prompt specifications, Appendices A & B, and the completed P1-P11 verification & decision traceability checklist.
-- **References**: [../AGENTS.md](../AGENTS.md), [INDEX.md](INDEX.md), [../frontend_rag/AGENTS.md](../frontend_rag/AGENTS.md), [../frontend_rag/PROGRESS.md](../frontend_rag/PROGRESS.md), [FE_DESIGN_AUDIT.md](FE_DESIGN_AUDIT.md), [FE_DESIGN_SYSTEM.md](FE_DESIGN_SYSTEM.md), [FE3d_prompt_v2.md](FE3d_prompt_v2.md).
+- **References**: [../AGENTS.md](../../AGENTS.md), [INDEX.md](../INDEX.md), [../frontend_rag/AGENTS.md](../../frontend_rag/AGENTS.md), [../frontend_rag/PROGRESS.md](../../frontend_rag/PROGRESS.md), [FE_DESIGN_AUDIT.md](../design/FE_DESIGN_AUDIT.md), [FE_DESIGN_SYSTEM.md](../design/FE_DESIGN_SYSTEM.md), [FE3d_prompt_v2.md](FE3d_prompt_v2.md).
 - **Created**: 2026-10-18T10:00:00+07:00
-- **Last Updated**: 2026-10-30T06:11:00+07:00
+- **Last Updated**: 2026-11-06T13:13:54+07:00
 
 [STATUS: ARCHIVED]
 
 > [!WARNING]
-> **Archived Bootstrap Prompt**: All modules `P1`-`P11` have been implemented and verified (`210/210` Vitest unit tests, `6/6` Playwright E2E tests). For active UI design tokens, Liquid Glass rules, and P15-P23 upgrades, consult [`FE_DESIGN_SYSTEM.md`](FE_DESIGN_SYSTEM.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), and [`frontend_rag/AGENTS.md`](../frontend_rag/AGENTS.md).
+> **Archived Bootstrap Prompt**: All modules `P1`-`P11` have been implemented and verified (`210/210` Vitest unit tests, `6/6` Playwright E2E tests). For active UI design tokens, Liquid Glass rules, and P15-P23 upgrades, consult [`FE_DESIGN_SYSTEM.md`](../design/FE_DESIGN_SYSTEM.md), [`FE3d_prompt_v2.md`](FE3d_prompt_v2.md), and [`frontend_rag/AGENTS.md`](../../frontend_rag/AGENTS.md).
 
 ---
 
@@ -19,7 +19,7 @@ lide
 
 # Kế hoạch & Danh mục Prompt Phát triển Frontend 3D "Cây Tri Thức Vector" cho Hệ thống RAG
 
-Tài liệu này theo đúng nguyên tắc và cấu trúc của `docs/lesson_2.md` và file `prompt.md` (Backend):
+Tài liệu này theo đúng nguyên tắc và cấu trúc của `docs/research/lesson_2.md` và file `prompt.md` (Backend):
 
 - **Phân rã chức năng (Decomposition)**: Chia FE thành các module độc lập, đơn nhiệm.
 - **Quy trình chuẩn**: `Yêu cầu ➔ Đặc tả (Input/Output/Edge case) ➔ Pseudocode (Hợp đồng) ➔ Prompt có cấu trúc ➔ Kiểm chứng (Test, Verification)`.
