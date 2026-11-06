@@ -6,25 +6,25 @@
 - **Detailed Plan**: §1 Kết luận và danh sách lỗi theo mức độ; §2 Việc phải làm; §3 Phạm vi; §4 Chi tiết từng lỗi; §5 Kiểm tra; §6 Không thấy lỗi; §7 Chưa kiểm tra và giới hạn.
 - **References**: [AGENTS.md](../../AGENTS.md), [docs/prompts/prompt_security.md](../prompts/prompt_security.md), [docs/AI_chat_log/Vuong_chat_logs.md](../AI_chat_log/Vuong_chat_logs.md) (D-054 đến D-057), [backend_rag/docker-compose.yml](../../backend_rag/docker-compose.yml), [.claude/skills/security-audit/SKILL.md](../../.claude/skills/security-audit/SKILL.md).
 - **Created**: 2026-11-05T02:11:58+07:00
-- **Last Updated**: 2026-11-06T13:13:54+07:00
+- **Last Updated**: 2026-11-06T13:39:06+07:00
 
 [STATUS: IN_PROGRESS]
 
-> **Không commit file này lên repo public trước khi hoàn tất §2.1 và §2.2.** Báo cáo không chứa secret, nhưng cho biết các điểm yếu chưa được đóng.
+> §2.1 và §2.2 đã hoàn tất ngày 2026-11-06. Báo cáo không chứa secret, nhưng vẫn nêu các điểm yếu chưa đóng ở §2.
 
 ---
 
 ## 1. Kết luận
 
-**Đã sửa toàn bộ lỗi nằm trong `backend_rag`, nhưng hệ thống chưa an toàn hẳn.** Hai credential đã lộ trên GitHub public vẫn chưa được đổi, và các dịch vụ của pipeline vẫn mở trên mọi network interface.
+**Đã sửa toàn bộ lỗi nằm trong `backend_rag`, nhưng hệ thống chưa an toàn hẳn.** Hai credential đã lộ trên GitHub public đã được đổi ngày 2026-11-06, nhưng firewall vẫn tắt và các dịch vụ của pipeline vẫn mở trên mọi network interface.
 
 Có **10 lỗi**, xếp từ nặng đến nhẹ. Trong cùng một mức, lỗi còn mở hoặc ảnh hưởng rộng hơn đứng trước.
 
 | # | Mức | Lỗi | Hậu quả chính | Trạng thái |
 | :--- | :--- | :--- | :--- | :--- |
 | 1 | **Critical** | Mongo của app không có mật khẩu, mở ra mọi interface | Đọc được toàn bộ user và chat, tự nâng quyền admin | Đã sửa |
-| 2 | **Critical** (nếu mật khẩu còn dùng được) | Mật khẩu `app_user` lộ trên GitHub public | Đọc và ghi mọi db trên `mongo_service`, kể cả `rag_ts_corpus` | **Còn mở: phải đổi mật khẩu** |
-| 3 | **Medium** | Key read-only của Qdrant lộ trên GitHub public | Đọc được vector và metadata, không ghi được | **Còn mở: phải đổi key** |
+| 2 | **Critical** (nếu mật khẩu còn dùng được) | Mật khẩu `app_user` lộ trên GitHub public | Đọc và ghi mọi db trên `mongo_service`, kể cả `rag_ts_corpus` | Đã sửa (2026-11-06) |
+| 3 | **Medium** | Key read-only của Qdrant lộ trên GitHub public | Đọc được vector và metadata, không ghi được | Đã sửa (2026-11-06) |
 | 4 | **Medium** | Giả mạo IP bằng `X-Forwarded-For` | Vượt rate limit và khóa đăng nhập, làm giả IP trong audit log | Đã sửa |
 | 5 | **Medium** | Một client chiếm hết hàng đợi LLM | Người dùng khác nhận 429 | Đã sửa |
 | 6 | **Medium** | Thư viện có lỗ hổng: 11 lỗi production theo `npm audit` | Tùy thư viện, chưa chứng minh khai thác được | Đã sửa |
@@ -41,15 +41,12 @@ Toàn bộ thay đổi vẫn nằm trong working tree, **chưa commit**.
 
 ## 2. Việc phải làm
 
-Trạng thái bên dưới được kiểm tra lúc 2026-11-05 02:11 (+07:00). Các việc này cần quyền sudo hoặc ảnh hưởng đến đồng đội, nên agent không tự làm.
+Trạng thái bên dưới được kiểm tra lúc 2026-11-05 02:11 (+07:00), riêng mục 1 và 2 cập nhật ngày 2026-11-06. Các việc này cần quyền sudo hoặc ảnh hưởng đến đồng đội, nên agent không tự làm.
 
 ### Bắt buộc trước khi bật lại tunnel
 
-1. **Đổi mật khẩu `app_user`, hoặc xóa user nếu không ai dùng.** Chạy trong `mongosh` của `mongo_service`:
-   ```js
-   db.getSiblingDB("admin").changeUserPassword("app_user", "<mật khẩu mới>")
-   ```
-2. **Đổi key read-only của Qdrant.** Sửa `QDRANT__SERVICE__READ_ONLY_API_KEY` trong cấu hình ở `~/Project/docker`, tạo lại container, rồi cập nhật `backend_rag/.env`. Cần báo đồng đội và pipeline trước.
+1. **Đã xong (2026-11-06): đổi mật khẩu `app_user`** và thu hẹp quyền từ `readWriteAnyDatabase` xuống `readWrite` trên `rag_ts_corpus`. Máy nào khác còn dùng `app_user` phải lấy mật khẩu mới.
+2. **Đã xong (2026-11-06): đổi key read-only của Qdrant** trong `~/Project/docker` và `backend_rag/.env`. Đồng đội dùng key cũ phải lấy key mới. Code của repo pipeline vẫn có key cũ làm giá trị mặc định, nên giá trị đó không còn dùng được.
 3. **Bật firewall.** Hiện vẫn đang tắt:
    ```bash
    sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
@@ -93,7 +90,7 @@ Số mục khớp với số thứ tự ở bảng §1.
 - **Hậu quả nếu mật khẩu còn dùng được:** kẻ tấn công vào được cổng 27017 có thể đọc và ghi mọi db, kể cả source of truth. Khi đó mức độ là **Critical**.
 - **Chưa kiểm tra:** agent không thử đăng nhập bằng mật khẩu này. Hãy coi như nó vẫn dùng được.
 - **Đã làm:** thay bằng placeholder trong `README.md`, `docs/guides/RUN_GUIDE.md` và `docs/prompts/prompt_security.md`.
-- **Còn mở:** đổi mật khẩu theo §2.1. Lịch sử git không được viết lại.
+- **Đã sửa (2026-11-06):** mật khẩu đã đổi và quyền chỉ còn `readWrite` trên `rag_ts_corpus`. Đăng nhập bằng mật khẩu cũ bị từ chối; `rag_ts`, `major_be_fe`, `planner`, `admin` trả `Unauthorized`. Lịch sử git không được viết lại, nhưng mật khẩu trong đó đã hết tác dụng.
 - **Hai sự cố trong quá trình review:**
   - Báo cáo review đầu tiên sai khi xem mật khẩu này chỉ còn trong lịch sử git. Thực tế lúc đó nó vẫn nằm trong file hiện tại.
   - Một lệnh đọc `README.md` đã in mật khẩu vào log của phiên làm việc. Đây thêm một lý do để đổi mật khẩu.
@@ -103,7 +100,7 @@ Số mục khớp với số thứ tự ở bảng §1.
 - **Lỗi:** key read-only đang dùng từng nằm trong `README.md` và `docs/guides/RUN_GUIDE.md`, có trên `origin/main` từ 2026-10-20. Qdrant mở `0.0.0.0:6333`.
 - **Hậu quả:** key chỉ đọc được vector và metadata, không ghi được.
 - **Đã làm:** thay bằng placeholder trong file hiện tại.
-- **Còn mở:** đổi key theo §2.2, vì key vẫn còn trong lịch sử git.
+- **Đã sửa (2026-11-06):** key đã đổi. Key cũ trả 401; key mới đọc được và bị từ chối khi ghi (403). Số point giữ nguyên 1.043.594.
 
 ### 4.4 Medium: Giả mạo IP để vượt rate limit
 
