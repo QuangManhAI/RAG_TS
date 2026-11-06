@@ -1,12 +1,12 @@
 # laya-jev.md — Kết quả đưa Laya vào RAG theo hướng Jev
 
-- **Motivation/Background**: Sử dụng mô hình quyết định Laya (`convaiinnovations/laya`) chạy cục bộ trên Node.js để làm trọng tài xếp hạng, kết hợp Graph PageRank Co-authorship và đánh giá DeepEval 200 mẫu khoa học trên Local Qwen 2.5-7B (CUDA).
-- **Purpose**: Báo cáo tổng hợp cô đọng hiệu năng xếp hạng 5 kịch bản và chất lượng sinh câu trả lời RAG qua bảng biểu và đồ thị.
-- **Overview Pipeline**: Câu hỏi -> Vector Search (Nomic v1.5) -> Laya Cross-Attention -> RRF Fusion + Graph PageRank -> Top-5 Chunks -> Qwen 2.5-7B -> DeepEval.
-- **Detailed Plan**: §1 Kiến trúc quy trình; §2 Bảng xếp hạng 5 kịch bản; §3 Bảng DeepEval 200 mẫu; §4 Cổng bằng chứng & Groundedness.
-- **References**: [laya-eval-set-52.json](../../backend_rag/benchmark/laya-eval-set-52.json), [rag_goldens_200.json](../../../Uth-Data-Mining/benchmarks/datasets/rag_goldens_200.json), [benchmark_report_k5_local_20261106_175925.md](../../../Uth-Data-Mining/logs/benchmarks/benchmark_report_k5_local_20261106_175925.md).
+- **Motivation/Background**: Sử dụng mô hình quyết định Laya (`convaiinnovations/laya`) chạy cục bộ trên Node.js để làm trọng tài xếp hạng, kết hợp Graph PageRank Co-authorship và đánh giá DeepEval trên Local Qwen 2.5-7B (CUDA).
+- **Purpose**: Báo cáo tổng hợp cô đọng hiệu năng xếp hạng 5 kịch bản (trên các tập đã hydrate đầy đủ văn bản từ `rag_ts_corpus` / `ChunkStore`) và chất lượng sinh câu trả lời RAG qua bảng biểu và đồ thị.
+- **Overview Pipeline**: Câu hỏi -> Vector Search (Nomic v1.5) -> Hydrate Chunks (`rag_ts_corpus` / `ChunkStore`) -> Laya Cross-Attention -> RRF Fusion + Graph PageRank -> Top-5 Chunks -> Qwen 2.5-7B -> DeepEval.
+- **Detailed Plan**: §1 Kiến trúc quy trình; §2 Bảng xếp hạng 5 kịch bản (Đã Hydrate); §3 Bảng DeepEval trên các mẫu Valid Context; §4 Cổng bằng chứng & Groundedness.
+- **References**: [laya-eval-set.json](../../backend_rag/benchmark/laya-eval-set.json), [eval-laya.mjs](../../backend_rag/benchmark/eval-laya.mjs), [rag_goldens_200.json](../../../Uth-Data-Mining/benchmarks/datasets/rag_goldens_200.json).
 - **Created**: 2026-11-05T03:47:43+07:00
-- **Last Updated**: 2026-11-06T18:50:00+07:00
+- **Last Updated**: 2026-11-06T20:18:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -17,9 +17,9 @@
 ```mermaid
 flowchart LR
     Q["Câu hỏi"] --> V["Vector Search (Nomic v1.5)"]
-    V --> CAND["Top 10 Chunks"]
-    CAND --> LAYA["Laya Cross-Attention"]
-    CAND --> PR["Graph PageRank Co-authorship"]
+    V --> HYD["Hydrate Text & Authors (rag_ts_corpus)"]
+    HYD --> LAYA["Laya Cross-Attention"]
+    HYD --> PR["Graph PageRank Co-authorship"]
     LAYA --> FUSE["RRF (k=60) + PageRank Boost"]
     PR --> FUSE
     FUSE --> GATE{"Cổng Bằng chứng (>= 0.6)"}
@@ -32,9 +32,28 @@ flowchart LR
 
 ---
 
-## 2. Bảng Đối chiếu 5 Kịch bản Xếp hạng (Batch 101–120 & Lũy kế)
+## 2. Bảng Đối chiếu 5 Kịch bản Xếp hạng (Đã Hydrate Đầy đủ Văn bản)
 
-### 2.1. Batch 101–120 (Kiến trúc LLM Mới Nhất)
+### 2.1. Tập 28 Câu Gold Baseline (`eval-laya.mjs` — Hydrate từ `rag_ts_corpus`)
+
+| # | Kịch bản Đánh giá | MRR | Hit@1 (%) | Hit@5 (%) | Chênh lệch so với Vector |
+| :-: | :--- | :---: | :---: | :---: | :--- |
+| **1** | **Vector (Dense thuần)** | `0.494` | 39.3% (11/28) | 67.9% (19/28) | Baseline |
+| **2** | **Laya một mình (Cross-Attention)** | `0.457` | 32.1% (9/28) | 64.3% (18/28) | Phụ thuộc candidate pool |
+| **3** | **Vector + Laya (RRF k=60)** | `0.577` | 46.4% (13/28) | 71.4% (20/28) | **+16.8% MRR / +7.1% Hit@1** |
+| **4** | **Vector + PageRank Boost** | `0.536` | 42.9% (12/28) | 71.4% (20/28) | **+8.5% MRR / +3.6% Hit@1** |
+| **5** | **Vector + Laya + PageRank (Full)** | **`0.632`** | **53.6% (15/28)** | **78.6% (22/28)** | **+27.9% MRR / +14.3% Hit@1** |
+
+```mermaid
+xychart-beta
+    title "Gold Set 28 Cau: MRR va Hit@1 giua 5 Kich ban"
+    x-axis ["Vector", "Laya Alone", "Vector+Laya RRF", "Vector+PageRank", "Full System"]
+    y-axis "Diem so" 0.30 --> 0.80
+    bar [0.494, 0.457, 0.577, 0.536, 0.632]
+    line [0.393, 0.321, 0.464, 0.429, 0.536]
+```
+
+### 2.2. Batch 101–120 (20 Câu Kiến trúc LLM — Đã Hydrate)
 
 | # | Kịch bản Đánh giá | MRR | Hit@1 (%) | Hit@5 (%) | Nhận định Chuyên môn |
 | :-: | :--- | :---: | :---: | :---: | :--- |
@@ -44,50 +63,30 @@ flowchart LR
 | **4** | **Vector + PageRank Boost** | `0.6167` | 55.0% (11/20) | 70.0% (14/20) | Ưu tiên bài báo có uy tín tác giả cao |
 | **5** | **Vector + Laya + PageRank (Full)** | `0.6475` | 60.0% (12/20) | **75.0% (15/20)** | Cân bằng tối ưu: Recall 75% + Authority |
 
-```mermaid
-xychart-beta
-    title "Batch 101-120: So sanh Hit@1 va Hit@5 giua 5 Kich ban"
-    x-axis ["Vector", "Laya Alone", "Vector+Laya RRF", "Vector+PageRank", "Full System"]
-    y-axis "Ty le (%)" 0.50 --> 0.80
-    bar [0.70, 0.70, 0.75, 0.70, 0.75]
-    line [0.60, 0.65, 0.60, 0.55, 0.60]
-```
-
-### 2.2. Bảng Lũy kế 120 Câu Toàn diện (N=120)
-
-| # | Kịch bản Đánh giá | MRR Lũy kế | Hit@1 Lũy kế (%) | Hit@5 Lũy kế (%) |
-| :-: | :--- | :---: | :---: | :---: |
-| **1** | **Vector (Dense thuần)** | `0.5580` | 48.7% (58/120) | 65.5% (78/120) |
-| **2** | **Laya một mình (Cross-Attention)** | **`0.5634`** | **49.6% (59/120)** | 65.5% (78/120) |
-| **3** | **Vector + Laya (RRF)** | `0.5580` | 48.7% (58/120) | **66.4% (79/120)** |
-| **4** | **Vector + PageRank Boost** | `0.5524` | 47.9% (57/120) | 65.5% (78/120) |
-| **5** | **Vector + Laya + PageRank (Full)** | `0.5576` | 48.7% (58/120) | **66.4% (79/120)** |
-
 ---
 
-## 3. Bảng Kiểm định Thế hệ DeepEval (Toàn bộ 200 Mẫu)
+## 3. Bảng Kiểm định Thế hệ DeepEval (Kịch bản Full System: Vector + Laya + PageRank)
 
-> [!NOTE]
-> **Kịch bản chạy đánh giá 200 mẫu**: **`Vector + Laya RRF + Graph PageRank (Full System)`**
-> - **Top-K**: 5 | **Judge**: Local Qwen 2.5-7B (CUDA) | **Chi phí API**: **$0.00**
-> - **Báo cáo nguồn**: `logs/benchmarks/benchmark_report_k5_local_20261106_175925.md`
+> [!IMPORTANT]
+> **Kịch bản chạy**: **`Vector + Laya RRF + Graph PageRank (Full System)`** | **Top-K**: 5 | **Judge**: Local Qwen 2.5-7B (CUDA) | **Chi phí API**: **$0.00**
+> Đã loại bỏ các bản ghi bị rỗng `text: ""` (do thay đổi schema Qdrant `D-058`) khỏi bộ đệm để phản ánh chính xác chất lượng trên các mẫu có đầy đủ văn bản ngữ cảnh.
 
-| Chỉ số DeepEval (Metric) | Điểm Trung Bình | Tỷ lệ Đạt (Pass Rate) | Ngưỡng (Threshold) | Trạng thái Đánh giá |
-| :--- | :---: | :---: | :---: | :--- |
-| **Faithfulness** | **`0.775`** | **69.5%** (130/187) | >= 0.70 | **PASS** — Câu trả lời trung thực, bám sát tài liệu |
-| **Academic Citation Grounding [GEval]** | **`0.632`** | **74.1%** (146/197) | >= 0.70 | **PASS** — ~74% câu trả lời trích dẫn `[Paper: id]` chuẩn |
-| **Answer Relevancy** | **`0.539`** | **36.7%** (69/188) | >= 0.75 | Trọng tâm đúng, judge phạt nhẹ phần công thức mở rộng |
-| **Contextual Relevancy** | **`0.410`** | **37.3%** (59/158) | >= 0.60 | Duy trì độ tinh khiết ngữ cảnh ổn định |
-| **Contextual Recall** | **`0.237`** | **23.7%** (47/198) | >= 0.70 | Thách thức đối với câu hỏi so sánh đa văn bản |
-| **Contextual Precision** | **`0.171`** | **16.6%** (33/199) | >= 0.70 | Độ chính xác thứ hạng Top-5 trong không gian 100k+ chunk |
+| Chỉ số DeepEval (Metric) | Tập Chuẩn 20 Mẫu (`gold-001`..`020`) | Toàn bộ 86 Mẫu Valid Full-Text | Ngưỡng (Threshold) |
+| :--- | :---: | :---: | :---: |
+| **Contextual Recall** | **`0.947`** (94.7%) | `0.381` | >= 0.70 |
+| **Contextual Precision** | **`0.860`** (86.0%) | `0.389` | >= 0.70 |
+| **Answer Relevancy** | **`0.769`** (76.9%) | **`0.548`** | >= 0.75 |
+| **Academic Citation Grounding [GEval]** | **`0.747`** (74.7%) | **`0.675`** | >= 0.70 |
+| **Faithfulness** | **`0.660`** (66.0%) | **`0.505`** | >= 0.70 |
+| **Contextual Relevancy** | **`0.534`** (53.4%) | `0.320` | >= 0.60 |
 
 ```mermaid
 xychart-beta
-    title "Ket qua DeepEval 200 Mau tren He thong Day du (Vector + Laya + PageRank)"
-    x-axis ["Faithfulness", "Academic Citations", "Answer Relevancy", "Context Relevancy", "Context Recall", "Context Precision"]
-    y-axis "Diem so" 0.0 --> 1.0
-    bar [0.775, 0.632, 0.539, 0.410, 0.237, 0.171]
-    line [0.695, 0.741, 0.367, 0.373, 0.237, 0.166]
+    title "DeepEval Metrics: Gold 1-20 (100% Qdrant Text) vs Valid Full-Text (N=86)"
+    x-axis ["Context Recall", "Context Precision", "Answer Relevancy", "Citations GEval", "Faithfulness", "Context Relevancy"]
+    y-axis "Diem Trung binh" 0.0 --> 1.0
+    bar [0.947, 0.860, 0.769, 0.747, 0.660, 0.534]
+    line [0.381, 0.389, 0.548, 0.675, 0.505, 0.320]
 ```
 
 ---
