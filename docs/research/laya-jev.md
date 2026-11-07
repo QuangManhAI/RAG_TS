@@ -53,15 +53,34 @@ xychart-beta
     line [0.393, 0.321, 0.464, 0.429, 0.536]
 ```
 
-### 2.2. Batch 101–120 (20 Câu Kiến trúc LLM — Đã Hydrate)
+### 2.2. Bảng Lũy kế 120 Câu Toàn diện (`N=120` — Đã Hydrate Văn bản & 29,523 Tác giả PageRank)
+
+| # | Kịch bản Đánh giá | MRR Lũy kế | Hit@1 Lũy kế (%) | Hit@5 Lũy kế (%) | Chênh lệch so với Vector |
+| :-: | :--- | :---: | :---: | :---: | :--- |
+| **1** | **Vector (Dense thuần)** | `0.5725` | 49.2% (59/120) | 67.5% (81/120) | Baseline (`Nomic Embed v1.5`) |
+| **2** | **Laya một mình (Cross-Attention)** | `0.5822` | 51.7% (62/120) | 66.7% (80/120) | **+1.7% MRR / +2.5% Hit@1** |
+| **3** | **Vector + Laya (RRF k=60)** | `0.5810` | 50.8% (61/120) | 67.5% (81/120) | **+1.5% MRR / +1.6% Hit@1** |
+| **4** | **Vector + PageRank Boost** | `0.5741` | 49.2% (59/120) | 68.3% (82/120) | **+0.8% Hit@5** (`20k papers / 29.5k authors`) |
+| **5** | **Vector + Laya + PageRank (Full)** | **`0.6076`** | **55.0% (66/120)** | **69.2% (83/120)** | **+6.1% MRR / +5.8% Hit@1 / +1.7% Hit@5** |
+
+```mermaid
+xychart-beta
+    title "Tap 120 Cau Da Hydrate (N=120): MRR va Hit@1 giua 5 Kich ban"
+    x-axis ["Vector", "Laya Alone", "Vector+Laya RRF", "Vector+PageRank", "Full System"]
+    y-axis "Diem so" 0.45 --> 0.72
+    bar [0.5725, 0.5822, 0.5810, 0.5741, 0.6076]
+    line [0.492, 0.517, 0.508, 0.492, 0.550]
+```
+
+### 2.3. Batch 101–120 (20 Câu Kiến trúc LLM — Đã Hydrate)
 
 | # | Kịch bản Đánh giá | MRR | Hit@1 (%) | Hit@5 (%) | Nhận định Chuyên môn |
 | :-: | :--- | :---: | :---: | :---: | :--- |
 | **1** | **Vector (Dense thuần)** | `0.6500` | 60.0% (12/20) | 70.0% (14/20) | Baseline dense embedding |
 | **2** | **Laya một mình (Cross-Attention)** | **`0.6821`** | **65.0% (13/20)** | 70.0% (14/20) | **Top-1 Precision cao nhất (+5.0%)** |
 | **3** | **Vector + Laya (RRF k=60)** | `0.6500` | 60.0% (12/20) | **75.0% (15/20)** | **Top-5 Recall cao nhất (+5.0%)** |
-| **4** | **Vector + PageRank Boost** | `0.6167` | 55.0% (11/20) | 70.0% (14/20) | Ưu tiên bài báo có uy tín tác giả cao |
-| **5** | **Vector + Laya + PageRank (Full)** | `0.6475` | 60.0% (12/20) | **75.0% (15/20)** | Cân bằng tối ưu: Recall 75% + Authority |
+| **4** | **Vector + PageRank Boost** | `0.6500` | 60.0% (12/20) | 70.0% (14/20) | Giữ vững Top-1 cho các bài báo nền tảng |
+| **5** | **Vector + Laya + PageRank (Full)** | **`0.6517`** | 60.0% (12/20) | **75.0% (15/20)** | **MRR hợp nhất cao nhất (`0.6517`) + Recall 75%** |
 
 ---
 
