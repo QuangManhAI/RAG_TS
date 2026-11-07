@@ -34,22 +34,23 @@ flowchart LR
 
 ## 2. Bảng Đối chiếu 5 Kịch bản Xếp hạng (`N=120` — Đã Hydrate Văn bản & 29,523 Tác giả PageRank)
 
-| # | Kịch bản Đánh giá | MRR | Hit@1 (%) | Recall@1 (%) | Hit@5 (%) | Recall@5 (%) | Latency (`ms/q`) | Chênh lệch so với Vector |
+| # | Kịch bản Đánh giá | MRR | Hit@1 (%) | Recall@1 (%) | Hit@5 (%) | Recall@5 (%) | Latency (`Laya 421M CPU` / `CUDA Batch`) | Chênh lệch so với Vector |
 | :-: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **1** | **Vector (Dense thuần)** | `0.5725` | 49.2% (59/120) | `45.0%` | 67.5% (81/120) | `60.8%` | `325.0 ms` | Baseline (`Nomic v1.5` + Hydrate) |
-| **2** | **Laya một mình (Cross-Attention)** | `0.5822` | 51.7% (62/120) | `46.2%` | 66.7% (80/120) | `60.0%` | `383.9 ms` (`+58.9 ms`) | **+1.7% MRR / +2.5% Hit@1 / +1.2% Recall@1** |
-| **3** | **Vector + Laya (RRF k=60)** | `0.5810` | 50.8% (61/120) | `46.2%` | 67.5% (81/120) | `60.4%` | `383.9 ms` (`+58.9 ms`) | **+1.5% MRR / +1.6% Hit@1 / +1.2% Recall@1** |
+| **1** | **Vector (Dense thuần)** | `0.5725` | 49.2% (59/120) | `45.0%` | 67.5% (81/120) | `60.8%` | **`325.0 ms`** | Baseline (`Nomic v1.5` + Hydrate) |
+| **2** | **Laya một mình (Cross-Attention)** | `0.5822` | 51.7% (62/120) | `46.2%` | 66.7% (80/120) | `60.0%` | `4,585 ms` (CPU) / `383.9 ms` (GPU) | **+1.7% MRR / +2.5% Hit@1 / +1.2% Recall@1** |
+| **3** | **Vector + Laya (RRF k=60)** | `0.5810` | 50.8% (61/120) | `46.2%` | 67.5% (81/120) | `60.4%` | `4,585 ms` (CPU) / `383.9 ms` (GPU) | **+1.5% MRR / +1.6% Hit@1 / +1.2% Recall@1** |
 | **4** | **Vector + PageRank Boost** | `0.5741` | 49.2% (59/120) | `45.0%` | 68.3% (82/120) | `61.7%` | **`325.2 ms` (`+0.21 ms`)** | **+0.8% Hit@5 / +0.9% Recall@5** |
-| **5** | **Vector + Laya + PageRank (Full)** | **`0.6076`** | **55.0% (66/120)** | **`49.6%`** | **69.2% (83/120)** | **`62.1%`** | **`384.1 ms` (`+59.1 ms`)** | **+6.1% MRR / +5.8% Hit@1 / +4.6% Recall@1** |
+| **5** | **Vector + Laya + PageRank (Full)** | **`0.6076`** | **55.0% (66/120)** | **`49.6%`** | **69.2% (83/120)** | **`62.1%`** | `4,585.2 ms` (CPU) / `384.1 ms` (GPU) | **+6.1% MRR / +5.8% Hit@1 / +4.6% Recall@1** |
 
-### 2.1. Chi phí Độ trễ theo Tầng (Latency ROI — PageRank có đáng dùng không?)
+### 2.1. Chi phí Độ trễ theo Tầng (Tại sao Laya đắt còn PageRank cực rẻ?)
 
-| Thành phần Pipeline | Độ trễ Trung bình (`ms/query`) | Tỷ trọng Thời gian | Đóng góp Hiệu năng (`Full System` vs `RRF`) |
-| :--- | :---: | :---: | :--- |
-| **1. Vector Search (`Nomic v1.5` + ANN + Hydrate)** | `325.01 ms` | `84.61%` | Thu hồi Top-10 ứng viên ban đầu (`75.0%` Hit@10) |
-| **2. Laya Cross-Encoder (10 chunks trên CUDA)** | `+58.85 ms` | `15.32%` | Chấm điểm Cross-Attention ngữ nghĩa sâu (`+2.5%` Hit@1) |
-| **3. RRF Fusion (`k=60`)** | `+0.02 ms` (`18.6 µs`) | `< 0.01%` | Hợp nhất thứ hạng Vector + Laya |
-| **4. Graph PageRank Lookup (In-Memory `O(1)`)** | **`+0.21 ms` (`205.7 µs`)** | **`0.05%`** | **Tăng `+4.2%` Hit@1 (`50.8% -> 55.0%`), `+3.4%` Recall@1, `+1.7%` Hit@5** |
+| Thành phần Pipeline | Độ trễ Trung bình (`ms/query`) | Chi tiết Thực thi | Đóng góp Hiệu năng (`Full System` vs `RRF`) |
+| :--- | :---: | :--- | :--- |
+| **1. Vector Search (`Nomic v1.5` + ANN + Hydrate)** | `325.01 ms` | Nhúng câu hỏi + quét 913k vector + nạp text từ `ChunkStore` | Thu hồi Top-10 ứng viên ban đầu (`75.0%` Hit@10) |
+| **2a. `Laya-421M` (`receptron/laya-onnx` trên Node CPU)** | **`+4,260.0 ms` (`~4.26s`)** | **`426 ms/chunk` $\times$ 10 tuần tự trên CPU (`1.6 GB` RAM)** | **Rất nặng nếu chạy tuần tự trên CPU** |
+| **2b. `Cross-Encoder MiniLM-L6` (22M, Batch-10 CUDA)** | `+58.85 ms` | Chấm song song 1 batch 10 chunks trên GPU RTX | Chấm điểm Cross-Attention ngữ nghĩa (`+2.5%` Hit@1) |
+| **3. RRF Fusion (`k=60`)** | `+0.02 ms` (`18.6 µs`) | 10 phép chia nghịch đảo thứ hạng trong RAM | Hợp nhất thứ hạng Vector + Cross-Encoder |
+| **4. Graph PageRank Lookup (In-Memory `O(1)`)** | **`+0.21 ms` (`205.7 µs`)** | **Tra bảng băm `20,000` bài & `29,523` tác giả trong RAM** | **Tăng `+4.2%` Hit@1 (`50.8% -> 55.0%`), `+3.4%` Recall@1, `+1.7%` Hit@5** |
 
 ```mermaid
 xychart-beta
