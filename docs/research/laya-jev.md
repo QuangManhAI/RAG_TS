@@ -1,12 +1,12 @@
 # laya-jev.md — Kết quả đưa Laya vào RAG theo hướng Jev
 
 - **Motivation/Background**: Sử dụng mô hình quyết định Laya (`convaiinnovations/laya`) chạy cục bộ trên Node.js để làm trọng tài xếp hạng, kết hợp Graph PageRank Co-authorship và đánh giá DeepEval trên Local Qwen 2.5-7B (CUDA).
-- **Purpose**: Báo cáo tổng hợp cô đọng hiệu năng xếp hạng 5 kịch bản (trên các tập đã hydrate đầy đủ văn bản từ `rag_ts_corpus` / `ChunkStore`) và chất lượng sinh câu trả lời RAG qua bảng biểu và đồ thị.
+- **Purpose**: Báo cáo tổng hợp cô đọng hiệu năng xếp hạng 5 kịch bản (trên tập 120 câu đã hydrate đầy đủ văn bản từ `rag_ts_corpus` / `ChunkStore` và 29,523 tác giả PageRank) và chất lượng sinh câu trả lời RAG qua bảng biểu và đồ thị.
 - **Overview Pipeline**: Câu hỏi -> Vector Search (Nomic v1.5) -> Hydrate Chunks (`rag_ts_corpus` / `ChunkStore`) -> Laya Cross-Attention -> RRF Fusion + Graph PageRank -> Top-5 Chunks -> Qwen 2.5-7B -> DeepEval.
-- **Detailed Plan**: §1 Kiến trúc quy trình; §2 Bảng xếp hạng 5 kịch bản (Đã Hydrate); §3 Bảng DeepEval trên các mẫu Valid Context; §4 Cổng bằng chứng & Groundedness.
-- **References**: [laya-eval-set.json](../../backend_rag/benchmark/laya-eval-set.json), [eval-laya.mjs](../../backend_rag/benchmark/eval-laya.mjs), [rag_goldens_200.json](../../../Uth-Data-Mining/benchmarks/datasets/rag_goldens_200.json).
+- **Detailed Plan**: §1 Kiến trúc quy trình; §2 Bảng xếp hạng 5 kịch bản (120 Câu & Batch 101–120 Đã Hydrate); §3 Bảng DeepEval trên các mẫu Valid Context; §4 Cổng bằng chứng & Groundedness.
+- **References**: [rag_goldens_200.json](../../../Uth-Data-Mining/benchmarks/datasets/rag_goldens_200.json), [laya_5_scenarios_comparison_120q.json](../../../Uth-Data-Mining/logs/benchmarks/laya_5_scenarios_comparison_120q.json), [cached_eval_master_k5_pagerank_local.json](../../../Uth-Data-Mining/logs/benchmarks/cached_eval_master_k5_pagerank_local.json).
 - **Created**: 2026-11-05T03:47:43+07:00
-- **Last Updated**: 2026-11-06T23:00:00+07:00
+- **Last Updated**: 2026-11-07T07:38:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -34,26 +34,7 @@ flowchart LR
 
 ## 2. Bảng Đối chiếu 5 Kịch bản Xếp hạng (Đã Hydrate Đầy đủ Văn bản)
 
-### 2.1. Tập 28 Câu Gold Baseline (`eval-laya.mjs` — Hydrate từ `rag_ts_corpus`)
-
-| # | Kịch bản Đánh giá | MRR | Hit@1 (%) | Hit@5 (%) | Chênh lệch so với Vector |
-| :-: | :--- | :---: | :---: | :---: | :--- |
-| **1** | **Vector (Dense thuần)** | `0.494` | 39.3% (11/28) | 67.9% (19/28) | Baseline |
-| **2** | **Laya một mình (Cross-Attention)** | `0.457` | 32.1% (9/28) | 64.3% (18/28) | Phụ thuộc candidate pool |
-| **3** | **Vector + Laya (RRF k=60)** | `0.577` | 46.4% (13/28) | 71.4% (20/28) | **+16.8% MRR / +7.1% Hit@1** |
-| **4** | **Vector + PageRank Boost** | `0.536` | 42.9% (12/28) | 71.4% (20/28) | **+8.5% MRR / +3.6% Hit@1** |
-| **5** | **Vector + Laya + PageRank (Full)** | **`0.632`** | **53.6% (15/28)** | **78.6% (22/28)** | **+27.9% MRR / +14.3% Hit@1** |
-
-```mermaid
-xychart-beta
-    title "Gold Set 28 Cau: MRR va Hit@1 giua 5 Kich ban"
-    x-axis ["Vector", "Laya Alone", "Vector+Laya RRF", "Vector+PageRank", "Full System"]
-    y-axis "Diem so" 0.30 --> 0.80
-    bar [0.494, 0.457, 0.577, 0.536, 0.632]
-    line [0.393, 0.321, 0.464, 0.429, 0.536]
-```
-
-### 2.2. Bảng Lũy kế 120 Câu Toàn diện (`N=120` — Đã Hydrate Văn bản & 29,523 Tác giả PageRank)
+### 2.1. Bảng Lũy kế 120 Câu Toàn diện (`N=120` — Đã Hydrate Văn bản & 29,523 Tác giả PageRank)
 
 | # | Kịch bản Đánh giá | MRR Lũy kế | Hit@1 Lũy kế (%) | Hit@5 Lũy kế (%) | Chênh lệch so với Vector |
 | :-: | :--- | :---: | :---: | :---: | :--- |
@@ -72,7 +53,7 @@ xychart-beta
     line [0.492, 0.517, 0.508, 0.492, 0.550]
 ```
 
-### 2.3. Batch 101–120 (20 Câu Kiến trúc LLM — Đã Hydrate)
+### 2.2. Batch 101–120 (20 Câu Kiến trúc LLM — Đã Hydrate)
 
 | # | Kịch bản Đánh giá | MRR | Hit@1 (%) | Hit@5 (%) | Nhận định Chuyên môn |
 | :-: | :--- | :---: | :---: | :---: | :--- |
