@@ -34,27 +34,27 @@ flowchart LR
 
 ## 2. Bảng Đối chiếu 5 Kịch bản Xếp hạng (`N=120` — Đã Hydrate Văn bản & 29,523 Tác giả PageRank)
 
-| # | Kịch bản Đánh giá | MRR | Hit@1 (%) | Hit@5 (%) | Recall@5 (%) | Hit@10 (%) | Chênh lệch so với Vector |
-| :-: | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **1** | **Vector (Dense thuần)** | `0.5725` | 49.2% (59/120) | 67.5% (81/120) | 60.8% | 75.0% (90/120) | Baseline (`Nomic Embed v1.5`) |
-| **2** | **Laya một mình (Cross-Attention)** | `0.5822` | 51.7% (62/120) | 66.7% (80/120) | 60.0% | 75.0% (90/120) | **+1.7% MRR / +2.5% Hit@1** |
-| **3** | **Vector + Laya (RRF k=60)** | `0.5810` | 50.8% (61/120) | 67.5% (81/120) | 60.4% | 75.0% (90/120) | **+1.5% MRR / +1.6% Hit@1** |
-| **4** | **Vector + PageRank Boost** | `0.5741` | 49.2% (59/120) | 68.3% (82/120) | 61.7% | 75.0% (90/120) | **+0.8% Hit@5 / +0.9% Recall@5** |
-| **5** | **Vector + Laya + PageRank (Full)** | **`0.6076`** | **55.0% (66/120)** | **69.2% (83/120)** | **`62.1%`** | **75.0% (90/120)** | **+6.1% MRR / +5.8% Hit@1 / +1.7% Hit@5** |
+| # | Kịch bản Đánh giá | MRR | Hit@1 (%) | Recall@1 (%) | Hit@5 (%) | Recall@5 (%) | Hit@10 (%) | Chênh lệch so với Vector |
+| :-: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **1** | **Vector (Dense thuần)** | `0.5725` | 49.2% (59/120) | `45.0%` | 67.5% (81/120) | `60.8%` | 75.0% (90/120) | Baseline (`Nomic Embed v1.5`) |
+| **2** | **Laya một mình (Cross-Attention)** | `0.5822` | 51.7% (62/120) | `46.2%` | 66.7% (80/120) | `60.0%` | 75.0% (90/120) | **+1.7% MRR / +2.5% Hit@1 / +1.2% Recall@1** |
+| **3** | **Vector + Laya (RRF k=60)** | `0.5810` | 50.8% (61/120) | `46.2%` | 67.5% (81/120) | `60.4%` | 75.0% (90/120) | **+1.5% MRR / +1.6% Hit@1 / +1.2% Recall@1** |
+| **4** | **Vector + PageRank Boost** | `0.5741` | 49.2% (59/120) | `45.0%` | 68.3% (82/120) | `61.7%` | 75.0% (90/120) | **+0.8% Hit@5 / +0.9% Recall@5** |
+| **5** | **Vector + Laya + PageRank (Full)** | **`0.6076`** | **55.0% (66/120)** | **`49.6%`** | **69.2% (83/120)** | **`62.1%`** | **75.0% (90/120)** | **+6.1% MRR / +5.8% Hit@1 / +4.6% Recall@1** |
 
 ```mermaid
 xychart-beta
-    title "Tap 120 Cau Da Hydrate (N=120): MRR, Hit@1 va Hit@5 giua 5 Kich ban"
+    title "Tap 120 Cau Da Hydrate (N=120): MRR, Hit@1 va Recall@1 giua 5 Kich ban"
     x-axis ["Vector", "Laya Alone", "Vector+Laya RRF", "Vector+PageRank", "Full System"]
-    y-axis "Diem so" 0.45 --> 0.72
+    y-axis "Diem so" 0.40 --> 0.70
     bar [0.5725, 0.5822, 0.5810, 0.5741, 0.6076]
-    line [0.492, 0.517, 0.508, 0.492, 0.550]
+    line [0.450, 0.462, 0.462, 0.450, 0.496]
 ```
 
 > [!NOTE]
 > **Phân biệt 3 công thức tính Recall trong báo cáo**:
-> 1. **`Hit@K` (Binary Document Recall@K — Bảng §2)**: $\text{Hit@K} = \frac{1}{N}\sum_{q=1}^{N} \mathbb{I}(\text{Top}_K(q) \cap G_q \neq \emptyset)$ — Tỷ lệ câu hỏi có **ít nhất 1 bài báo chuẩn** (`relevant_paper_ids`) nằm trong Top-$K$ (`69.2%` tại $K=5$, `75.0%` tại $K=10$).
-> 2. **`Recall@5` (Strict Multi-Paper Recall@5 — Bảng §2)**: $\text{Recall@5} = \frac{1}{N}\sum_{q=1}^{N} \frac{|\text{Top}_5(q) \cap G_q|}{|G_q|}$ — Trong 120 câu có 92 câu gắn 1 bài báo ($|G_q|=1$) và 28 câu gắn 2 bài báo ($|G_q|=2$); chỉ số này tính tỷ lệ bao phủ toàn bộ tập $G_q$ trong Top-5 (`60.8%` Vector $\rightarrow$ **`62.1%`** Full System).
+> 1. **`Hit@K` (Binary Document Recall@K — Bảng §2)**: $\text{Hit@K} = \frac{1}{N}\sum_{q=1}^{N} \mathbb{I}(\text{Top}_K(q) \cap G_q \neq \emptyset)$ — Tỷ lệ câu hỏi có **ít nhất 1 bài báo chuẩn** (`relevant_paper_ids`) nằm trong Top-$K$ (`55.0%` tại $K=1$, `69.2%` tại $K=5$, `75.0%` tại $K=10$).
+> 2. **`Recall@1` & `Recall@5` (Strict Multi-Paper Recall@K — Bảng §2)**: $\text{Recall@K} = \frac{1}{N}\sum_{q=1}^{N} \frac{|\text{Top}_K(q) \cap G_q|}{|G_q|}$ — Trong 120 câu có 92 câu gắn 1 bài báo ($|G_q|=1$) và 28 câu gắn 2 bài báo ($|G_q|=2$, nên tối đa 1 chunk ở vị trí Top-1 đóng góp $1/2 = 0.5$ cho câu 2 bài báo); `Recall@1` tăng từ `45.0%` (Vector) lên **`49.6%` (+4.6%)** (Full System) và `Recall@5` tăng từ `60.8%` lên **`62.1%` (+1.3%)**.
 > 3. **DeepEval `Contextual Recall` (Statement-Level Recall@5 — Bảng §3)**: $\frac{\text{Số mệnh đề trong } \texttt{expected\_output} \text{ có bằng chứng trong Top-5 chunks}}{\text{Tổng số mệnh đề trong } \texttt{expected\_output}}$ — Đo mức độ Top-5 chunks đã hydrate đủ thông tin để trả lời câu hỏi (**`0.900` / `90.0%`** trên `N=105` mẫu `gold-001`..`100`), ngay cả khi thông tin đến từ bài báo khảo sát/trích dẫn tương đương trong kho dữ liệu.
 
 ---
