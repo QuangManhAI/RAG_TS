@@ -702,4 +702,17 @@
 - **Rejected:** Running retrieval ranking on unindexed broad questions (which artificially flattened scores to identical 0.3000 MRR), or removing Python files without preserving self-contained HTML/PNG benchmark reports in `RAG_TS`.
 - **Touches:** `docs/research/laya-jev.md`, `docs/INDEX.md`, `AGENTS.md`, `backend_rag/benchmark/README.md`.
 - **Evidence:** 200/200 test cases certified in `logs/benchmarks/benchmark_report_k5_local_20261106_175925.md` ($0.00 API cost); 5-scenario ranking certified in `logs/benchmarks/batch_101_120_5_scenarios.json`; 0 `.py` files remaining in `RAG_TS`.
-- **Revisit if:** Additional ground-truth chunk IDs are annotated and indexed in Qdrant for questions 121–200.
+- **Revisit if:** Additional ground-truth chunk IDs are annotated and indexed in Qdrant for questions 121–200.
+
+### D-061 — Benchmark đối đầu Laya Mới (20261108-seed0) vs Baseline Pretrained Laya trên 150 test cases
+
+- **Status:** accepted
+- **When:** 2026-11-09T19:20:00+07:00
+- **Decided by:** human-directed, agent-proposed
+- **Trigger:** "ok, i want to benchamrk it vs the bseline laya, using this testset \"C:\Users\TDV\Downloads\test_set_v1.jsonl\" do it via Deepeval local (QWEN)"
+- **Decision:** Execute full 2-tier A/B benchmark (Tier 1: 100 positive rerank + 50 negative rejection; Tier 2: DeepEval Answer Relevancy, Faithfulness, Context Relevancy on 100 positive cases) comparing `models/laya_onnx_20261108-2053_seed0` against Baseline Pretrained Laya using Local Qwen 2.5-7B Instruct on CUDA port 9001 ($0.00 cost).
+- **Why:** Empirically verify improvements of soft-ce calibrated fine-tuning on MRR, Hit@k, off-topic rejection, and end-to-end RAG answer faithfulness before switching backend checkpoint.
+- **Rejected:** Cloud API judging (incurs token costs), or testing positive queries only (fails to measure hallucination/false acceptance on off-topic questions).
+- **Touches:** `models/laya_onnx_20261108-2053_seed0`, `backend_rag/scripts/benchmark-laya-runner.mjs`, `backend_rag/scripts/serve-qwen-judge.mjs`, `docs/reports/LAYA_AB_BENCHMARK_REPORT.md`, `docs/prompts/plan_laya_benchmark_vs_baseline.md`.
+- **Evidence:** 150/150 cases certified in `docs/reports/LAYA_AB_BENCHMARK_REPORT.md`: MRR 0.8853 -> 0.8939 (+0.86%), Hit@1 81.0% -> 82.0% (+1.0%), Hit@5 97.0% -> 98.0% (+1.0%), 100% off-topic rejection, DeepEval Faithfulness 0.7977, Answer Relevancy 0.6341 ($0.00 spent).
+- **Revisit if:** New checkpoint with additional multi-hop or cross-domain fine-tuning is trained.

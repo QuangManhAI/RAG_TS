@@ -6,7 +6,7 @@
 - **Detailed Plan**: Files live under `docs/` by topic: `architecture/`, `api/`, `design/`, `guides/`, `security/`, `research/`, `reports/`, `slides/`, `prompts/`, `assets/`.  Section 1 catalogs AI Agent Entrypoints & Governance Rules; Section 2 catalogs System Architecture & API Specifications; Section 3 catalogs Backend Engineering & SRE Benchmark Docs; Section 4 catalogs Frontend 3D, Design System & Offline Persistence Docs; Section 5 lists Archived Bootstrap Prompts (do not use for active code generation).
 - **References**: [AGENTS.md](../AGENTS.md), [backend_rag/AGENTS.md](../backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](../frontend_rag/AGENTS.md), [agents/rules/MD_CONVENTION.md](../agents/rules/MD_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-29T19:43:00+07:00
-- **Last Updated**: 2026-11-06T13:13:54+07:00
+- **Last Updated**: 2026-11-09T17:51:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -45,6 +45,10 @@
 | [`docs/architecture/database-v2.md`](architecture/database-v2.md) | `IN_PROGRESS` | **Storage Redesign**: Qdrant, MongoDB and MinIO after moving chunk content out of Qdrant. |
 | [`docs/security/agent-sec.md`](security/agent-sec.md) | `IN_PROGRESS` | **Backend Security Review**: Findings and fixes before production. |
 | [`docs/research/laya-jev.md`](research/laya-jev.md) | `ACTIVE` | **Laya Evaluation**: Results of adding Laya to the RAG pipeline, with the JEV sources beside it. |
+| [`docs/grafana_analysis/GRAFANA_MONITORING_ANALYSIS.md`](grafana_analysis/GRAFANA_MONITORING_ANALYSIS.md) | `ACTIVE` | **Grafana Production Telemetry & SRE Forensic Analysis**: Comparative analysis of the `10:20 AM – 11:40 AM` and `8:00 PM – 8:30 PM` Grafana windows across all 11 panels, bimodal REST vs. SSE latency separation, native C++ RSS pulse profiling, and the `20:20:50` backend restart reconstruction. |
+| [`docs/slides/grafana_report_slides.html`](slides/grafana_report_slides.html) | `ACTIVE` | **Grafana SRE Forensic Slide Deck**: 6-slide executive presentation covering scorecard KPIs, comparative matrix table, bimodal REST vs SSE latency graph, 20:20:50 restart reconstruction, C++ memory pulse elasticity, and actionable SRE remediation plan. |
+| [`docs/prompts/plan_laya_benchmark_vs_baseline.md`](prompts/plan_laya_benchmark_vs_baseline.md) | `ACTIVE` | **Laya A/B Benchmark Plan**: Implementation plan for benchmarking Laya (20261108-seed0) vs Baseline on `test_set_v1.jsonl` (150 queries) via DeepEval with Local Qwen 2.5-7B Judge on port 9001. |
+| [`docs/reports/LAYA_AB_BENCHMARK_REPORT.md`](reports/LAYA_AB_BENCHMARK_REPORT.md) | `ACTIVE` | **Laya A/B Benchmark Report**: Comprehensive 2-tier benchmark report comparing Laya New (`20261108-seed0`) vs Pretrained Baseline across 150 test queries with DeepEval on local Qwen 2.5-7B Judge. |
 
 ---
 

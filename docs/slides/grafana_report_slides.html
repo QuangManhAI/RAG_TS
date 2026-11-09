@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Báo Cáo Giám Sát Grafana — RAG_TS SRE & Telemetry Forensic</title>
+<style>
+/* ===========================================
+   VIEWPORT FITTING & SLIDE DECK ENGINE
+   =========================================== */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #090d16;
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+:root {
+  --bg-deck: #090d16;
+  --bg-card: rgba(18, 24, 38, 0.85);
+  --bg-card-border: rgba(255, 255, 255, 0.08);
+  --bg-soft: rgba(255, 255, 255, 0.04);
+  --text-main: #f8fafc;
+  --text-sub: #94a3b8;
+  --text-dim: #64748b;
+  
+  --accent-orange: #f97316;
+  --accent-cyan: #06b6d4;
+  --accent-green: #10b981;
+  --accent-red: #ef4444;
+  --accent-purple: #a855f7;
+  --accent-blue: #3b82f6;
+
+  --slide-pad: clamp(1rem, 2.8vw, 2.5rem);
+  --title-size: clamp(1.3rem, 2.6vw, 2.2rem);
+  --h2-size: clamp(1rem, 1.8vw, 1.4rem);
+  --body-size: clamp(0.72rem, 1vw, 0.95rem);
+  --small-size: clamp(0.62rem, 0.8vw, 0.82rem);
+}
+
+.deck-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: var(--slide-pad);
+  padding-bottom: calc(var(--slide-pad) + 1.8rem);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  transform: translateY(12px);
+}
+
+.slide.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* Header & Banner */
+.slide-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: clamp(0.6rem, 1.2vw, 1.2rem);
+  border-bottom: 1px solid var(--bg-card-border);
+  padding-bottom: 0.6rem;
+}
+.title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.badge-tag {
+  align-self: flex-start;
+  font-size: var(--small-size);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2em 0.6em;
+  border-radius: 4px;
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+.slide-title {
+  margin: 0;
+  font-size: var(--title-size);
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+.slide-subtitle {
+  margin: 0;
+  font-size: var(--body-size);
+  color: var(--text-sub);
+}
+.deck-badge {
+  font-size: var(--small-size);
+  color: var(--text-dim);
+  font-family: monospace;
+  background: var(--bg-soft);
+  padding: 0.3em 0.7em;
+  border-radius: 6px;
+  border: 1px solid var(--bg-card-border);
+}
+
+/* Layouts */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(0.7rem, 1.4vw, 1.4rem);
+  flex: 1;
+  min-height: 0;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(0.7rem, 1.4vw, 1.4rem);
+  flex: 1;
+  min-height: 0;
+}
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(0.5rem, 1vw, 1rem);
+}
+.grid-wide {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: clamp(0.7rem, 1.4vw, 1.4rem);
+  flex: 1;
+  min-height: 0;
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--bg-card-border);
+  border-radius: 10px;
+  padding: clamp(0.6rem, 1.1vw, 1.1rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+}
+.card-header {
+  font-size: var(--h2-size);
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.card-body {
+  flex: 1;
+  font-size: var(--body-size);
+  color: var(--text-sub);
+  line-height: 1.45;
+  overflow-y: auto;
+}
+
+/* Metric Display */
+.metric-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--bg-card-border);
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.metric-box.border-cyan { border-left: 3px solid var(--accent-cyan); }
+.metric-box.border-green { border-left: 3px solid var(--accent-green); }
+.metric-box.border-orange { border-left: 3px solid var(--accent-orange); }
+.metric-box.border-purple { border-left: 3px solid var(--accent-purple); }
+
+.metric-val {
+  font-size: clamp(1.2rem, 2.2vw, 1.9rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--text-main);
+}
+.metric-val.green { color: var(--accent-green); }
+.metric-val.cyan { color: var(--accent-cyan); }
+.metric-val.orange { color: var(--accent-orange); }
+.metric-val.red { color: var(--accent-red); }
+
+.metric-lbl {
+  font-size: var(--small-size);
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.25rem;
+}
+.metric-sub {
+  font-size: var(--small-size);
+  color: var(--text-sub);
+  margin-top: 0.2rem;
+}
+
+/* Tables */
+.sre-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--small-size);
+  text-align: left;
+}
+.sre-table th {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-main);
+  padding: 0.45rem 0.6rem;
+  font-weight: 700;
+  border-bottom: 1px solid var(--bg-card-border);
+}
+.sre-table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--text-sub);
+}
+.sre-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+.sre-table .num {
+  font-variant-numeric: tabular-nums;
+  font-family: monospace;
+}
+.pill {
+  display: inline-block;
+  padding: 0.15em 0.5em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 700;
+}
+.pill.green { background: rgba(16, 185, 129, 0.18); color: var(--accent-green); }
+.pill.cyan { background: rgba(6, 182, 212, 0.18); color: var(--accent-cyan); }
+.pill.orange { background: rgba(249, 115, 22, 0.18); color: var(--accent-orange); }
+.pill.red { background: rgba(239, 68, 68, 0.18); color: var(--accent-red); }
+
+/* SVG Graphs & Visuals */
+.chart-container {
+  width: 100%;
+  flex: 1;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Event Timeline */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  padding-left: 1.2rem;
+}
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 0.4rem;
+  top: 0.2rem;
+  bottom: 0.2rem;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.timeline-item {
+  position: relative;
+  font-size: var(--body-size);
+}
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -1.2rem;
+  top: 0.35rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan);
+}
+.timeline-item.alert::before {
+  background: var(--accent-orange);
+  box-shadow: 0 0 8px var(--accent-orange);
+}
+.timeline-item.danger::before {
+  background: var(--accent-red);
+  box-shadow: 0 0 8px var(--accent-red);
+}
+
+/* Bottom Controls */
+.deck-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.2rem;
+  background: rgba(9, 13, 22, 0.95);
+  border-top: 1px solid var(--bg-card-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.2rem;
+  font-size: var(--small-size);
+  color: var(--text-dim);
+  z-index: 100;
+}
+.progress-bar-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.progress-bar {
+  height: 100%;
+  width: 16.66%;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-orange));
+  transition: width 0.3s ease;
+}
+.nav-buttons {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.btn-nav {
+  background: var(--bg-soft);
+  border: 1px solid var(--bg-card-border);
+  color: var(--text-sub);
+  padding: 0.2em 0.6em;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--small-size);
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.btn-nav:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+}
+.dots {
+  display: flex;
+  gap: 0.35rem;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.dot.active {
+  background: var(--accent-cyan);
+  transform: scale(1.3);
+  box-shadow: 0 0 6px var(--accent-cyan);
+}
+</style>
+</head>
+<body>
+
+<div class="deck-container">
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- SLIDE 1: EXECUTIVE SUMMARY & SCORECARD -->
+  <section class="slide active" id="slide-0">
+    <div class="slide-header">
+      <div class="title-group">
+        <span class="badge-tag">SRE Telemetry Audit</span>
+        <h1 class="slide-title">Báo Cáo Giám Sát Grafana — RAG_TS SRE</h1>
+        <p class="slide-subtitle">Phân tích thực nghiệm & đối chiếu pháp chứng 2 khung giờ telemetry (10:20–11:40 & 20:00–20:30)</p>
+      </div>
+      <div class="deck-badge">UID: 48382351 • 11 PANELS</div>
+    </div>
+
+    <div class="grid-4" style="margin-bottom: 0.8rem;">
+      <div class="metric-box border-green">
+        <div class="metric-val green">100% OK</div>
+        <div class="metric-lbl">Tỷ Lệ Thành Công HTTP</div>
+        <div class="metric-sub">0 lỗi 4xx/5xx (~173 requests toàn bộ 2 phiên)</div>
+      </div>
+      <div class="metric-box border-cyan">
+        <div class="metric-val cyan">41–66 ms</div>
+        <div class="metric-lbl">Độ Trễ Pure REST P95</div>
+        <div class="metric-sub">Vượt xa chuẩn SRE Rule L1 (&lt; 500 ms)</div>
+      </div>
+      <div class="metric-box border-orange">
+        <div class="metric-val orange">11 Users</div>
+        <div class="metric-lbl">Đỉnh Người Dùng Đồng Thời</div>
+        <div class="metric-sub">Peak 3 SSE Streams &amp; 3 LLM Queued Turns</div>
+      </div>
+      <div class="metric-box border-purple">
+        <div class="metric-val">0 Leak</div>
+        <div class="metric-lbl">Độ Ổn Định Bộ Nhớ RSS</div>
+        <div class="metric-sub">Thu hồi đàn hồi ~89MB sau spike 2.09–2.83GB</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-cyan);">⚡</span> Khung Giờ 1: 10:20 AM – 11:40 AM (75.5 Phút)
+        </div>
+        <div class="card-body">
+          <p><strong>Bối Cảnh Tải Concurrency Cao:</strong> 454 scrape ticks liên tục, mô phỏng người dùng tra cứu đa luồng với 11 người hoạt động trong cửa sổ 5m.</p>
+          <ul style="padding-left: 1.1rem; margin-top: 0.4rem; display: flex; flex-direction: column; gap: 0.3rem;">
+            <li><strong>Tổng lượt yêu cầu:</strong> ~144.3 requests HTTP 200, lưu lượng đỉnh <code>10.90 req/m</code> lúc 11:04.</li>
+            <li><strong>Tranh chấp luồng suy luận:</strong> Xuất hiện 2 đợt xếp hàng mutex LLM (hàng đợi chạm 3 turns) lúc 11:04 và 11:13.</li>
+            <li><strong>Dấu hiệu độ trễ:</strong> P95 dashboard chạm trần 25–30s do luồng SSE token generation bị gom chung vào cùng 1 histogram.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-orange);">🔍</span> Khung Giờ 2: 8:00 PM – 8:30 PM (36.8 Phút)
+        </div>
+        <div class="card-body">
+          <p><strong>Bối Cảnh Buổi Tối Nhẹ Nhàng &amp; Phát Hiện Tái Khởi Động:</strong> 221 scrape ticks ghi nhận lưu lượng REST đơn thuần với đỉnh 3–4 người dùng.</p>
+          <ul style="padding-left: 1.1rem; margin-top: 0.4rem; display: flex; flex-direction: column; gap: 0.3rem;">
+            <li><strong>Độ trễ siêu tốc:</strong> Không có luồng SSE, P95 giữ phẳng ở mức <strong>41.96 ms</strong>, P99 đạt <strong>41.95 ms</strong>.</li>
+            <li><strong>Phát hiện pháp chứng tại 20:20:50:</strong> Quá trình backend restart cold-load GGUF làm <code>active_users_5m</code> rơi về 0 và <code>rag_component_up{component="llm"}</code> nhúng xuống 0 trong 10s.</li>
+            <li><strong>Đỉnh tiêu thụ RAM:</strong> Bộ nhớ RSS chạm đỉnh <strong>2.83 GiB</strong> lúc nạp mô hình vào RAM trước khi hạ về 65.7 MiB.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 2: CROSS-WINDOW TELEMETRY MATRIX -->
+  <section class="slide" id="slide-1">
+    <div class="slide-header">
+      <div class="title-group">
+        <span class="badge-tag">Comparative Matrix</span>
+        <h1 class="slide-title">Bảng Đối Chiếu Chỉ Số Telemetry Toàn Diện</h1>
+        <p class="slide-subtitle">So sánh định lượng 11 Panels Grafana giữa 2 phiên làm việc thực tế của backend_rag</p>
+      </div>
+      <div class="deck-badge">STAGE 3 DATA EXTRACTION</div>
+    </div>
+
+    <div class="card" style="flex:1;">
+      <table class="sre-table">
+        <thead>
+          <tr>
+            <th>Chỉ Số &amp; Panel Giám Sát</th>
+            <th>Khung Giờ 1 (10:20–11:40 AM)</th>
+            <th>Khung Giờ 2 (8:00–8:30 PM)</th>
+            <th>Đánh Giá SRE &amp; Ý Nghĩa Pháp Chứng</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Thời gian thu thập</strong></td>
+            <td class="num">75m 30s (454 ticks @ 10s)</td>
+            <td class="num">36m 50s (221 ticks @ 10s)</td>
+            <td><span class="pill green">Liên Tục</span> 1 nhịp trống duy nhất lúc 20:20:40</td>
+          </tr>
+          <tr>
+            <td><strong>Người dùng trực tuyến (1m / 5m)</strong></td>
+            <td class="num">Peak 9 (1m) / Peak 11 (5m)</td>
+            <td class="num">Peak 3 (1m) / Peak 4 (5m)</td>
+            <td>W1 đại diện cho đa người dùng; W2 là tải bảo trì đơn lẻ</td>
+          </tr>
+          <tr>
+            <td><strong>Tổng lượng HTTP 200 / Đỉnh tốc độ</strong></td>
+            <td class="num">~144.3 reqs (Đỉnh 10.90 req/m)</td>
+            <td class="num">~29.1 reqs (Đỉnh 6.55 req/m)</td>
+            <td><span class="pill green">100% OK</span> 0 lỗi 4xx/5xx trên toàn bộ 2 khung giờ</td>
+          </tr>
+          <tr>
+            <td><strong>Luồng SSE &amp; Hàng Đợi Mutex LLM</strong></td>
+            <td class="num">Peak 3 SSE Streams / 3 Queued</td>
+            <td class="num">0 SSE Streams / 0 Queued</td>
+            <td>Mutex 1 slot kiểm soát tốt, tuần tự hóa 3 truy vấn không crash</td>
+          </tr>
+          <tr>
+            <td><strong>Độ trễ P95 hiển thị Dashboard</strong></td>
+            <td class="num">16.21 s avg (Chạm trần 25–30s)</td>
+            <td class="num">41.96 ms avg (Flatline)</td>
+            <td><span class="pill orange">Ảo Giác Bimodal</span> Do SSE stream time rơi vào le="30"</td>
+          </tr>
+          <tr>
+            <td><strong>Độ trễ Pure REST P95 / P99</strong></td>
+            <td class="num"><strong>66.75 ms</strong> / <strong>95.00 ms</strong></td>
+            <td class="num"><strong>41.96 ms</strong> / <strong>41.95 ms</strong></td>
+            <td><span class="pill green">Đạt Chuẩn L1</span> Cả 2 khung giờ đều &lt; 500ms P95, &lt; 1s P99</td>
+          </tr>
+          <tr>
+            <td><strong>Bộ nhớ Resident Set Size (RSS)</strong></td>
+            <td class="num">89MB (Idle) → 2.09GB (Peak) → 58.5MB</td>
+            <td class="num">89MB (Idle) → 2.83GB (Cold) → 65.7MB</td>
+            <td><span class="pill green">Zero Leak</span> RAM native giải phóng ngay khi dispose sequence</td>
+          </tr>
+          <tr>
+            <td><strong>Trạng thái Component (rag_component_up)</strong></td>
+            <td class="num">100% UP (1.0) cả 5 dịch vụ</td>
+            <td class="num">99.55% UP (llm dip xuống 0 tại 20:20:50)</td>
+            <td>Dấu vết tái khởi động: LlmService nạp model mất ~10s</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: BIMODAL LATENCY FORENSIC -->
+  <section class="slide" id="slide-2">
+    <div class="slide-header">
+      <div class="title-group">
+        <span class="badge-tag">Latency Investigation</span>
+        <h1 class="slide-title">Ảo Giác Độ Trễ: Bimodal REST vs. SSE Stream</h1>
+        <p class="slide-subtitle">Vì sao P95 Panel 5 chạm trần 25–30s trong khi REST API thực tế chỉ mất 41.96ms – 66.75ms?</p>
+      </div>
+      <div class="deck-badge">PANEL 5 &amp; 8 ROOT CAUSE</div>
+    </div>
+
+    <div class="grid-wide">
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-cyan);">📊</span> Biểu Đồ So Sánh: Global Dashboard P95 vs. Pure REST P95
+        </div>
+        <div class="card-body" style="display:flex; flex-direction:column;">
+          <!-- SVG Bar Visual -->
+          <div class="chart-container">
+            <svg viewBox="0 0 540 180">
+              <!-- Grid lines -->
+              <line x1="50" y1="30" x2="520" y2="30" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4"/>
+              <line x1="50" y1="75" x2="520" y2="75" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4"/>
+              <line x1="50" y1="120" x2="520" y2="120" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4"/>
+              <line x1="50" y1="150" x2="520" y2="150" stroke="rgba(255,255,255,0.2)"/>
+              
+              <!-- Y Axis labels -->
+              <text x="40" y="35" fill="#64748b" font-size="11" text-anchor="end">30s</text>
+              <text x="40" y="80" fill="#64748b" font-size="11" text-anchor="end">20s</text>
+              <text x="40" y="125" fill="#64748b" font-size="11" text-anchor="end">10s</text>
+              <text x="40" y="153" fill="#64748b" font-size="11" text-anchor="end">0ms</text>
+
+              <!-- Bar 1: W1 Global P95 (Pinned by SSE) -->
+              <rect x="75" y="32" width="75" height="118" rx="4" fill="url(#gradOrange)" />
+              <text x="112" y="24" fill="#f97316" font-size="12" font-weight="bold" text-anchor="middle">25.0 – 30.0 s</text>
+              <text x="112" y="168" fill="#94a3b8" font-size="11" text-anchor="middle">W1 Global P95</text>
+              
+              <!-- Bar 2: W1 Pure REST P95 -->
+              <rect x="185" y="148.5" width="75" height="1.5" rx="1" fill="#06b6d4" />
+              <text x="222" y="140" fill="#06b6d4" font-size="12" font-weight="bold" text-anchor="middle">66.75 ms</text>
+              <text x="222" y="168" fill="#94a3b8" font-size="11" text-anchor="middle">W1 Pure REST</text>
+
+              <!-- Bar 3: W2 Global P95 (No SSE) -->
+              <rect x="295" y="149" width="75" height="1" rx="1" fill="#10b981" />
+              <text x="332" y="140" fill="#10b981" font-size="12" font-weight="bold" text-anchor="middle">41.96 ms</text>
+              <text x="332" y="168" fill="#94a3b8" font-size="11" text-anchor="middle">W2 Global P95</text>
+
+              <!-- Bar 4: SRE Target Threshold -->
+              <line x1="395" y1="147.5" x2="510" y2="147.5" stroke="#ef4444" stroke-width="2" stroke-dasharray="3"/>
+              <text x="452" y="138" fill="#ef4444" font-size="11" font-weight="bold" text-anchor="middle">&lt; 500 ms SLA</text>
+              <text x="452" y="168" fill="#94a3b8" font-size="11" text-anchor="middle">Rule L1 SLA</text>
+
+              <defs>
+                <linearGradient id="gradOrange" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#f97316" stop-opacity="0.9"/>
+                  <stop offset="100%" stop-color="#f97316" stop-opacity="0.3"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div style="font-size: var(--small-size); color: var(--text-dim); text-align: center; margin-top: 0.2rem;">
+            *Khoảng cách tỷ lệ 30s so với 41ms là <strong>~700 lần</strong> — biểu đồ trực quan hóa hiện tượng ô nhiễm histogram.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-orange);">⚠️</span> Cơ Chế Kỹ Thuật Gây Lệch Chỉ Số
+        </div>
+        <div class="card-body">
+          <p><strong>1. Điểm Chặn Đo Lường (<code>res.on('finish')</code>):</strong></p>
+          <p style="font-size: var(--small-size); margin-bottom: 0.5rem;">
+            Trong <code>PrometheusMetricsRegistry</code>, middleware bấm giờ từ lúc nhận request đến khi socket HTTP đóng. Với SSE (<code>/rag/chat/stream</code>), socket mở suốt <strong>20–35 giây</strong> để stream toàn bộ token.
+          </p>
+
+          <p><strong>2. Trần Histogram (<code>le="30"</code>):</strong></p>
+          <p style="font-size: var(--small-size); margin-bottom: 0.5rem;">
+            Bộ buckets kết thúc ở <code>30.0s</code>. Bất kỳ stream SSE nào hoàn tất đều rơi vào bucket <code>le="30"</code> hoặc <code>+Inf</code>, khiến thuật toán <code>histogram_quantile(0.95)</code> ghim P95 ở giá trị cực đại <strong>25s–30s</strong>.
+          </p>
+
+          <p><strong>3. Bộ Lọc PromQL Quá Rộng:</strong></p>
+          <p style="font-size: var(--small-size);">
+            Query hiện tại chỉ loại trừ <code>route!~"/api/v1/health.*"</code> mà <strong>chưa tách riêng</strong> SSE stream. Chỉ cần 1 request SSE hoàn tất là làm biến dạng P95 của cả 5 phút.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: WINDOW 2 RESTART AT 20:20:50 -->
+  <section class="slide" id="slide-3">
+    <div class="slide-header">
+      <div class="title-group">
+        <span class="badge-tag">Incident Reconstruction</span>
+        <h1 class="slide-title">Giải Mã Pháp Chứng: Backend Restart Lúc 20:20:50</h1>
+        <p class="slide-subtitle">Bốn tín hiệu telemetry hội tụ xác nhận sự kiện tiến trình Node.js khởi động lại và cold-load mô hình</p>
+      </div>
+      <div class="deck-badge">CRITICAL EVENT AUDIT</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-red);">🚨</span> Dòng Thời Gian Pháp Chứng Sự Cố
+        </div>
+        <div class="card-body">
+          <div class="timeline">
+            <div class="timeline-item">
+              <strong>20:20:30 — Trạng thái ổn định bình thường:</strong><br>
+              <span style="font-size:var(--small-size); color:var(--text-sub);">
+                <code>rag_active_users_5m = 3</code>, RSS = <code>98.8 MiB</code>, cả 5 components <code>UP (1.0)</code>.
+              </span>
+            </div>
+            <div class="timeline-item alert">
+              <strong>20:20:40 — Mất 1 nhịp scrape Prometheus:</strong><br>
+              <span style="font-size:var(--small-size); color:var(--text-sub);">
+                Không có dữ liệu telemetry ghi nhận. Tiến trình Node.js cũ đã thoát hoặc đang nhận tín hiệu shutdown.
+              </span>
+            </div>
+            <div class="timeline-item danger">
+              <strong>20:20:50 — Đỉnh điểm bất thường đồng bộ:</strong><br>
+              <span style="font-size:var(--small-size); color:var(--text-sub);">
+                • <code>active_users_5m</code> rơi thẳng từ <strong>3 về 0</strong> (bộ nhớ in-memory Map bị xóa sạch).<br>
+                • <code>rag_component_up{component="llm"}</code> báo <strong>0 (DOWN)</strong> duy nhất trong toàn bộ log.<br>
+                • <code>process_resident_memory_bytes</code> vọt lên đỉnh <strong>2.83 GiB</strong>.
+              </span>
+            </div>
+            <div class="timeline-item">
+              <strong>20:21:00 — Hoàn tất phục hồi tự động:</strong><br>
+              <span style="font-size:var(--small-size); color:var(--text-sub);">
+                <code>LlmService.onModuleInit()</code> nạp xong context 7B GGUF. Component <code>llm</code> trở lại <strong>1.0 (UP)</strong>.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-cyan);">🔬</span> Bằng Chứng Mã Nguồn &amp; Kết Luận
+        </div>
+        <div class="card-body">
+          <p><strong>Tại sao active_users_5m tụt về 0 ngay lập tức?</strong></p>
+          <p style="font-size:var(--small-size); margin-bottom: 0.6rem;">
+            Theo thuật toán tại <code>prometheus-metrics.ts</code> (line 50–70), các actor được lưu trong <code>private activeActors = new Map()</code> với rolling TTL 300s. Một user chỉ biến mất sau 5 phút không gửi request. Việc chỉ số rơi về 0 trong 20s <strong>chỉ có thể xảy ra khi tiến trình bị khởi động lại</strong>.
+          </p>
+
+          <p><strong>Tại sao component LLM báo 0 trong đúng 10s?</strong></p>
+          <p style="font-size:var(--small-size); margin-bottom: 0.6rem;">
+            Tại <code>health.service.ts</code>, phương thức check kiểm tra <code>this.llmService.isReady()</code>. Khi khởi động, <code>LlmService</code> nạp mô hình GGUF bất đồng bộ qua <code>node-llama-cpp</code>. Trong 10 giây nạp weights, cờ sẵn sàng trả về <code>false</code>.
+          </p>
+
+          <div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--accent-green); padding: 0.4rem 0.6rem; border-radius: 4px; font-size: var(--small-size);">
+            <strong>Kết Luận SRE:</strong> Không phải lỗi crash runtime, mà là thao tác redeploy/restart backend có chủ đích. Hệ thống tự phục hồi hoàn toàn sau đúng 1 chu kỳ scrape (10 giây).
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5: NATIVE C++ RSS & CONCURRENCY -->
+  <section class="slide" id="slide-4">
+    <div class="slide-header">
+      <div class="title-group">
+        <span class="badge-tag">Memory &amp; Concurrency</span>
+        <h1 class="slide-title">Hồ Sơ Bộ Nhớ RSS &amp; Quản Lý Hàng Đợi LLM</h1>
+        <p class="slide-subtitle">Cơ chế thu hồi bộ nhớ C++ đàn hồi (89MB ↔ 2.83GB) và tính ổn định khi nghẽn luồng suy luận</p>
+      </div>
+      <div class="deck-badge">ZERO LEAK CERTIFIED</div>
+    </div>
+
+    <div class="grid-wide">
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-purple);">📈</span> Xung Bộ Nhớ Đàn Hồi Theo Chu Kỳ Luồng SSE
+        </div>
+        <div class="card-body" style="display:flex; flex-direction:column;">
+          <div class="chart-container">
+            <svg viewBox="0 0 540 180">
+              <!-- Y Axis & grid -->
+              <line x1="50" y1="30" x2="520" y2="30" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4"/>
+              <line x1="50" y1="85" x2="520" y2="85" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4"/>
+              <line x1="50" y1="140" x2="520" y2="140" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4"/>
+              <line x1="50" y1="155" x2="520" y2="155" stroke="rgba(255,255,255,0.2)"/>
+
+              <text x="40" y="34" fill="#64748b" font-size="10" text-anchor="end">2.5 GB</text>
+              <text x="40" y="89" fill="#64748b" font-size="10" text-anchor="end">1.5 GB</text>
+              <text x="40" y="144" fill="#64748b" font-size="10" text-anchor="end">100 MB</text>
+
+              <!-- Memory Curve Pulse -->
+              <path d="M 50,145 
+                       L 100,145 
+                       L 130,70 
+                       L 180,65 
+                       L 210,146 
+                       L 250,146 
+                       L 280,48 
+                       L 340,45 
+                       L 370,148 
+                       L 430,148 
+                       L 450,28 
+                       L 480,149 
+                       L 520,150" 
+                    fill="url(#gradMem)" stroke="#a855f7" stroke-width="2.5" />
+
+              <!-- Markers -->
+              <circle cx="155" cy="67" r="4" fill="#06b6d4"/>
+              <text x="155" y="55" fill="#06b6d4" font-size="10" font-weight="bold" text-anchor="middle">1.45 GiB (Burst 1)</text>
+
+              <circle cx="310" cy="46" r="4" fill="#f97316"/>
+              <text x="310" y="36" fill="#f97316" font-size="10" font-weight="bold" text-anchor="middle">2.09 GiB (Burst 2: 3 SSE)</text>
+
+              <circle cx="450" cy="28" r="4" fill="#ef4444"/>
+              <text x="450" y="18" fill="#ef4444" font-size="10" font-weight="bold" text-anchor="middle">2.83 GiB (Cold GGUF)</text>
+
+              <!-- Baseline label -->
+              <text x="80" y="138" fill="#10b981" font-size="10">Baseline ~89 MiB</text>
+              <text x="500" y="143" fill="#10b981" font-size="10" text-anchor="end">Clean: 58.5 MiB</text>
+
+              <defs>
+                <linearGradient id="gradMem" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#a855f7" stop-opacity="0.45"/>
+                  <stop offset="100%" stop-color="#a855f7" stop-opacity="0.0"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div style="font-size: var(--small-size); color: var(--text-dim); text-align: center; margin-top: 0.2rem;">
+            *Bộ nhớ RSS tăng giảm dốc đứng theo chu kỳ request, hoàn toàn <strong>không có hiện tượng rò rỉ hình bậc thang</strong>.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-green);">🛡️</span> Bản Chất Kỹ Thuật Đã Được Xác Minh
+        </div>
+        <div class="card-body">
+          <p><strong>1. Bộ Nhớ Ảo C++ mmap vs. Heap Node.js:</strong></p>
+          <p style="font-size:var(--small-size); margin-bottom: 0.5rem;">
+            Node.js heap thực tế chỉ dùng <strong>~45–60 MiB</strong>. Khi <code>NodeLlamaEngine.generate()</code> chạy, thư viện C++ cấp phát bộ nhớ native để xử lý ma trận và context. Khi stream kết thúc, hàm <code>await sequence.dispose()</code> thu hồi triệt để.
+          </p>
+
+          <p><strong>2. Mutex Tuần Tự Hóa Chống Sập Model:</strong></p>
+          <p style="font-size:var(--small-size); margin-bottom: 0.5rem;">
+            Tại thời điểm 11:04 và 11:13 có 3 users cùng hỏi một lúc, <code>rag_llm_queue_length</code> ghi nhận mức 3. Mutex của <code>LlmService</code> tuần tự hóa từng turn, bảo đảm GPU/CPU không bị OOM, tất cả 3 luồng đều trả lời trọn vẹn 100%.
+          </p>
+
+          <p><strong>3. Điểm Cuối Ca Làm Việc:</strong></p>
+          <p style="font-size:var(--small-size);">
+            Tại tick cuối W1, RAM thu hồi về <strong>58.5 MiB</strong>; tick cuối W2 về <strong>65.7 MiB</strong>, thấp hơn cả lúc mới khởi động.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 6: ACTIONABLE SRE REMEDIATION PLAN -->
+  <section class="slide" id="slide-5">
+    <div class="slide-header">
+      <div class="title-group">
+        <span class="badge-tag">Remediation Roadmap</span>
+        <h1 class="slide-title">Kế Hoạch Nâng Cấp Hệ Thống &amp; Observability</h1>
+        <p class="slide-subtitle">Bốn giải pháp hành động khắc phục triệt để hiện tượng ô nhiễm dữ liệu và cải thiện độ chuẩn xác giám sát</p>
+      </div>
+      <div class="deck-badge">ACTIONABLE FIXES</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-cyan);">1.</span> Tách Biệt Histogram REST vs. SSE Stream
+        </div>
+        <div class="card-body">
+          <p><strong>Vấn đề:</strong> Panel 5 và Panel 8 gộp chung luồng stream vào histogram API.</p>
+          <p><strong>Hành động PromQL:</strong> Tách làm 2 panels độc lập trong <code>dashboard.json</code>:</p>
+          <pre style="background:rgba(0,0,0,0.4); padding:0.5rem; border-radius:6px; font-size:0.75rem; color:#38bdf8; overflow-x:auto;"># Panel 5A: Pure REST API Latency P95
+histogram_quantile(0.95, sum(rate(rag_http_request_duration_seconds_bucket{
+  route!~"/api/v1/health.*|/api/v1/rag/chat/stream"
+}[5m])) by (le))
+
+# Panel 5B: SSE Generation Duration P95
+histogram_quantile(0.95, sum(rate(rag_http_request_duration_seconds_bucket{
+  route="/api/v1/rag/chat/stream"
+}[5m])) by (le))</pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-green);">2.</span> Bổ Sung Metric Đo Lường TTFT (Time-To-First-Token)
+        </div>
+        <div class="card-body">
+          <p><strong>Vấn đề:</strong> Hiện chỉ đo tổng thời gian stream kết thúc, chưa đo thời gian user chờ token đầu tiên xuất hiện.</p>
+          <p><strong>Hành động Code:</strong> Thêm metric vào <code>prometheus-metrics.ts</code>:</p>
+          <pre style="background:rgba(0,0,0,0.4); padding:0.5rem; border-radius:6px; font-size:0.75rem; color:#4ade80; overflow-x:auto;">// Bấm giờ từ khi nhận request đến chunk SSE đầu tiên
+rag_sse_ttft_seconds_bucket{
+  route="/api/v1/rag/chat/stream"
+}
+// Buckets: [0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0]</pre>
+          <p style="font-size:var(--small-size); color:var(--text-sub); margin-top:0.3rem;">
+            Giúp đánh giá trực tiếp trải nghiệm người dùng cuối (UX perceived latency).
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-orange);">3.</span> Khởi Tạo Counter Route Tại Thời Điểm Startup
+        </div>
+        <div class="card-body">
+          <p><strong>Vấn đề:</strong> Counter tạo lười (lazy-init) khi có request đầu tiên, dẫn đến các route xuất hiện giữa chừng với rate 0 ms / 0 req/m.</p>
+          <p><strong>Hành động Code:</strong> Duyệt qua danh sách known routes ở <code>PrometheusMetricsRegistry.init()</code> để gán <code>count = 0</code> trước.</p>
+          <p style="font-size:var(--small-size); color:var(--text-dim); margin-top:0.3rem;">
+            Loại bỏ hiện tượng các route nhảy nhót hoặc thiếu series trong biểu đồ stacked rate.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span style="color:var(--accent-purple);">4.</span> Cấu Hình Export Multi-Frame CSV Trên Grafana
+        </div>
+        <div class="card-body">
+          <p><strong>Vấn đề:</strong> Export CSV từ Grafana v2 bị mất các series phụ (chỉ lưu 1 frame đầu) trên các panel đa đường (Panels 6–11).</p>
+          <p><strong>Hành động SRE:</strong></p>
+          <ul style="padding-left:1.1rem; font-size:var(--small-size); display:flex; flex-direction:column; gap:0.25rem;">
+            <li>Bật tùy chọn <code>"Series joined by time"</code> khi export bảng dữ liệu.</li>
+            <li>Hoặc truy vấn trực tiếp HTTP API Prometheus: <code>/api/v1/query_range</code> để trích xuất đầy đủ tensor đa chiều.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER NAVIGATION -->
+  <footer class="deck-footer">
+    <div style="display:flex; align-items:center; gap:0.6rem;">
+      <span id="slideCounter">1 / 6</span>
+      <span style="color:rgba(255,255,255,0.15);">•</span>
+      <span>RAG_TS SRE Observability Report</span>
+    </div>
+
+    <div class="dots" id="dotsContainer"></div>
+
+    <div class="nav-buttons">
+      <button class="btn-nav" id="btnPrev" title="Phím Mũi Tên Trái / PageUp">‹ Trước</button>
+      <button class="btn-nav" id="btnNext" title="Phím Mũi Tên Phải / Space / PageDown">Sau ›</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+class DeckController {
+  constructor() {
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    this.current = 0;
+    this.progressBar = document.getElementById('progressBar');
+    this.counter = document.getElementById('slideCounter');
+    this.dotsContainer = document.getElementById('dotsContainer');
+
+    this.initDots();
+    this.bindEvents();
+    this.show(0);
+  }
+
+  initDots() {
+    this.dotsContainer.innerHTML = '';
+    this.slides.forEach((_, i) => {
+      const dot = document.createElement('div');
+      dot.className = 'dot' + (i === 0 ? ' active' : '');
+      dot.addEventListener('click', () => this.show(i));
+      this.dotsContainer.appendChild(dot);
+    });
+  }
+
+  show(index) {
+    if (index < 0) index = 0;
+    if (index >= this.slides.length) index = this.slides.length - 1;
+
+    this.slides[this.current].classList.remove('active');
+    this.current = index;
+    this.slides[this.current].classList.add('active');
+
+    // Update progress
+    const pct = ((this.current + 1) / this.slides.length) * 100;
+    this.progressBar.style.width = pct + '%';
+    this.counter.textContent = `${this.current + 1} / ${this.slides.length}`;
+
+    // Update dots
+    const dots = this.dotsContainer.querySelectorAll('.dot');
+    dots.forEach((dot, i) => dot.classList.toggle('active', i === this.current));
+  }
+
+  next() { this.show(this.current + 1); }
+  prev() { this.show(this.current - 1); }
+
+  bindEvents() {
+    document.getElementById('btnNext').onclick = () => this.next();
+    document.getElementById('btnPrev').onclick = () => this.prev();
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        this.next();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        this.prev();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        this.show(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        this.show(this.slides.length - 1);
+      }
+    });
+
+    // Touch swipe support
+    let startX = null;
+    window.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      if (startX === null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 50) {
+        if (dx < 0) this.next();
+        else this.prev();
+      }
+      startX = null;
+    }, { passive: true });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  new DeckController();
+});
+</script>
+</body>
+</html>
