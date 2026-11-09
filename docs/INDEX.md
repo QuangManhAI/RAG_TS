@@ -49,6 +49,7 @@
 | [`docs/slides/grafana_report_slides.html`](slides/grafana_report_slides.html) | `ACTIVE` | **Grafana SRE Forensic Slide Deck**: 6-slide executive presentation covering scorecard KPIs, comparative matrix table, bimodal REST vs SSE latency graph, 20:20:50 restart reconstruction, C++ memory pulse elasticity, and actionable SRE remediation plan. |
 | [`docs/prompts/plan_laya_benchmark_vs_baseline.md`](prompts/plan_laya_benchmark_vs_baseline.md) | `ACTIVE` | **Laya A/B Benchmark Plan**: Implementation plan for benchmarking Laya (20261108-seed0) vs Baseline on `test_set_v1.jsonl` (150 queries) via DeepEval with Local Qwen 2.5-7B Judge on port 9001. |
 | [`docs/reports/LAYA_AB_BENCHMARK_REPORT.md`](reports/LAYA_AB_BENCHMARK_REPORT.md) | `ACTIVE` | **Laya A/B Benchmark Report**: Comprehensive 2-tier benchmark report comparing Laya New (`20261108-seed0`) vs Pretrained Baseline across 150 test queries with DeepEval on local Qwen 2.5-7B Judge. |
+| [`docs/reports/VECTOR_VS_LAYA_BENCHMARK_REPORT.md`](reports/VECTOR_VS_LAYA_BENCHMARK_REPORT.md) | `ACTIVE` | **Pure Vector vs Laya Benchmark Report**: Tri-party comparative benchmark report evaluating Pure Vector RAG (Nomic v1.5 Cosine) vs Baseline Pretrained Laya vs Fine-Tuned Laya (`20261108-seed0`) on 150 test cases via Local Qwen DeepEval. |
 
 ---
 

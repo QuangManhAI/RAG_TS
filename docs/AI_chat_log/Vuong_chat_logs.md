@@ -715,4 +715,18 @@
 - **Rejected:** Cloud API judging (incurs token costs), or testing positive queries only (fails to measure hallucination/false acceptance on off-topic questions).
 - **Touches:** `models/laya_onnx_20261108-2053_seed0`, `backend_rag/scripts/benchmark-laya-runner.mjs`, `backend_rag/scripts/serve-qwen-judge.mjs`, `docs/reports/LAYA_AB_BENCHMARK_REPORT.md`, `docs/prompts/plan_laya_benchmark_vs_baseline.md`.
 - **Evidence:** 150/150 cases certified in `docs/reports/LAYA_AB_BENCHMARK_REPORT.md`: MRR 0.8853 -> 0.8939 (+0.86%), Hit@1 81.0% -> 82.0% (+1.0%), Hit@5 97.0% -> 98.0% (+1.0%), 100% off-topic rejection, DeepEval Faithfulness 0.7977, Answer Relevancy 0.6341 ($0.00 spent).
-- **Revisit if:** New checkpoint with additional multi-hop or cross-domain fine-tuning is trained.
+- **Revisit if:** New checkpoint with additional multi-hop or cross-domain fine-tuning is trained.
+
+### D-062 — Tri-Party Benchmark: Pure Vector RAG vs Laya Baseline vs Laya Mới trên 150 test cases
+
+- **Status:** accepted
+- **When:** 2026-11-09T22:44:00+07:00
+- **Decided by:** human-directed, agent-proposed
+- **Trigger:** "new task, run the baseline deepeval on those 150 new test sample, but this time, benchmark the pure vector rag search, no rerank, laya, also commits the reulst of laya benhcmakr + push /grill-me/grill-me"
+- **Decision:** Execute full 2-tier Pure Vector RAG benchmark (Nomic v1.5 Cosine without reranker or Laya) on 150 test samples (`test_set_v1.jsonl`) with Local Qwen 2.5-7B Instruct synthesis and DeepEval judging, merging with Laya A/B numbers into a 3-way comparative matrix.
+- **Why:** Empirically quantify the exact value-add of cross-attention reranking (Laya) over bi-encoder vector similarity in both retrieval precision and end-to-end generation quality.
+- **Rejected:** Skipping negative query evaluation (would hide vector overconfidence / 8% false acceptance on off-topic questions).
+- **Touches:** `backend_rag/scripts/benchmark-vector-runner.mjs`, `backend_rag/benchmark/results/vector_final_benchmark.json`, `backend_rag/benchmark/results/vector_eval_cases.json`, `docs/reports/VECTOR_VS_LAYA_BENCHMARK_REPORT.md`.
+- **Evidence:** 150/150 cases certified in `docs/reports/VECTOR_VS_LAYA_BENCHMARK_REPORT.md`: Pure Vector achieves MRR 0.8623, Hit@1 79.0%, DeepEval Faithfulness 0.7956, Answer Relevancy 0.6159; Laya Mới outperforms by +3.16% MRR, +3.0% Hit@1, +1.82% Answer Relevancy, and eliminates 8% off-topic false acceptance ($0.00 spent).
+- **Revisit if:** Vector embedding model is upgraded to a larger 1024-dim or matryoshka embedding architecture.
+
