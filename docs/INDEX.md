@@ -6,7 +6,7 @@
 - **Detailed Plan**: Files live under `docs/` by topic: `architecture/`, `api/`, `design/`, `guides/`, `security/`, `research/`, `reports/`, `slides/`, `prompts/`, `assets/`.  Section 1 catalogs AI Agent Entrypoints & Governance Rules; Section 2 catalogs System Architecture & API Specifications; Section 3 catalogs Backend Engineering & SRE Benchmark Docs; Section 4 catalogs Frontend 3D, Design System & Offline Persistence Docs; Section 5 lists Archived Bootstrap Prompts (do not use for active code generation).
 - **References**: [AGENTS.md](../AGENTS.md), [backend_rag/AGENTS.md](../backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](../frontend_rag/AGENTS.md), [agents/rules/MD_CONVENTION.md](../agents/rules/MD_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-29T19:43:00+07:00
-- **Last Updated**: 2026-11-06T13:13:54+07:00
+- **Last Updated**: 2026-11-10T20:20:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -40,6 +40,7 @@
 | [`docs/architecture/SCIENTIFIC_RAG_BACKEND.md`](architecture/SCIENTIFIC_RAG_BACKEND.md) | `ACTIVE` | **Scientific RAG Pipeline**: Nomic v1.5 embeddings (`search_query:` prefix), Qdrant cosine search, PageRank authority boost, FP-Growth query expansion, and LLM citation grounding. |
 | [`docs/architecture/RAG.md`](architecture/RAG.md) | `ACTIVE` | **RAG Pipeline Concepts & Domain Notes**: Theoretical and practical notes on retrieval, reranking, and prompt grounding. |
 | [`docs/reports/REPORT.md`](reports/REPORT.md) | `ACTIVE` | **Executive Engineering & Performance Report**: Consolidated summary of WebGL 3D optimizations, Lighthouse 97 audit, and backend load qualification. |
+| [`docs/reports/prometheus-2026-11-08-sunday.md`](reports/prometheus-2026-11-08-sunday.md) | `ACTIVE` | **Prometheus Production Window Report (2026-11-08, 10:00–12:00 and 20:00–21:00)**: Real-traffic analysis of `backend_rag` — availability (down 11:34:45, restart 20:20:44), chat 429s and 26 s streams, route latency percentiles, CPU/RSS, Qdrant probe flaps, and metric gaps. |
 | [`docs/reports/integrated-bench-run-2026-10-23T08-19-38-jjpmf-executive.md`](reports/integrated-bench-run-2026-10-23T08-19-38-jjpmf-executive.md) | `ACTIVE` | **Integrated Benchmark Run Report**: Historical snapshot of early integrated pipeline benchmark metrics. |
 | [`docs/api/API-compare.md`](api/API-compare.md) | `ACTIVE` | **API Before/After Comparison**: The redesign against the 8 API principles. |
 | [`docs/architecture/database-v2.md`](architecture/database-v2.md) | `IN_PROGRESS` | **Storage Redesign**: Qdrant, MongoDB and MinIO after moving chunk content out of Qdrant. |
