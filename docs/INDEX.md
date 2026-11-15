@@ -6,7 +6,7 @@
 - **Detailed Plan**: Files live under `docs/` by topic: `architecture/`, `api/`, `design/`, `guides/`, `security/`, `research/`, `reports/`, `slides/`, `prompts/`, `assets/`.  Section 1 catalogs AI Agent Entrypoints & Governance Rules; Section 2 catalogs System Architecture & API Specifications; Section 3 catalogs Backend Engineering & SRE Benchmark Docs; Section 4 catalogs Frontend 3D, Design System & Offline Persistence Docs; Section 5 lists Archived Bootstrap Prompts (do not use for active code generation).
 - **References**: [AGENTS.md](../AGENTS.md), [backend_rag/AGENTS.md](../backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](../frontend_rag/AGENTS.md), [agents/rules/MD_CONVENTION.md](../agents/rules/MD_CONVENTION.md), [docs/AI_chat_log/Vuong_chat_logs.md](AI_chat_log/Vuong_chat_logs.md).
 - **Created**: 2026-10-29T19:43:00+07:00
-- **Last Updated**: 2026-11-09T17:51:00+07:00
+- **Last Updated**: 2026-11-15T13:05:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -32,6 +32,7 @@
 | Document | Status | Audience & Scope |
 | :--- | :---: | :--- |
 | [`docs/architecture/ARCHITECTURE_OVERVIEW.md`](architecture/ARCHITECTURE_OVERVIEW.md) | `ACTIVE` | **Full-Stack System Architecture**: End-to-end topology (`frontend_rag` $\leftrightarrow$ `backend_rag` $\leftrightarrow$ MongoDB / Qdrant / LLM), SSE streaming flow, and dual-persistence model. |
+| [`docs/architecture/BE_FE_DIRECTORY_GUIDE.md`](architecture/BE_FE_DIRECTORY_GUIDE.md) | `ACTIVE` | **BE & FE Directory Reference Guide**: Complete directory-by-directory map explaining every folder, barrel `index.ts`, and key file across `backend_rag/` (`49` dir `README.md`s) and `frontend_rag/` (`63` dir `README.md`s). |
 | [`README.md`](../README.md) | `ACTIVE` | **Project Overview**: High-level introduction to the RAG 3D Knowledge Tree system and repository layout. |
 | [`docs/guides/RUN_GUIDE.md`](guides/RUN_GUIDE.md) | `ACTIVE` | **Environment & Startup Guide**: How to run `cloudflared` TCP tunnel (`localhost:27018`), Qdrant, Ollama/GGUF model, `backend_rag`, and `frontend_rag`. |
 | [`docs/api/API_SPECIFICATION.md`](api/API_SPECIFICATION.md) | `ACTIVE` | **REST & SSE API Reference**: Detailed request/response payloads, status codes, and error envelopes for `/api/v1/*`. |
@@ -58,7 +59,7 @@
 | Document | Status | Audience & Scope |
 | :--- | :---: | :--- |
 | [`backend_rag/AGENTS.md`](../backend_rag/AGENTS.md) | `ACTIVE` | **Backend AI Manual**: Module directory, DTO/validation rules, cache invalidation checklist, and test commands. |
-| [`backend_rag/README.md`](../backend_rag/README.md) | `ACTIVE` | **Backend Service Guide**: Setup, `.env` variables, scripts, and endpoint summary for `backend_rag`. |
+| [`backend_rag/README.md`](../backend_rag/README.md) | `ACTIVE` | **Backend Service Guide**: Upgraded operational guide + per-directory spec hub linking to all `49` local `backend_rag/*/README.md` technical specs. |
 | [`backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md`](../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md) | `ACTIVE` | **Auth & Security Deep Dive**: `Argon2id` (`64 MB`, `UV_THREADPOOL_SIZE=4`), JWT access tokens, 1-RTT atomic refresh rotation, token family reuse revocation, progressive lockout, and auth caches. |
 | [`backend_rag/docs/AUTH_LOGOUT_DESIGN.md`](../backend_rag/docs/AUTH_LOGOUT_DESIGN.md) | `ACTIVE` | **Logout & Session Revocation Spec**: Single-device `/auth/logout` vs. all-device `/auth/logout-all` token revocation semantics. |
 | [`backend_rag/docs/PERFORMANCE_AND_CACHING.md`](../backend_rag/docs/PERFORMANCE_AND_CACHING.md) | `ACTIVE` | **Performance, Caching & SRE Playbook**: Generation-versioned `LRUCache` (`bumpUserGen`), `Singleflight` coalescing, `.lean()` DTO paths, MongoDB pool tuning (`maxPoolSize: 120`), and Rule L1 k6 certification. |
@@ -77,7 +78,7 @@
 | Document | Status | Audience & Scope |
 | :--- | :---: | :--- |
 | [`frontend_rag/AGENTS.md`](../frontend_rag/AGENTS.md) | `ACTIVE` | **Frontend AI Manual**: Component map, R3F `<Canvas>` rules, Zustand stores, Dexie.js IndexedDB rules, and Web Vitals guardrails. |
-| [`frontend_rag/README.md`](../frontend_rag/README.md) | `ACTIVE` | **Frontend App Guide**: Vite dev server, environment configuration, and build scripts. |
+| [`frontend_rag/README.md`](../frontend_rag/README.md) | `ACTIVE` | **Frontend App Guide**: Upgraded operational guide + per-directory spec hub linking to all `63` local `frontend_rag/*/README.md` technical specs. |
 | [`docs/design/FE_DESIGN_SYSTEM.md`](design/FE_DESIGN_SYSTEM.md) | `ACTIVE` | **Frontend Design System & Liquid Glass Spec**: Single source of truth for design tokens (color, radius, blur, glass materials, typography, motion), complex/quaternion 3D rotation math, and Liquid Glass levels 1–4. |
 | [`docs/design/FE_DESIGN_AUDIT.md`](design/FE_DESIGN_AUDIT.md) | `ACTIVE` | **Frontend Token Drift & Design Audit**: Empirical measurement of UI token drift across P1–P14 and post-P14 commits prior to `FE_DESIGN_SYSTEM.md`. |
 | [`docs/prompts/FE3d_prompt_v2.md`](prompts/FE3d_prompt_v2.md) | `ACTIVE` | **Frontend v2 Prompt Plan (`P15`–`P23`)**: Step-by-step specification, pseudocode, and verification plan for Design System migration, 3D complex/quaternion math, and Liquid Glass. |
@@ -89,6 +90,8 @@
 | [`frontend_rag/PROGRESS.md`](../frontend_rag/PROGRESS.md) | `ACTIVE` | **Frontend Feature Implementation Tracker**: Module completion and Vitest/Playwright verification log. |
 | [`frontend_rag/docs/design-migration-report.md`](../frontend_rag/docs/design-migration-report.md) | `ACTIVE` | **Design Migration Report**: per-prompt `check:design` counts, scale STATS, screenshot diffs and frame-time measurements. |
 | [`docs/design/liquid-glass.md`](design/liquid-glass.md) | `ACTIVE` | **Liquid Glass Write-Up**: How the glass of the knowledge tree UI works and why. |
+| [`docs/design/light_mode_color_experiment_report.md`](design/light_mode_color_experiment_report.md) | `ACTIVE` | **Light Mode Blue Palette Report**: Comparison matrix and 1:1 close-up crops across 5 Light Mode sky palettes from the default sun/horizon overview pose. |
+| [`docs/design/baseline_sun_horizon_review.md`](design/baseline_sun_horizon_review.md) | `ACTIVE` | **Sun & Horizon Default Camera Review**: Calibrated `-5°`/`-40°` overview pose baseline capture and live `PerfHUD` pose-tracker usage guide. |
 
 ---
 
