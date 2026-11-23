@@ -6,7 +6,7 @@
 - **Detailed Plan**: Index table followed by immutable 12-line decision blocks with strict attribution and command-level verification evidence.
 - **References**: [agents/template/DECISION_LOG_TEMPLATE.md](../../agents/template/DECISION_LOG_TEMPLATE.md), [frontend_rag/docs/perf-chat-report.md](../../frontend_rag/docs/perf-chat-report.md), [backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md](../../backend_rag/benchmark/BOTTLENECK_ANALYSIS_AND_OPTIMIZATION.md).
 - **Created**: 2026-10-20T19:00:00+07:00
-- **Last Updated**: 2026-11-06T19:55:00+07:00
+- **Last Updated**: 2026-11-23T09:37:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -64,7 +64,8 @@
 | D-057 | Override vulnerable transitive dependencies | agent-proposed, human-approved | accepted |
 | D-058 | Read chunk text from `rag_ts_corpus` | agent-proposed, human-approved | accepted |
 | D-059 | Run Laya on Node: fused rerank plus evidence and groundedness gates | human-directed, agent-proposed | accepted |
-| D-060 | 5-Scenario Retrieval Ranking & Full 200-Sample DeepEval Generation Benchmark Certification | human-directed, agent-proposed | accepted |
+| D-060 | 5-Scenario Retrieval Ranking & Full 200-Sample DeepEval Generation Benchmark Certification | human-directed, agent-proposed | accepted |
+| D-063 | Extract BE Repositories and FE Hook -> Service -> API Layers                     | agent-proposed, human-approved | accepted |
 
 ---
 
@@ -729,4 +730,16 @@
 - **Touches:** `backend_rag/scripts/benchmark-vector-runner.mjs`, `backend_rag/benchmark/results/vector_final_benchmark.json`, `backend_rag/benchmark/results/vector_eval_cases.json`, `docs/reports/VECTOR_VS_LAYA_BENCHMARK_REPORT.md`.
 - **Evidence:** 150/150 cases certified in `docs/reports/VECTOR_VS_LAYA_BENCHMARK_REPORT.md`: Pure Vector achieves MRR 0.8623, Hit@1 79.0%, DeepEval Faithfulness 0.7956, Answer Relevancy 0.6159; Laya Mới outperforms by +3.16% MRR, +3.0% Hit@1, +1.82% Answer Relevancy, and eliminates 8% off-topic false acceptance ($0.00 spent).
 - **Revisit if:** Vector embedding model is upgraded to a larger 1024-dim or matryoshka embedding architecture.
+
+### D-063 — Extract BE Repositories and FE Hook -> Service -> API Layers
+- **Status:** accepted
+- **When:** 2026-11-23T09:37:00+07:00
+- **Decided by:** agent-proposed, human-approved
+- **Trigger:** "ok, follow with the option A"
+- **Decision:** Extracted 7 Mongoose repositories (`auth`, `chat-sessions`, `admin`) keeping `engines/*` as the peer AI tier, and introduced FE `services/` + `shared/api/errors.ts` (`HttpError`) routing feature components through hooks -> services -> APIs -> HTTP client.
+- **Why:** Aligns full-stack architecture with the required layered request-response flow while preserving `.lean()`, 1-RTT atomic rotation, append-only audit logs, offline-first Dexie sync, and 100+ FPS `world/scene/` WebGL hot paths.
+- **Rejected:** Documentation-only mapping without code extraction — left `@InjectModel` directly inside services and direct store/fetch coupling across feature components.
+- **Touches:** `backend_rag/src/modules/{auth,chat-sessions,admin}/**`, `backend_rag/src/testing/barrels.spec.ts`, `frontend_rag/src/shared/api/**`, `frontend_rag/src/features/{auth,chat,result,crawl}/**`, `frontend_rag/src/test/featureModules.test.tsx`, `AGENTS.md`.
+- **Evidence:** BE `nest build` OK, `jest --runInBand` 29/29 suites (267/267 tests), `test:e2e` 1/1 suite (13/13 tests), `eslint` 0 errors, `@InjectModel` in `*.service.ts` 0; FE `tsc --noEmit` 0 errors, `vitest run` 41/41 files (327/327 tests), `lint` (`eslint` 0 errors + `check-design --strict` OK), `vite build` OK.
+- **Revisit if:** Additional feature modules are added without repository or `Hook -> Service -> API` separation.
 
