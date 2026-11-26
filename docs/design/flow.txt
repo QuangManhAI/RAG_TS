@@ -1,0 +1,438 @@
+Here is the complete, concrete Login (POST /api/v1/auth/tokens) trace through our refactored RAG_TS codebase, mapping every single hop of your lecturer's diagram
+  to the exact file, function, input, and output.
+
+  Suppose the user signs in with email = "alice@university.edu", password = "StrongPass123!".
+  ──────
+  Stage 1 — Outbound: Client → FE → HTTP Request
+
+   Step │ Layer          │ File & Symbol                               │ Input               │ What Happens                         │ Output
+  ──────┼────────────────┼─────────────────────────────────────────────┼─────────────────────┼──────────────────────────────────────┼───────────────────────────────
+   1    │ Client         │ Browser UI                                  │ User types email +  │ Fires DOM form onSubmit event        │ React.FormEvent
+        │                │                                             │ password and clicks │                                      │
+        │                │                                             │ "Đăng nhập"         │                                      │
+   2    │ Component      │ frontend_rag/src/features/auth/AuthOverlay. │ Form state email,   │ Calls e.preventDefault(), sets       │ Calls Hook action
+        │                │ tsx:6-36 (AuthOverlay.handleSubmit)         │ password            │ loading = true, invokes await        │ login("alice@university.edu",
+        │                │                                             │                     │ login(email, password) obtained from │ "StrongPass123!")
+        │                │                                             │                     │ useAuthSession()                     │
+   3    │ Hook (+ Store) │ frontend_rag/src/features/auth/hooks/useAut │ (email, password)   │ Hook exposes the login action from   │ Calls authenticate(email,
+        │                │ h.ts:4-22 (useAuthSession) →                │                     │ Zustand store; store delegates       │ password)
+        │                │ frontend_rag/src/features/auth/authStore.ts │                     │ execution to FE service              │
+        │                │ :39-48 (useAuth.login)                      │                     │ authenticate(email, password)        │
+   4    │ FE Service     │ frontend_rag/src/features/auth/services/aut │ (email, password)   │ Orchestrates login & owns client-    │ Calls loginWithPassword({
+        │                │ hService.ts:34-40 (authenticate)            │                     │ side error translation (mapAuthError │ email, password })
+        │                │                                             │                     │ maps HTTP 401/429/validation codes   │
+        │                │                                             │                     │ to Vietnamese UX messages)           │
+   5    │ FE API         │ frontend_rag/src/features/auth/api/authApi. │ { email, password } │ Selects endpoint /auth/tokens, sets  │ Calls
+        │                │ ts:42-49 (loginWithPassword)                │ (LoginPayload)      │ method: 'POST', Content-Type:        │ publicFetch('/auth/tokens',
+        │                │                                             │                     │ application/json, and                │ init)
+        │                │                                             │                     │ JSON.stringify(payload)              │
+   6    │ FE HTTP Client │ frontend_rag/src/shared/api/http.ts:17-19   │ path =              │ Prepends API_BASE ('/api/v1') and    │ Sends raw HTTP Request
+        │                │ (publicFetch) +                             │ '/auth/tokens',     │ invokes browser fetch() without      │
+        │                │ frontend_rag/src/shared/api/config.ts:1     │ RequestInit         │ auto-refreshing 401 tokens           │
+
+  HTTP Request on the wire:
+
+    POST /api/v1/auth/tokens HTTP/1.1
+    Content-Type: application/json
+    Accept: */*
+    
+    {"email":"alice@university.edu","password":"StrongPass123!"}
+  ──────
+  Stage 2 — Server Inbound: HTTP Request → BE → Database
+
+   Step │ Layer       │ File & Symbol                           │ Input              │ What Happens                                      │ Output
+  ──────┼─────────────┼─────────────────────────────────────────┼────────────────────┼───────────────────────────────────────────────────┼──────────────────────────
+   7    │ Node.js     │ backend_rag/src/main.ts:19-23           │ Raw TCP/HTTP       │ Accepts connection (keepAliveTimeout = 65_000,    │ Express Request &
+        │ HTTP Server │ (bootstrap)                             │ socket on port     │ UV_THREADPOOL_SIZE = '4' for Argon2id) and hands  │ Response
+        │             │                                         │ 3000               │ (req, res) to Express/NestJS                      │
+   8    │ NestJS /    │ backend_rag/src/app.setup.ts:48-75      │ Express (req, res) │ Runs in sequence: trust proxy →                   │ req.body = { email:
+        │ Express     │ (configureApp)                          │                    │ requestIdMiddleware (sets X-Request-Id) → helmet  │ "alice@university.edu",
+        │ Middleware  │                                         │                    │ (securityHeaders) →                               │ password:
+        │             │                                         │                    │ PrometheusMetricsRegistry.middleware →            │ "StrongPass123!" },
+        │             │                                         │                    │ unsupportedBody (415 if not JSON/XML) → XML body  │ req.id = "<uuid>", real
+        │             │                                         │                    │ middleware (skips JSON) → Express JSON body       │ req.ip
+        │             │                                         │                    │ parser → CORS → matches global prefix /api/v1     │
+   9    │ Guard       │ backend_rag/src/app.module.ts:46        │ ExecutionContext   │ Checks IP rate-limit bucket (10 requests / 60s).  │ true (allow) — or throws
+        │             │ (ThrottlerGuard) +                      │ (client IP)        │ (Login is public, so JwtAuthGuard is not attached │ 429 ThrottlerException
+        │             │ backend_rag/src/common/security/throttl │                    │ here.)                                            │
+        │             │ er.ts:20 (@RateLimit('login'))          │                    │                                                   │
+   10   │ Interceptor │ backend_rag/src/common/http/xml.ts:109- │ ExecutionContext,  │ 1. Checks req.accepts(['application/json',        │ Execution enters Pipe &
+        │ (chiều vào  │ 118 (ContentNegotiationInterceptor) →   │ Accept header,     │ 'application/xml', 'text/xml', 'text/event-       │ Controller
+        │ / Pre-      │ backend_rag/src/common/http/hateoas.ts: │ @WithLinks         │ stream']) (else 406).2. Reads @WithLinks({        │
+        │ controller) │ 157-166 (LinksInterceptor)              │ metadata           │ resource: accountLinks }) metadata via Reflector  │
+        │             │                                         │                    │ and calls next.handle().                          │
+   11   │ Pipe        │ backend_rag/src/common/http/validation. │ Raw req.body       │ Validates email (string, <= 254, trimmed via      │ Typed LoginDto instance
+        │             │ ts:18-26 (createValidationPipe) +       │                    │ @Transform) & password (string, <= 200); rejects  │
+        │             │ backend_rag/src/modules/auth/dto/auth.d │                    │ unknown fields (forbidNonWhitelisted: true) with  │
+        │             │ to.ts:36-47 (LoginDto)                  │                    │ 400 BadRequestException                           │
+   12   │ Controller  │ backend_rag/src/modules/auth/auth.contr │ dto: LoginDto, ip: │ Thin HTTP entrypoint — delegates straight to      │ Calls
+        │             │ oller.ts:33-41 (AuthController.login)   │ string             │ this.auth.login(dto, ip)                          │ AuthService.login(dto,
+        │             │                                         │                    │                                                   │ ip)
+   13   │ Service     │ backend_rag/src/modules/auth/auth.servi │ (dto, ip)          │ 1. Normalizes email + computes key =              │ Repository calls
+        │             │ ce.ts:118-185 (AuthService.login) +     │                    │ sha256(email|ip).2. Checks attemptCountCache &    │
+        │             │ backend_rag/src/modules/auth/token.serv │                    │ userByEmailCache; on cache miss, calls            │
+        │             │ ice.ts:51-76 (TokenService.issue)       │                    │ Repositories in parallel (Promise.all).3. Rejects │
+        │             │                                         │                    │ if attemptCount >= 5 (429).4. Runs                │
+        │             │                                         │                    │ argon2.verify(hash || dummyHash, dto.password)    │
+        │             │                                         │                    │ (anti-timing-enumeration). Fails → records        │
+        │             │                                         │                    │ attempt + 401.5. Checks user.is_active (else      │
+        │             │                                         │                    │ 401).6. Updates last_login_at, signs JWT          │
+        │             │                                         │                    │ access_token (15m, claims { sub, roles, ver }),   │
+        │             │                                         │                    │ generates 32-byte refresh_token, hashes with      │
+        │             │                                         │                    │ HMAC-SHA256, and writes token + clears prior      │
+        │             │                                         │                    │ failures in parallel.                             │
+   14   │ Repository  │ backend_rag/src/modules/auth/repositori │ Typed keys /       │ Executes Mongoose queries with .lean() (no        │ MongoDB wire commands
+        │             │ es/login-attempts.repository.ts         │ filters / records  │ hydration overhead) against injected models       │
+        │             │ (countByKey,                            │                    │                                                   │
+        │             │ clearByKey)backend_rag/src/modules/auth │                    │                                                   │
+        │             │ /repositories/users.repository.ts       │                    │                                                   │
+        │             │ (findByEmailLean,                       │                    │                                                   │
+        │             │ updateLastLogin)backend_rag/src/modules │                    │                                                   │
+        │             │ /auth/repositories/refresh-tokens.repos │                    │                                                   │
+        │             │ itory.ts (create)                       │                    │                                                   │
+   15   │ Database    │ MongoDB rag_ts (login_attempts, users,  │ Queries & writes   │ Reads attempt count + user record, updates        │ Raw BSON documents &
+        │             │ refresh_tokens)                         │                    │ users.last_login_at, inserts refresh_tokens doc   │ write acks
+        │             │                                         │                    │ (TTL 7 days), deletes old login_attempts          │
+  ──────
+  Stage 3 — Server Return: Database → BE → HTTP Response
+
+   Step │ Layer         │ File & Symbol                                  │ Input              │ What Happens                                    │ Output
+  ──────┼───────────────┼────────────────────────────────────────────────┼────────────────────┼─────────────────────────────────────────────────┼───────────────────
+   16   │ Database →    │ UsersRepository, LoginAttemptsRepository,      │ BSON docs          │ Returns plain JS objects (LeanUser), number     │ { _id, email,
+        │ Repository    │ RefreshTokensRepository                        │                    │ (attemptCount), void                            │ password_hash,
+        │               │                                                │                    │                                                 │ display_name,
+        │               │                                                │                    │                                                 │ roles, is_active,
+        │               │                                                │                    │                                                 │ token_version,
+        │               │                                                │                    │                                                 │ created_at }
+   17   │ Repository →  │ backend_rag/src/modules/auth/auth.service.ts:3 │ LeanUser, familyId │ Converts LeanUser → UserDto via toUserDto()     │ AuthResponseDto
+        │ Service       │ 16-333 (AuthService.respond) +                 │                    │ (strips password_hash), populates userCache &   │ object
+        │               │ TokenService.issue                             │                    │ tokenVersionCache, combines with {              │
+        │               │                                                │                    │ access_token, token_type: 'Bearer', expires_in: │
+        │               │                                                │                    │ 900, refresh_token }                            │
+   18   │ Service →     │ backend_rag/src/modules/auth/auth.controller.t │ AuthResponseDto    │ Resolves promise back to NestJS router (default │ AuthResponseDto
+        │ Controller    │ s:39-41                                        │                    │ @Post status = 201 Created)                     │
+   19   │ Interceptor   │ 1.                                             │ AuthResponseDto    │ Runs in reverse onion order                     │ { access_token,
+        │ (chiều ra /   │ LinksInterceptor` (`hateoas.ts#L167-L175`)2.   │                    │ (backend_rag/src/app.setup.ts:77-81):1.         │ token_type,
+        │ Post-         │ ContentNegotiationInterceptor` (`xml.ts#L119-L │                    │ LinksInterceptor clones the body and attaches   │ expires_in,
+        │ controller)   │ 125`)                                          │                    │ _links: accountLinks() (self, update, password, │ refresh_token,
+        │               │                                                │                    │ chat-sessions, token-rotations, token-          │ user, _links }
+        │               │                                                │                    │ revocations).2. ContentNegotiationInterceptor   │
+        │               │                                                │                    │ keeps the object as JSON (or converts via       │
+        │               │                                                │                    │ toXml() if Accept: application/xml).            │
+   20   │ NestJS /      │ Express response writer (or                    │ Enriched body      │ Serializes JSON, sets 201 Created, Content-     │ HTTP Response on
+        │ Express sends │ HttpExceptionFilter on any error)              │                    │ Type: application/json, X-Request-Id, helmet    │ the wire
+        │ Response      │                                                │                    │ headers, and records Prometheus request latency │
+
+  HTTP Response on the wire:
+
+    HTTP/1.1 201 Created
+    Content-Type: application/json; charset=utf-8
+    X-Request-Id: 7f3c9b1e-...
+    
+    {
+      "access_token": "eyJhbGciOi...",
+      "token_type": "Bearer",
+      "expires_in": 900,
+      "refresh_token": "k9xQ2m...",
+      "user": { "id": "674...", "email": "alice@university.edu", "display_name": "Alice", "roles": ["user"], "created_at": "..." },
+      "_links": { "self": { "href": "/api/v1/users/me" }, "chat-sessions": { "href": "/api/v1/chat-sessions" }, "..." : "..." }
+    }
+
+  (If login failed with wrong password, Guard/Pipe/Service throws an exception that short-circuits straight to HttpExceptionFilter, returning 401 Unauthorized with
+  { statusCode: 401, error: "UNAUTHORIZED", message: "invalid credentials", ... }.)
+  ──────
+  Stage 4 — FE Return: HTTP Response → FE → Client
+
+   Step │ Layer       │ File & Symbol                       │ Input             │ What Happens                                       │ Output
+  ──────┼─────────────┼─────────────────────────────────────┼───────────────────┼────────────────────────────────────────────────────┼──────────────────────────────
+   21   │ FE HTTP     │ frontend_rag/src/shared/api/http.ts │ Browser fetch     │ Resolves native Response back to authApi           │ Response (status: 201, ok:
+        │ Client      │ :17-19 (publicFetch)                │ settlement        │                                                    │ true)
+   22   │ FE API      │ frontend_rag/src/features/auth/api/ │ Response          │ Checks res.ok. If !res.ok, parses server message   │ AuthTokenResponse ({ user,
+        │             │ authApi.ts:28-39 (readJsonOrThrow)  │                   │ and throws AuthApiError(status, message,           │ access_token, refresh_token
+        │             │                                     │                   │ serverMessage) (extending HttpError). If res.ok,   │ })
+        │             │                                     │                   │ awaits res.json().                                 │
+   23   │ FE Service  │ frontend_rag/src/features/auth/serv │ AuthTokenResponse │ On success: returns AuthTokenResponse. On error:   │ Clean AuthTokenResponse (or
+        │             │ ices/authService.ts:34-40           │ (or thrown        │ translates 401 → "Email hoặc mật khẩu không chính  │ localized Error)
+        │             │ (authenticate / mapAuthError)       │ AuthApiError)     │ xác.", 429 → "Quá nhiều lần thử đăng nhập...",     │
+        │             │                                     │                   │ etc., and rethrows localized Error.                │
+   24   │ FE Hook /   │ frontend_rag/src/features/auth/auth │ AuthTokenResponse │ Calls set({ user: data.user, accessToken:          │ Reactive state change
+        │ Store       │ Store.ts:39-48 (useAuth.login) →    │                   │ data.access_token, refreshToken:                   │ (isAuthenticated: true,
+        │ updates     │ frontend_rag/src/features/auth/hook │                   │ data.refresh_token, isAuthenticated: true }).      │ user: { ... })
+        │ State       │ s/useAuth.ts:4-22 (useAuthSession)  │                   │ Zustand persist writes to localStorage['rag-auth-  │
+        │             │                                     │                   │ storage'] and notifies all useAuthSession()        │
+        │             │                                     │                   │ subscribers.                                       │
+   25   │ Component   │ frontend_rag/src/features/chat/comp │ Updated           │ - Success: ChatPanel sees isAuthenticated === true │ User sees the unlocked RAG
+        │ re-renders  │ onents/ChatPanel.tsx:15-119 &       │ useAuthSession()  │ → unmounts <AuthOverlay />, mounts <PipelineStatus │ chat workspace (or
+        │ → Client    │ frontend_rag/src/features/auth/Auth │ values            │ />, <MessageList />, <ChatInput />, displays       │ Vietnamese error alert)
+        │             │ Overlay.tsx:22-36                   │                   │ Alice's badge + logout button, and useEffect       │
+        │             │                                     │                   │ triggers initSessions() to sync chat history.-     │
+        │             │                                     │                   │ Failure: AuthOverlay catches the Vietnamese Error, │
+        │             │                                     │                   │ calls setError(err.message), sets loading = false, │
+        │             │                                     │                   │ and renders the red <div role="alert"> banner.     │
+  ──────
+  Quick Summary of the Error Path (Bonus for Presenting to Your Lecturer)
+  If the user submits a wrong password:
+  AuthService.login() (401) → bypasses Controller return & Interceptors → HttpExceptionFilter → HTTP 401 → authApi.ts throws AuthApiError(401, ...) → authService.ts
+  (mapAuthError) maps it to "Email hoặc mật khẩu không chính xác." → AuthOverlay.tsx renders <div role="alert">.
+
+────────────────────────────────────────────────────────────
+> make the similar flow for LLM's flow
+○ Thought for 10.4s (Plan mode mandates a direct explanatory response without state mutations, meaning read-only investigation suffices. Tracing the streaming cha...)
+● Explored 9 files (rag.controller.ts, chat-request.dto.ts, rag.service.ts, +6) (ctrl+o to expand)
+
+▸ Thought for 38s
+
+  Here is the complete LLM / RAG Chat Streaming (POST /api/v1/rag/chat/stream) trace through RAG_TS, in the exact same layer-by-layer format as Login — showing
+  where every AI engine plugs into the Backend and how streaming SSE returns incrementally to the Frontend.
+  Suppose a signed-in user asks: "How does LoRA optimize large models?".
+  ──────
+  Stage 1 — Outbound: Client → FE → HTTP Request
+
+   Step │ Layer          │ File & Symbol                        │ Input               │ What Happens                                 │ Output
+  ──────┼────────────────┼──────────────────────────────────────┼─────────────────────┼──────────────────────────────────────────────┼──────────────────────────────
+   1    │ Client         │ Browser UI                           │ User types question │ Triggers form onSubmit / onKeyDown           │ React.FormEvent
+        │                │                                      │ and presses Enter   │                                              │
+        │                │                                      │ (or clicks Send)    │                                              │
+   2    │ Component      │ frontend_rag/src/features/chat/compo │ Textarea value      │ Clears input box and invokes void            │ Calls Hook action send("How
+        │                │ nents/ChatInput.tsx:5-17             │                     │ send(value) obtained from                    │ does LoRA optimize large
+        │                │ (ChatInput.submit)                   │                     │ useChatInputState()                          │ models?")
+   3    │ Hook (+ Store) │ frontend_rag/src/features/chat/hooks │ text: string        │ 1. Aborts any in-flight stream               │ Calls FE Service
+        │                │ /useChatWorkspace.ts:90-95           │                     │ (AbortController).2. Generates RFC 9562      │ buildRagRequest() &
+        │                │ (useChatInputState) →                │                     │ UUIDv7 userMsgId (reused as Idempotency-Key) │ openRagStream()
+        │                │ frontend_rag/src/features/chat/store │                     │ and assistantMsgId.3. Appends optimistic     │
+        │                │ /ragStore.ts:139-176 (useRag.send)   │                     │ user message + empty status: 'streaming'     │
+        │                │                                      │                     │ assistant bubble to Zustand.4. Ensures an    │
+        │                │                                      │                     │ offline-first local session exists via       │
+        │                │                                      │                     │ useSessionStore.createOrGetSession(query) →  │
+        │                │                                      │                     │ chatSessionService.createLocalSession()      │
+        │                │                                      │                     │ (writes to Dexie IndexedDB first).           │
+   4    │ FE Service     │ frontend_rag/src/features/chat/servi │ (query, sessionId,  │ 1. Reads chatDb.sessions.get(sessionId) —    │ Calls streamChat(req,
+        │                │ ces/ragChatService.ts:10-43          │ uiSettings)         │ attaches session_id only if already synced   │ signal, userMsgId)
+        │                │ (buildRagRequest, openRagStream)     │                     │ with BE.2. Builds RagRequest (query, top_k,  │
+        │                │                                      │                     │ nprobe, use_authority_boost, expand_query,   │
+        │                │                                      │                     │ optional category & session_id).3. Calls     │
+        │                │                                      │                     │ chatApi.streamChat(req, signal, userMsgId)   │
+        │                │                                      │                     │ (wraps stream with WorldBridge if running    │
+        │                │                                      │                     │ live BE on mock 3D world).                   │
+   5    │ FE API         │ frontend_rag/src/features/chat/api/c │ (req, signal,       │ Sets headers Content-Type: application/json, │ Calls
+        │                │ hatApi.ts:35 →                       │ idempotencyKey)     │ Accept: text/event-stream, and Idempotency-  │ apiFetch('/rag/chat/stream',
+        │                │ frontend_rag/src/shared/api/client.t │                     │ Key: <userMsgId> (enables 180s auto-resume   │ init)
+        │                │ s:186-222 (streamChat)               │                     │ if the stream drops).                        │
+   6    │ FE HTTP Client │ frontend_rag/src/shared/api/http.ts: │ path =              │ Reads accessToken from useAuth, attaches     │ Sends HTTP Request
+        │                │ 25-36 (apiFetch)                     │ '/rag/chat/stream', │ Authorization: Bearer <jwt>, executes        │
+        │                │                                      │ RequestInit         │ fetch('/api/v1/rag/chat/stream', ...). If    │
+        │                │                                      │                     │ 401, auto-rotates refresh token once via     │
+        │                │                                      │                     │ rotateTokens() and retries.                  │
+  HTTP Request on the wire:
+
+    POST /api/v1/rag/chat/stream HTTP/1.1
+    Authorization: Bearer eyJhbGciOi...
+    Content-Type: application/json
+    Accept: text/event-stream
+    Idempotency-Key: 019ab3f2-7c10-7000-8000-000000000001
+    
+    {"query":"How does LoRA optimize large models?","top_k":5,"nprobe":2,"use_authority_boost":true,"expand_query":false}
+  ──────
+  Stage 2 — Server Inbound: HTTP Request → BE → AI Engines & Database
+
+   Step │ Layer                       │ File & Symbol                 │ Input             │ What Happens                            │ Output
+  ──────┼─────────────────────────────┼───────────────────────────────┼───────────────────┼─────────────────────────────────────────┼───────────────────────────────
+   7    │ Node.js HTTP Server         │ backend_rag/src/main.ts:19-23 │ TCP/HTTP socket   │ Accepts request and forwards (req, res) │ Express Request, Response
+        │                             │                               │ on :3000          │ to Express/NestJS                       │
+   8    │ NestJS / Express Middleware │ backend_rag/src/app.setup.ts: │ (req, res)        │ Sets trust proxy, X-Request-Id, helmet, │ Parsed req.body, req.id,
+        │                             │ 48-75                         │                   │ Prometheus metrics timer, checks        │ req.ip
+        │                             │                               │                   │ supported body (415 if not JSON/XML),   │
+        │                             │                               │                   │ parses JSON req.body, checks CORS,      │
+        │                             │                               │                   │ routes under /api/v1                    │
+   9    │ Guards (2 layers)           │ 1. ThrottlerGuard +           │ ExecutionContext, │ 1. Rate-limits per IP: 20 req / 60s     │ req.user = { id, roles, email
+        │                             │ @RateLimitChat()2.            │ Authorization     │ with Bearer token, 10 req / 60s         │ } (or undefined)
+        │                             │ OptionalJwtAuthGuard          │ header            │ anonymous (else 429).2. Verifies JWT    │
+        │                             │                               │                   │ signature & checks                      │
+        │                             │                               │                   │ AuthService.getActiveUser() (is_active  │
+        │                             │                               │                   │ === true and token_version ===          │
+        │                             │                               │                   │ claims.ver, cached 5s). Attaches        │
+        │                             │                               │                   │ req.user (or allows anonymous if no     │
+        │                             │                               │                   │ header; throws 401 if invalid/revoked). │
+   10   │ Interceptor (chiều vào)     │ ContentNegotiationInterceptor │ Accept:           │ Checks req.accepts(['application/json', │ Enters Pipe & Controller
+        │                             │                               │ text/event-stream │ 'application/xml', 'text/xml',          │
+        │                             │                               │                   │ 'text/event-stream']) → passes (else    │
+        │                             │                               │                   │ 406)                                    │
+   11   │ Pipe                        │ backend_rag/src/common/http/v │ Raw req.body      │ Trims query (1–2000 chars), validates   │ Typed ChatRequestDto
+        │                             │ alidation.ts:18-26 +          │                   │ top_k (1–20), nprobe (1–6), booleans,   │
+        │                             │ ChatRequestDto                │                   │ optional UUID session_id & category;    │
+        │                             │                               │                   │ rejects extra fields (400)              │
+   12   │ Controller                  │ backend_rag/src/modules/rag/r │ (dto, user,       │ 1. Validates Idempotency-Key UUID (400  │ Starts RagService.run()
+        │                             │ ag.controller.ts:145-170      │ rawKey, req, res) │ if invalid).2. Acquires per-client in-  │ generator
+        │                             │ (RagController.stream)        │                   │ flight slot (ClientSlots, else 429).3.  │
+        │                             │                               │                   │ Hooks abortOnClientClose(res)           │
+        │                             │                               │                   │ (AbortController aborts LLM if user     │
+        │                             │                               │                   │ closes tab / clicks Stop).4. Creates    │
+        │                             │                               │                   │ async generator events =                │
+        │                             │                               │                   │ this.rag.run(...) and awaits the first  │
+        │                             │                               │                   │ events.next() before sending 200 SSE    │
+        │                             │                               │                   │ headers (so early 404/409 still return  │
+        │                             │                               │                   │ proper HTTP status codes).              │
+   13   │ Service / AI Orchestrator   │ backend_rag/src/modules/rag/r │ (dto, user,       │ Orchestrates the full multi-stage RAG   │ Yields
+        │                             │ ag.service.ts:76-293          │ signal, result,   │ workflow below — calling Repositories   │ AsyncGenerator<PipelineEvent>
+        │                             │ (RagService.run & execute)    │ t0, key)          │ (MongoDB) and AI/Vector Engines         │
+        │                             │                               │                   │ (src/engines/*) as peer infrastructure  │
+        │                             │                               │                   │ layers:                                 │
+
+  Inside Step 13–15: How RagService Calls Repositories & AI Engines (Peer Tier)
+
+   Sub-step                     │ Tier / Engine /    │ Exact Files                                         │ Input → Output
+                                │ Repository         │                                                     │
+  ──────────────────────────────┼────────────────────┼─────────────────────────────────────────────────────┼────────────────────────────────────────────────────────
+   13a. Idempotency & Ownership │ Repository →       │ backend_rag/src/modules/chat-sessions/chat-sessions │ Verifies session_id ownership (404 if not owned) &
+                                │ MongoDB            │ .service.ts → ChatSessionsRepository &              │ inserts in_progress lock _id = "<userId>:<key>" with
+                                │ (chat_sessions,    │ ChatRequestsRepository                              │ SHA-256 body fingerprint (409 on conflict; if
+                                │ chat_requests)     │                                                     │ completed, replays stored answer immediately without
+                                │                    │                                                     │ calling AI!).
+   13b. Expand & Embed          │ AI Engines (Mining │ backend_rag/src/engines/mining/mining.service.ts +  │ Yields phase: 'embedding'. Optionally expands terms
+                                │ + Embedding)       │ backend_rag/src/engines/embedding/embedding.service │ via FP-Growth rules → embeds "search_query: <query>"
+                                │                    │ .ts (EMBEDDING_PORT)                                │ via Nomic Embed Text v1.5 → number[768] vector.
+   13c. 3D Tree Routing         │ Index Engine       │ backend_rag/src/engines/tree-router/tree-router.ser │ Yields phase: 'flying'. Matches 768-dim query against
+                                │ (TreeRouter)       │ vice.ts                                             │ branch/twig centroids (nprobe = 2) → yields { type:
+                                │                    │                                                     │ 'route', steps }.
+   13d. Vector Search           │ Vector Repository  │ backend_rag/src/engines/vector-store/vector-store.s │ Yields phase: 'comparing'. Searches read-only Qdrant
+                                │ → Qdrant + Corpus  │ ervice.ts (VECTOR_STORE_PORT) +                     │ scientific_papers_gold (limit = max(40, top_k * 8)) +
+                                │ MongoDB            │ backend_rag/src/engines/corpus/corpus.service.ts    │ hydrates chunk text from read-only rag_ts_corpus →
+                                │                    │                                                     │ yields { type: 'compare', candidates }.
+   13e. Rerank & Evidence Gate  │ AI Engines (Mining │ backend_rag/src/engines/mining/mining.service.ts +  │ Yields phase: 'found'. Applies PageRank authority
+                                │ + Judge)           │ backend_rag/src/engines/judge/judge.service.ts      │ boost → scores candidates with Laya + RRF fusion
+                                │                    │ (JUDGE_PORT, @receptron/laya ONNX) +                │ (fuseRanks). If top evidence < LAYA_EVIDENCE_THRESHOLD
+                                │                    │ backend_rag/src/modules/rag/rag.service.ts:296-321  │ (0.6), calls LLM once to rewrite the query & re-
+                                │                    │                                                     │ search; if still too low, abstains (grounded = []).
+                                │                    │                                                     │ Yields { type: 'retrieval', grounded_chunks,
+                                │                    │                                                     │ expanded_terms }.
+   13f. LLM Token Generation    │ AI Engine          │ backend_rag/src/engines/llm/llm.service.ts:94-154   │ Yields phase: 'generating'. Builds grounded prompt
+                                │ (LlmService →      │ (LLM_PORT) →                                        │ (SYSTEM_PROMPT + buildUserPrompt(grounded, question)).
+                                │ NodeLlamaEngine →  │ backend_rag/src/engines/llm/llm-engine.ts:61-84     │ Acquires LlmQueue semaphore (LLM_CONCURRENCY=1,
+                                │ Local GPU/CPU)     │ (node-llama-cpp)                                    │ LLM_MAX_QUEUE=8, else 429), starts LLM_TIMEOUT_MS
+                                │                    │                                                     │ timer (504), runs Qwen2.5-7B-Instruct-Q4_K_M
+                                │                    │                                                     │ (temperature=0.2, maxTokens=1024), pushes every chunk
+                                │                    │                                                     │ through TokenChannel → yields { type: 'token', text }
+                                │                    │                                                     │ continuously!
+   13g. Groundedness Gate       │ AI Engine (Judge)  │ backend_rag/src/modules/rag/rag.service.ts:218-248  │ Scores generated answer vs. context with Laya
+                                │                    │                                                     │ (groundedness). If < LAYA_GROUNDED_THRESHOLD (0.3),
+                                │                    │                                                     │ replaces answer with NO_CONTEXT_ANSWER and yields {
+                                │                    │                                                     │ type: 'answer_replaced', answer }. Extracts [Paper:
+                                │                    │                                                     │ id] citations.
+   13h. Persist Exchange        │ Repository →       │ backend_rag/src/modules/chat-sessions/chat-sessions │ Saves user + assistant UUIDv7 messages,
+                                │ MongoDB            │ .service.ts:340-463 → ChatMessagesRepository,       │ creates/updates session (message_count += 2), marks
+                                │ (chat_messages,    │ ChatSessionsRepository, ChatRequestsRepository      │ idempotency key completed in one transaction, and
+                                │ chat_sessions,     │                                                     │ invalidates LRUCache (bumpUserGen). Yields final {
+                                │ chat_requests)     │                                                     │ type: 'done', citations, timings, quality, session_id,
+                                │                    │                                                     │ message_id }.
+  ──────
+  Stage 3 — Server Return: AI Engines / DB → BE → HTTP SSE Stream
+
+   Step │ Layer      │ File & Symbol                     │ Input                      │ What Happens                                   │ Output
+  ──────┼────────────┼───────────────────────────────────┼────────────────────────────┼────────────────────────────────────────────────┼────────────────────────────
+   16   │ Service →  │ backend_rag/src/modules/rag/rag.c │ Each yielded PipelineEvent │ Opens raw Express SSE stream (200 OK, Content- │ Continuous HTTP SSE stream
+        │ Controller │ ontroller.ts:172-209 +            │                            │ Type: text/event-stream; charset=utf-8, X-     │
+        │ (Streaming │ backend_rag/src/modules/rag/trans │                            │ Accel-Buffering: no, : ping every 5s). Writes  │
+        │ loop)      │ port/sse.ts:8-43 (SseWriter)      │                            │ each event immediately as data: <json>\n\n.    │
+        │            │                                   │                            │ Attaches _links: chatLinks(r.value) on the     │
+        │            │                                   │                            │ final done event. (Because @Res() streams      │
+        │            │                                   │                            │ directly, it bypasses single-body post-        │
+        │            │                                   │                            │ Interceptor serialization.)                    │
+   17   │ Cleanup    │ backend_rag/src/modules/rag/rag.c │ Stream end / abort / error │ Closes generator (events.return()), releases   │ Closed HTTP stream
+        │ (finally)  │ ontroller.ts:202-209              │                            │ ClientSlots slot, clears 5s ping timer, calls  │
+        │            │                                   │                            │ res.end(). (If an error occurs mid-stream,     │
+        │            │                                   │                            │ sends { type: 'error', message, status } event │
+        │            │                                   │                            │ instead of crashing the socket.)               │
+
+  (Note: For the non-streaming endpoint POST /api/v1/rag/chat in backend_rag/src/modules/rag/rag.controller.ts:86-139, the Controller simply drains all events of
+  the exact same RagService.run() generator and returns a single ChatResponseDto — which then flows back through LinksInterceptor + ContentNegotiationInterceptor
+  (JSON/XML) identically to Login!)
+
+  HTTP SSE Response on the wire:
+
+    HTTP/1.1 200 OK
+    Content-Type: text/event-stream; charset=utf-8
+    Cache-Control: no-cache, no-transform
+    X-Accel-Buffering: no
+    
+    : ok
+    
+    data: {"type":"phase","phase":"embedding"}
+    
+    data: {"type":"route","steps":[...]}
+    
+    data: {"type":"compare","candidates":[...]}
+    
+    data: {"type":"retrieval","grounded_chunks":[...],"expanded_terms":[]}
+    
+    data: {"type":"phase","phase":"generating"}
+    
+    data: {"type":"token","text":"LoRA "}
+    
+    data: {"type":"token","text":"freezes pretrained weights [Paper: 2106.09685]..."}
+    
+    data:
+    {"type":"done","citations":["2106.09685"],"timings":{"embed_ms":18,"route_ms":1,"search_ms":42,"rerank_ms":390,"llm_ms":1840,"total_ms":2310},"session_id":"019a
+    ...","message_id":"019a...","_links":{...}}
+  ──────
+  Stage 4 — FE Return: HTTP Stream → FE → Client
+
+   Step │ Layer      │ File & Symbol                   │ Input                             │ What Happens                          │ Output
+  ──────┼────────────┼─────────────────────────────────┼───────────────────────────────────┼───────────────────────────────────────┼────────────────────────────────
+   18   │ FE HTTP    │ frontend_rag/src/shared/api/cli │ Response.body                     │ Checks res.ok. Reads raw byte chunks  │ AsyncGenerator<RagStreamEvent>
+        │ Client     │ ent.ts:233-286 & readSse +      │ (ReadableStream<Uint8Array>)      │ via TextDecoder + SseBuffer +         │
+        │ (readSse)  │ frontend_rag/src/shared/api/sse │                                   │ parseSseBlock and yields each         │
+        │            │ Parser.ts                       │                                   │ RagStreamEvent. If the tunnel drops   │
+        │            │                                 │                                   │ mid-stream while signed in, retries   │
+        │            │                                 │                                   │ the same POST with the same           │
+        │            │                                 │                                   │ Idempotency-Key every 3s (up to 180s) │
+        │            │                                 │                                   │ to replay the completed answer.       │
+   19   │ FE API →   │ frontend_rag/src/features/chat/ │ Each RagStreamEvent               │ Passes events up (applying            │ Stream of RagStreamEvent
+        │ FE Service │ api/chatApi.ts →                │                                   │ bridgeStream coordinate mapping if    │
+        │            │ frontend_rag/src/features/chat/ │                                   │ mock 3D world is paired with live BE) │
+        │            │ services/ragChatService.ts:24-4 │                                   │                                       │
+        │            │ 3 (openRagStream)               │                                   │                                       │
+   20   │ FE Store / │ frontend_rag/src/features/chat/ │ Each RagStreamEvent               │ 1. Updates phase, visualPhase,        │ Reactive Zustand state updates
+        │ Hook       │ store/ragStore.ts:76-103        │                                   │ current (route, grounded_chunks,      │ + IndexedDB persistence
+        │ updates    │ (dispatch) &                    │                                   │ answer, citationChecks, timings) and  │
+        │ State      │ frontend_rag/src/features/chat/ │                                   │ patches the assistant message in a    │
+        │            │ store/ragStore.ts:178-202 →     │                                   │ single batched set().2. On done with  │
+        │            │ frontend_rag/src/features/chat/ │                                   │ ev.session_id: calls                  │
+        │            │ store/pipeline.ts (reduceEvent) │                                   │ useSessionStore.confirmBackendSession │
+        │            │                                 │                                   │ () →                                  │
+        │            │                                 │                                   │ chatSessionService.reconcileBackendSe │
+        │            │                                 │                                   │ ssion() (migrates Dexie local UUIDv7  │
+        │            │                                 │                                   │ → backend UUIDv7 + fires background   │
+        │            │                                 │                                   │ PATCH /chat-sessions/:id title        │
+        │            │                                 │                                   │ sync).3. In finally: saves            │
+        │            │                                 │                                   │ completed/stopped exchange to         │
+        │            │                                 │                                   │ IndexedDB via                         │
+        │            │                                 │                                   │ chatSessionService.saveExchangeLocall │
+        │            │                                 │                                   │ y().                                  │
+   21   │ Hook →     │ •                               │ Subscribed slices (messages,      │ • PipelineStatus updates the 6        │ User watches the 3D retrieval
+        │ Components │ frontend_rag/src/features/chat/ │ phase, visualPhase, timings)      │ progress stages and final ms          │ animation, live streamed
+        │ re-render  │ components/PipelineStatus.tsx   │                                   │ timings.• MessageBubble smoothly      │ answer with KaTeX math,
+        │ → Client   │ (usePipelineStatusState)•       │                                   │ reveals streaming text (45ms          │ verified citation chips, and
+        │            │ frontend_rag/src/features/chat/ │                                   │ startTransition typewriter) synced    │ saved offline history
+        │            │ components/MessageList.tsx      │                                   │ with 3D visualPhase.• Markdown uses   │
+        │            │ (useMessageListState)•          │                                   │ useDeferredValue(text) so             │
+        │            │ frontend_rag/src/features/chat/ │                                   │ KaTeX/Markdown parsing never blocks   │
+        │            │ components/MessageBubble.tsx    │                                   │ the 60–100 FPS WebGL loop, and        │
+        │            │ (useAssistantMessageState)•     │                                   │ renders [Paper: 2106.09685] as        │
+        │            │ frontend_rag/src/features/chat/ │                                   │ clickable <CitationChip /> badges.•   │
+        │            │ components/Markdown.tsx:33-57   │                                   │ Simultaneously, the 3D WorldCanvas    │
+        │            │                                 │                                   │ animates the query orb along the tree │
+        │            │                                 │                                   │ branches and highlights the retrieved │
+        │            │                                 │                                   │ Top-K papers.                         │
+  ──────
+  Side-by-Side Comparison (Login vs. LLM Stream — Useful for Presentation)
+
+   Aspect                 │ Login (POST /api/v1/auth/tokens)              │ LLM Chat Stream (POST /api/v1/rag/chat/stream)
+  ────────────────────────┼───────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────
+   FE HTTP Client         │ publicFetch (no Bearer token, no 401 retry)   │ apiFetch (Bearer JWT + 401 auto-rotate + Idempotency-Key stream resume)
+   BE Guards              │ ThrottlerGuard (10/min)                       │ ThrottlerGuard (20/min authed / 10/min anon) + OptionalJwtAuthGuard
+   BE Infrastructure Tier │ Repositories → MongoDB only (Users,           │ Repositories → MongoDB (ChatSessions, ChatMessages, ChatRequests) + AI/Vector Engines
+                          │ LoginAttempts, RefreshTokens)                 │ (Mining, Embedding, TreeRouter, VectorStore/Qdrant, Judge/Laya, Llm/Qwen2.5)
+   BE Return Path         │ Single 201 JSON/XML via LinksInterceptor +    │ Continuous 200 text/event-stream via SseWriter (_links attached on done event)
+                          │ ContentNegotiationInterceptor                 │
+   Error Handling         │ HttpExceptionFilter returns JSON/XML error    │ Before first event: HttpExceptionFilter (400/401/404/409/429). After stream opens: {
+                          │ envelope                                      │ type: 'error', message, status } SSE event
