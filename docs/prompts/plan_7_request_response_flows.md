@@ -6,7 +6,7 @@
 - **Detailed Plan**: §1 Chuẩn hóa luồng Request–Response mục tiêu; §2 Danh sách 7 luồng trọng yếu; §3 Ma trận phân chia 7 subagent; §4 Khuôn mẫu `.md` bắt buộc (bảng 4 giai đoạn + 2 sơ đồ Mermaid); §5 Quy trình tổng hợp & kiểm chứng.
 - **References**: [AGENTS.md](../../AGENTS.md), [backend_rag/AGENTS.md](../../backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](../../frontend_rag/AGENTS.md), [agents/rules/MD_CONVENTION.md](../../agents/rules/MD_CONVENTION.md), [docs/api/API_DESIGN.md](../api/API_DESIGN.md), [docs/architecture/ARCHITECTURE_OVERVIEW.md](../architecture/ARCHITECTURE_OVERVIEW.md).
 - **Created**: 2026-11-26T10:11:00+07:00
-- **Last Updated**: 2026-11-26T12:00:00+07:00
+- **Last Updated**: 2026-11-26T18:50:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -97,7 +97,7 @@ Mỗi file `docs/architecture/flows/0X_*.md` bắt buộc tuân thủ các quy t
 4. **Bảng Chi Tiết 4 Giai Đoạn (`Input → Xử lý → Output`) + HTTP Wire Payload**:
    - Tách rõ 4 bảng: `Giai đoạn 1: Client → FE → HTTP Request`, `Giai đoạn 2: HTTP Request → BE → Repository/AI Engine → Database`, `Giai đoạn 3: Database → BE → HTTP Response`, `Giai đoạn 4: HTTP Response → FE → Client`.
    - Cột chuẩn: `Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output)`.
-   - Mọi đường dẫn code phải là **relative markdown link** tính từ `docs/architecture/flows/` (`../../../frontend_rag/...#L..` hoặc `../../../backend_rag/...#L..`) đã kiểm tra đúng số dòng trên file thật.
+   - Mọi tham chiếu trong cột `File & Ký hiệu` bắt buộc tuân thủ định dạng đồng nhất `` [`basename.ext`](../../../path/to/basename.ext#Lx-Ly) (`ClassName.method()` / `functionName()` / `<Component />`) `` — luôn hiển thị tên file gốc trong nhãn link, luôn có số dòng `#Lx-Ly` hợp lệ, và luôn kèm ký hiệu hàm/lớp/method cụ thể ngay sau link.
    - Kèm khối code minh họa **HTTP Request** và **HTTP Response** (hoặc **SSE events**) thực tế.
 5. **Mục Nhánh Lỗi & Bất biến Hệ thống (Error Paths & Invariants)**:
    - Liệt kê các mã lỗi HTTP (`400`, `401`, `404`, `409`, `429`, `503`/`504`) đi qua `HttpExceptionFilter`, cách FE xử lý, và các bất biến liên quan.
