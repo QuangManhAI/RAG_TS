@@ -6,7 +6,7 @@
 - **Detailed Plan**: Mục 1 tổng quan kiến trúc & hai sơ đồ Mermaid (Flowchart + Sequence); Mục 2 đặc tả Giai đoạn 0 (Trigger tại HTTP Client) và bảng chi tiết 4 Giai đoạn (`Giai đoạn 1..4`) kèm đường dẫn và số dòng đã xác minh; Mục 3 minh họa HTTP Wire Examples (Request, `201 Created`, `401 Unauthorized`, `429 Too Many Requests`); Mục 4 phân tích các nhánh lỗi và các bất biến hệ thống (System Invariants).
 - **References**: `React 19`, `Zustand` (`persist` middleware), `Web Locks API` (`navigator.locks`), `NestJS 11`, `Mongoose` (`findOneAndUpdate`), `Node crypto` (`HMAC-SHA256`), `lru-cache`, `@nestjs/throttler`, `fast-xml-parser`, `agents/rules/MD_CONVENTION.md`, `AGENTS.md`.
 - **Created**: 2026-11-26T10:12:00+07:00
-- **Last Updated**: 2026-11-26T10:12:00+07:00
+- **Last Updated**: 2026-11-26T12:00:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -14,58 +14,56 @@
 
 ## 1. Tổng quan Kiến trúc & Sơ đồ Luồng
 
-Cơ chế xoay vòng token của `RAG_TS` được kích hoạt **hoàn toàn trong suốt (transparent)** ở tầng HTTP Client mỗi khi một API có xác thực (như tải danh sách phiên chat, tin nhắn hoặc hồ sơ người dùng) bị Backend từ chối với mã `401 Unauthorized`. Hai nguyên nhân phổ biến nhất dẫn đến `401` tại [`JwtAuthGuard`](../../../backend_rag/src/modules/auth/guards/jwt-auth.guard.ts#L22-L47) là:
+Cơ chế xoay vòng token của `RAG_TS` được kích hoạt **hoàn toàn trong suốt (transparent)** khi một thao tác người dùng qua API có xác thực (như tải danh sách phiên chat hoặc hồ sơ) nhận mã `401 Unauthorized` tại [`apiFetch`](../../../frontend_rag/src/shared/api/http.ts#L23-L34). Hai nguyên nhân phổ biến nhất dẫn đến `401` tại [`JwtAuthGuard`](../../../backend_rag/src/modules/auth/guards/jwt-auth.guard.ts#L22-L47) là:
 
 1. **Access token hết hạn tự nhiên**: `TokenService.verifyAccess()` bắt `TokenExpiredError` sau `ACCESS_TTL_SECONDS` (`900s`) và ném `401` với message `token expired`.
 2. **Account state / `token_version` thay đổi**: Quản trị viên thay đổi role (`updateRolesAndBumpVersion`), khóa tài khoản (`disableAndBumpVersion`) hoặc người dùng đổi mật khẩu (`revokeAllForUser`), làm tăng `users.token_version` hoặc đặt `is_active: false`. Khi cache `tokenVersionCache` (`5s` TTL không trượt) hết hạn hoặc bị xóa tường minh, `JwtAuthGuard` phát hiện `(user.token_version ?? 0) !== (claims.tokenVersion ?? 0)` hoặc `!user.is_active` và ném `401` với message `unauthorized`.
 
-### 1.1 Sơ đồ Kiến trúc End-to-End (`flowchart LR`)
+### 1.1 Sơ đồ Kiến trúc End-to-End 26 Bước (`flowchart TB`)
 
 ```mermaid
-flowchart LR
-    subgraph FE["Frontend (React 19 + Zustand)"]
-        Call["Protected Call (chatApi / fetchCurrentUser)"]
-        ApiFetch["apiFetch (shared/api/http.ts)"]
-        Store["useAuth.rotateTokens (authStore.ts)"]
-        Lock["rotateSessionTokens + withTabLock (navigator.locks)"]
-        PubFetch["refreshAuthTokens via publicFetch"]
-        Overlay["ChatPanel -> AuthOverlay (isAuthenticated: false)"]
+flowchart TB
+    subgraph FE_IN["Giai đoạn 1 — Frontend Chiều đi (Trigger 401 -> HTTP Request Xoay vòng)"]
+        CLI_IN["1. Client (Thao tác cần xác thực bị 401 token expired)"]
+        CMP_IN["2. FE Component (ChatPanel / HistoryDrawer gọi action)"]
+        HK_IN["3. FE Hook & Store (useChatPanelState -> useSessionStore -> useAuth.rotateTokens)"]
+        FSVC_IN["4. FE Service (authService.ts: rotateSessionTokens + withTabLock navigator.locks)"]
+        FAPI_IN["5. FE API (authApi.ts: refreshAuthTokens payload refresh_token)"]
+        HTTP_IN["6. FE HTTP Client (apiFetch gặp 401 -> publicFetch POST /auth/token-rotations)"]
+        CLI_IN --> CMP_IN --> HK_IN --> FSVC_IN --> FAPI_IN --> HTTP_IN
     end
 
-    subgraph BE["Backend Pipeline (NestJS 11)"]
-        JwtGuard["JwtAuthGuard (401 Expired or ver mismatch)"]
-        Mid["Express Middleware (requestId, helmet, xml)"]
-        Throttle["ThrottlerGuard (@RateLimit refresh 30/min)"]
-        Pipe["ValidationPipe (RefreshDto)"]
-        Ctrl["AuthController.refresh (POST /auth/token-rotations)"]
-        AuthSvc["AuthService.refresh"]
-        TokenSvc["TokenService.consume & issue (HMAC-SHA256)"]
-        Int["LinksInterceptor + ContentNegotiationInterceptor"]
+    subgraph BE_IN["Giai đoạn 2 — Backend Chiều vào (HTTP Request -> Database)"]
+        NODE["7. BE Node.js HTTP Server (main.ts: keepAliveTimeout=65s, headersTimeout=66s)"]
+        MW["8. BE NestJS/Express Middleware (app.setup.ts: trust proxy, requestId, helmet, metrics, XML/JSON)"]
+        GRD["9. BE Guard (ThrottlerGuard + @RateLimit refresh 30 req/60s)"]
+        INT_IN["10. BE Interceptor chiều vào (ContentNegotiation Accept 406 + LinksInterceptor metadata)"]
+        PIP["11. BE Pipe (ValidationPipe -> RefreshDto refresh_token)"]
+        CTL_IN["12. BE Controller (AuthController.refresh @Post token-rotations)"]
+        BSVC_IN["13. BE Service (AuthService.refresh + TokenService.consume HMAC-SHA256 & issue)"]
+        REPO_IN["14. BE Repository (RefreshTokensRepository.consumeActiveByHashLean / create + UsersRepository)"]
+        DB["15. Database (MongoDB: refresh_tokens 1-RTT findOneAndUpdate & users)"]
+        HTTP_IN -->|"POST /api/v1/auth/token-rotations"| NODE --> MW --> GRD --> INT_IN --> PIP --> CTL_IN --> BSVC_IN --> REPO_IN --> DB
     end
 
-    subgraph DB["MongoDB (via Cloudflare Tunnel)"]
-        RT[("refresh_tokens (1-RTT findOneAndUpdate)")]
-        Users[("users (is_active, token_version)")]
+    subgraph BE_OUT["Giai đoạn 3 — Backend Chiều về (Database -> HTTP Response)"]
+        REPO_OUT["16. Database -> BE Repository (LeanRefreshToken, LeanUser, RefreshToken mới)"]
+        BSVC_OUT["17. BE Service (Kiểm tra reuse/replay -> revokeFamily hoặc trả AuthResponseDto + cacheUser)"]
+        CTL_OUT["18. BE Controller (AuthController.refresh trả AuthResponseDto status 201)"]
+        INT_OUT["19. BE Interceptor chiều ra (LinksInterceptor +_links -> ContentNegotiation JSON/XML)"]
+        EXP_OUT["20. BE NestJS/Express gửi response (HTTP 201 / 401 HttpExceptionFilter + X-Request-Id)"]
+        DB --> REPO_OUT --> BSVC_OUT --> CTL_OUT --> INT_OUT --> EXP_OUT
     end
 
-    Call -->|"Bearer accessToken"| ApiFetch
-    ApiFetch -->|"Initial request"| JwtGuard
-    JwtGuard -->|"401 Unauthorized"| ApiFetch
-    ApiFetch -->|"res.status === 401"| Store
-    Store --> Lock
-    Lock -->|"Rehydrate + check staleAccessToken"| PubFetch
-    PubFetch -->|"POST /api/v1/auth/token-rotations"| Mid
-    Mid --> Throttle --> Pipe --> Ctrl --> AuthSvc
-    AuthSvc --> TokenSvc
-    TokenSvc -->|"consumeActiveByHashLean"| RT
-    AuthSvc -->|"getActiveUser / findByIdLean"| Users
-    TokenSvc -->|"issue new JWT + new refresh_token"| RT
-    AuthSvc --> Int
-    Int -->|"201 Created (new pair + _links)"| PubFetch
-    PubFetch -->|"onRotated (update Zustand + localStorage)"| ApiFetch
-    ApiFetch -->|"Retry original request with new Bearer"| Call
-    Int -->|"401 (reused / expired / user_gone)"| PubFetch
-    PubFetch -->|"onRevoked -> clear session"| Overlay
+    subgraph FE_OUT["Giai đoạn 4 — Frontend Chiều về (HTTP Response -> Retry & Client)"]
+        HTTP_OUT["21. FE HTTP Client (publicFetch đọc Response -> apiFetch replay request gốc khi rotated=true)"]
+        FAPI_OUT["22. FE API (authApi.ts: readJsonOrThrow -> AuthTokenResponse hoặc AuthApiError 401)"]
+        FSVC_OUT["23. FE Service (authService.ts: onRotated hoặc onRevoked nếu 401, giữ phiên nếu lỗi mạng)"]
+        HK_OUT["24. FE Hook & Store (useAuth cập nhật localStorage rag-auth-storage & isAuthenticated)"]
+        CMP_OUT["25. FE Component (ChatPanel giữ phiên & tải dữ liệu hoặc chuyển AuthOverlay khi 401)"]
+        CLI_OUT["26. Client (Phiên làm việc nối tiếp liền mạch hoặc được yêu cầu đăng nhập lại)"]
+        EXP_OUT -->|"HTTP 201 Created / 401"| HTTP_OUT --> FAPI_OUT --> FSVC_OUT --> HK_OUT --> CMP_OUT --> CLI_OUT
+    end
 ```
 
 ### 1.2 Sơ đồ Tuần tự Chi tiết (`sequenceDiagram`)
@@ -150,50 +148,57 @@ Mọi lời gọi API yêu cầu xác thực ở Frontend (ví dụ [`listRemote
 
 ---
 
-### Giai đoạn 1 — Frontend Orchestration, Cross-Tab Lock & Single-Flight Request
+### Giai đoạn 1 — Chiều đi Frontend: Client → FE → HTTP Request
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1.1 | HTTP Client | [`http.ts`](../../../frontend_rag/src/shared/api/http.ts#L23-L34) (`apiFetch`) | `res.status === 401`, `token: string` | Kiểm tra `res.status !== 401 \|\| !token`; nếu đúng điều kiện `401` với token đã gửi, tạm giữ `res` gốc và gọi `useAuth.getState().rotateTokens(token)` (lưu ý chỉ retry tối đa 1 lần để tránh vòng lặp vô hạn). | `Promise<boolean>` (`rotated`) |
-| 1.2 | State Store | [`authStore.ts`](../../../frontend_rag/src/features/auth/authStore.ts#L66-L82) (`useAuth.rotateTokens`) | `staleAccessToken: string` | Ủy quyền cho [`rotateSessionTokens`](../../../frontend_rag/src/features/auth/services/authService.ts#L64-L84) kèm 4 hooks điều khiển store: `rehydrate` (`useAuth.persist?.rehydrate()`), `getTokens`, `onRotated` (cập nhật `user`, `accessToken`, `refreshToken`, `isAuthenticated: true`), và `onRevoked` (xóa trắng session, `isAuthenticated: false`). | `Promise<boolean>` |
-| 1.3 | Auth Service (Single-Flight & Lock) | [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L12-L18), [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L64-L84) (`rotation`, `withTabLock`, `rotateSessionTokens`) | `staleAccessToken`, `hooks: TokenRotationHooks` | 1) Gán `rotation ??= withTabLock(...)` để gom mọi caller song song **trong cùng tab** vào một Promise duy nhất (single-flight), và dọn `rotation = null` trong `.finally()`. 2) `withTabLock` dùng `navigator.locks.request('rag-token-rotation', run)` để tuần tự hóa **giữa các tab** cùng origin (fallback chạy trực tiếp nếu môi trường test/browser không có `navigator.locks`). | Chỉ 1 luồng chạy vào critical section tại một thời điểm |
-| 1.4 | Auth Service (Rehydrate & Pre-check) | [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L66-L69) | Trạng thái `localStorage` `'rag-auth-storage'` | Gọi `await hooks.rehydrate()` để đồng bộ state mới nhất từ `localStorage` (do tab khác có thể vừa xoay vòng xong). Nếu `accessToken && accessToken !== staleAccessToken`, trả `true` ngay lập tức mà **không** gửi `refresh_token` cũ lên server (tránh false-positive reuse). Nếu `!refreshToken`, trả `false`. | `true` (skip HTTP), `false` (abort), hoặc `refreshToken` hợp lệ để xoay vòng |
-| 1.5 | Auth API Adapter | [`authApi.ts`](../../../frontend_rag/src/features/auth/api/authApi.ts#L66-L73) (`refreshAuthTokens`) | `refreshToken: string` | Gọi `publicFetch('/auth/token-rotations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: refreshToken }) })`. Dùng [`publicFetch`](../../../frontend_rag/src/shared/api/http.ts#L15-L17) (ghép [`API_BASE`](../../../frontend_rag/src/shared/api/config.ts#L1) = `/api/v1`) để **không** đính kèm `Authorization` cũ và **không** lặp `apiFetch` khi endpoint này trả `401`. | HTTP `POST /api/v1/auth/token-rotations` gửi tới Backend |
+| 1 | Client | [`ChatPanel.tsx`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L27-L29) | Thao tác mở app, chuyển phiên hoặc xem hồ sơ khi access token đã hết hạn (`900s`) | Client kích hoạt một thao tác có xác thực trong khi `accessToken` trên `localStorage` đã quá hạn hoặc `token_version` vừa bị tăng trên server. | Sự kiện mount / click kích hoạt API bảo vệ |
+| 2 | FE — Component | [`ChatPanel.tsx`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L27-L30) / [`HistoryDrawer.tsx`](../../../frontend_rag/src/features/chat/components/HistoryDrawer.tsx#L24-L45) | Mount hoặc sự kiện UI | Component gọi action tải phiên/tin nhắn (đi qua `apiFetch` và gặp phản hồi `401 Unauthorized`). | Lời gọi action đồng bộ từ Hook |
+| 3 | FE — Hook (+ Store) | [`useAuth.ts`](../../../frontend_rag/src/features/auth/hooks/useAuth.ts#L11), [`authStore.ts`](../../../frontend_rag/src/features/auth/authStore.ts#L66-L82) (`useAuth.rotateTokens`) | `staleAccessToken: string` | Khi `apiFetch` bắt `res.status === 401`, kích hoạt `useAuth.getState().rotateTokens(token)` truyền 4 hooks (`rehydrate`, `getTokens`, `onRotated`, `onRevoked`) xuống service. | Lời gọi `rotateSessionTokens(staleAccessToken, hooks)` |
+| 4 | FE — Service | [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L12-L18) & [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L64-L84) (`rotation`, `withTabLock`, `rotateSessionTokens`) | `staleAccessToken`, `hooks: TokenRotationHooks` | 1) Gom caller cùng tab vào promise single-flight `rotation`; 2) Khóa liên tab qua `navigator.locks.request('rag-token-rotation', ...)`; 3) Gọi `hooks.rehydrate()`: nếu tab khác đã xoay vòng xong (`accessToken !== staleAccessToken`) trả `true` ngay không gọi server; nếu thiếu `refreshToken` trả `false`. | `refreshToken` hợp lệ sẵn sàng gọi API xoay vòng |
+| 5 | FE — API | [`authApi.ts`](../../../frontend_rag/src/features/auth/api/authApi.ts#L66-L73) (`refreshAuthTokens`) | `refreshToken: string` | Chuẩn bị endpoint `'/auth/token-rotations'`, `method: 'POST'`, header `Content-Type: application/json`, body `{ refresh_token: refreshToken }`, gọi `publicFetch` (không gắn `Authorization` cũ và không lặp `apiFetch`). | Yêu cầu tới `publicFetch('/auth/token-rotations', init)` |
+| 6 | FE — HTTP Client (gọi fetch) | [`http.ts`](../../../frontend_rag/src/shared/api/http.ts#L15-L34) (`publicFetch`, `apiFetch`) & [`config.ts`](../../../frontend_rag/src/shared/api/config.ts#L1) | `path = '/auth/token-rotations'`, `API_BASE = '/api/v1'` | `publicFetch` gọi `fetch('/api/v1/auth/token-rotations', init)` phát request xoay vòng token trong suốt trên đường truyền. | HTTP Request `POST /api/v1/auth/token-rotations` |
 
 ---
 
-### Giai đoạn 2 — Backend HTTP Pipeline, Rate Limit, Validation & Controller
+### Giai đoạn 2 — Chiều vào Backend: HTTP Request → BE → Database
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 2.1 | Express Middleware Pipeline | [`app.setup.ts`](../../../backend_rag/src/app.setup.ts#L47-L75) (`configureApp`), [`request-context.ts`](../../../backend_rag/src/common/logging/request-context.ts#L20-L32), [`security.ts`](../../../backend_rag/src/common/security/security.ts#L11-L52), [`xml.ts`](../../../backend_rag/src/common/http/xml.ts#L70-L105) | Raw HTTP Request | Chạy tuần tự: 1) `express.set('trust proxy', trustProxySetting(...))` để đọc đúng IP client cho rate limiter; 2) `requestIdMiddleware` gán/echo `X-Request-Id` (UUIDv7) và mở `AsyncLocalStorage` context; 3) `securityHeaders(isProduction)` (Helmet CSP/frameguard/noSniff); 4) `metrics.middleware` (Prometheus); 5) `unsupportedBody` (chặn `415` nếu không phải JSON/XML); 6) `textBody` + `xmlBodyMiddleware` (parse XML an toàn nếu `Content-Type` là XML, chặn `<!DOCTYPE`/`<!ENTITY` XXE); 7) Global prefix `api/v1` và CORS. | `req.id`, `req.body` (object), security headers sẵn sàng |
-| 2.2 | Global Guard (Rate Limit) | [`app.module.ts`](../../../backend_rag/src/app.module.ts#L32-L46), [`throttler.ts`](../../../backend_rag/src/common/security/throttler.ts#L16-L46), [`auth.controller.ts`](../../../backend_rag/src/modules/auth/auth.controller.ts#L46) | Client IP + Route metadata `@RateLimit('refresh')` | `ThrottlerGuard` (đăng ký global qua `APP_GUARD`) đọc cấu hình ghi đè của route `refresh`: tối đa **`30` requests / `60_000ms` (1 phút)** trên mỗi IP (`RATE_LIMITS.refresh`). Nếu vượt ngưỡng, ném `ThrottlerException` (`429 Too Many Requests`). | Cho phép đi tiếp hoặc `429` qua [`HttpExceptionFilter`](../../../backend_rag/src/common/http/http-exception.filter.ts#L69-L97) |
-| 2.3 | Request Interceptor (Pre-handler) | [`xml.ts`](../../../backend_rag/src/common/http/xml.ts#L109-L119) (`ContentNegotiationInterceptor`) | Header `Accept` | Kiểm tra `req.accepts(['application/json', 'application/xml', 'text/xml', 'text/event-stream'])`. Nếu client gửi `Accept` không tương thích (vd `text/csv`), ném `406 NotAcceptableException`. | Cho phép đi tiếp tới Pipe & Handler |
-| 2.4 | Validation Pipe | [`validation.ts`](../../../backend_rag/src/common/http/validation.ts#L18-L26) (`createValidationPipe`), [`auth.dto.ts`](../../../backend_rag/src/modules/auth/dto/auth.dto.ts#L49-L54) (`RefreshDto`) | `req.body` | `ValidationPipe` (`whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`) kiểm tra `RefreshDto`: `refresh_token` phải là chuỗi có độ dài `1..200` ký tự; mọi field thừa sẽ bị từ chối với `400 Bad Request` theo [`firstValidationMessage`](../../../backend_rag/src/common/http/validation.ts#L8-L16). | `dto: RefreshDto` hợp lệ |
-| 2.5 | Controller | [`auth.controller.ts`](../../../backend_rag/src/modules/auth/auth.controller.ts#L44-L51) (`AuthController.refresh`) | `dto: RefreshDto` | Route công khai (không gắn `JwtAuthGuard`, vì access token đã hết hạn hoặc bị vô hiệu), gắn `@WithLinks({ resource: accountLinks })` để bổ sung `_links` ở bước trả về. Gọi `this.auth.refresh(dto.refresh_token)`. | `Promise<AuthResponseDto>` |
+| 7 | BE — Node.js HTTP Server | [`main.ts`](../../../backend_rag/src/main.ts#L19-L24) (`bootstrap`) | HTTP socket cổng `3000` | Node `http.Server` giữ kết nối bền vững (`keepAliveTimeout = 65_000`, `headersTimeout = 66_000`) tiếp nhận request `POST /api/v1/auth/token-rotations`. | Request đi vào Express/NestJS |
+| 8 | BE — NestJS/Express Middleware | [`app.setup.ts`](../../../backend_rag/src/app.setup.ts#L47-L75), [`request-context.ts`](../../../backend_rag/src/common/logging/request-context.ts#L20-L32), [`xml.ts`](../../../backend_rag/src/common/http/xml.ts#L70-L105) | Raw HTTP Request | Thiết lập `trust proxy`, gắn `X-Request-Id` (UUIDv7) + `AsyncLocalStorage`, `securityHeaders` (Helmet), `PrometheusMetricsRegistry.middleware`, kiểm tra `unsupportedBody` (`415`), parse JSON/XML an toàn (chặn XXE), áp prefix `/api/v1` và CORS. | `req.id`, `req.ip`, `req.body` chuẩn hóa |
+| 9 | BE — Guard | [`app.module.ts`](../../../backend_rag/src/app.module.ts#L32-L46), [`throttler.ts`](../../../backend_rag/src/common/security/throttler.ts#L16-L46), [`auth.controller.ts`](../../../backend_rag/src/modules/auth/auth.controller.ts#L46) | `req.ip`, metadata `@RateLimit('refresh')` | `ThrottlerGuard` áp ngưỡng **`30` requests / `60_000ms`** trên mỗi IP. Route công khai không gắn `JwtAuthGuard` (vì access token đã hết hạn hoặc bị revoke). | Cho phép đi tiếp hoặc `429 Too Many Requests` |
+| 10 | BE — Interceptor chiều vào | [`xml.ts`](../../../backend_rag/src/common/http/xml.ts#L109-L119) (`ContentNegotiationInterceptor`), [`hateoas.ts`](../../../backend_rag/src/common/http/hateoas.ts#L160-L166) (`LinksInterceptor`) | Header `Accept`, metadata `@WithLinks` | `ContentNegotiationInterceptor` kiểm tra `req.accepts(OFFERED)` (ném `406 NotAcceptableException` nếu không hỗ trợ); `LinksInterceptor` đọc spec `@WithLinks({ resource: accountLinks })`. | Request vượt qua tiền kiểm tra |
+| 11 | BE — Pipe | [`validation.ts`](../../../backend_rag/src/common/http/validation.ts#L18-L26) (`createValidationPipe`), [`auth.dto.ts`](../../../backend_rag/src/modules/auth/dto/auth.dto.ts#L49-L54) (`RefreshDto`) | `req.body` | `ValidationPipe` (`whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`) kiểm tra `refresh_token` là chuỗi `1..200` ký tự; từ chối field thừa với `400 Bad Request`. | `dto: RefreshDto` hợp lệ |
+| 12 | BE — Controller | [`auth.controller.ts`](../../../backend_rag/src/modules/auth/auth.controller.ts#L44-L51) (`AuthController.refresh`) | `dto: RefreshDto` | Trích `dto.refresh_token` và gọi `this.auth.refresh(dto.refresh_token)`. | Ủy quyền `Promise<AuthResponseDto>` cho `AuthService` |
+| 13 | BE — Service | [`auth.service.ts`](../../../backend_rag/src/modules/auth/auth.service.ts#L186-L213), [`token.service.ts`](../../../backend_rag/src/modules/auth/token.service.ts#L43-L138) (`hashRefresh`, `consume`, `issue`) | `raw: string` | Tính `hash = createHmac('sha256', JWT_REFRESH_SECRET).update(raw).digest('hex')`, gọi tiêu thụ nguyên tử. Nếu thành công (`r.ok`), kiểm tra `userCache` / `users.findByIdLean`, kiểm tra `is_active` (nếu khóa gọi `revokeFamily`), sau đó ký JWT mới (`ver: user.token_version ?? 0`, `expiresIn: 900s`) và sinh hash refresh token mới cùng `r.familyId`. Nếu atomic consume trả `null`, tra bản ghi gốc để phát hiện replay (`rec.revoked_at !== null`) và thu hồi toàn bộ `family_id`. | Chuỗi lệnh atomic update, tra cứu user & insert token |
+| 14 | BE — Repository | [`refresh-tokens.repository.ts`](../../../backend_rag/src/modules/auth/repositories/refresh-tokens.repository.ts#L22-L62) (`consumeActiveByHashLean`, `findByHashLean`, `revokeFamily`, `create`), [`users.repository.ts`](../../../backend_rag/src/modules/auth/repositories/users.repository.ts#L33-L35) | `tokenHash`, `userId`, `familyId`, `now` | Thực thi **1-RTT atomic** `findOneAndUpdate({ token_hash, revoked_at: null, expires_at: { $gt: now } }, { $set: { revoked_at: now } }).lean()`; khi replay gọi `updateMany` thu hồi cả `family_id`; khi thành công gọi `UsersRepository.findByIdLean` và `RefreshTokensRepository.create`. | Truy vấn Mongoose qua Cloudflare TCP Tunnel |
+| 15 | Database | [`refresh-token.schema.ts`](../../../backend_rag/src/modules/auth/schemas/refresh-token.schema.ts#L4-L27) & [`user.schema.ts`](../../../backend_rag/src/modules/auth/schemas/user.schema.ts#L5-L45) | Lệnh đọc/ghi từ Mongoose | MongoDB thực thi cập nhật nguyên tử trên `refresh_tokens` (chỉ tối đa 1 request đồng thời thắng), đọc `users` và lưu document `refresh_tokens` mới (TTL 7 ngày). | Document `.lean()` trước/sau cập nhật |
 
 ---
 
-### Giai đoạn 3 — Backend Domain Logic: 1-RTT Atomic Rotation, Replay Detection & Persistence
+### Giai đoạn 3 — Chiều về Backend: Database → BE → HTTP Response
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 3.1 | Token Service (Hash & Atomic Consume) | [`token.service.ts`](../../../backend_rag/src/modules/auth/token.service.ts#L43-L47), [`token.service.ts`](../../../backend_rag/src/modules/auth/token.service.ts#L106-L116) (`hashRefresh`, `consume`) | `raw: string` | Tính `hash = createHmac('sha256', JWT_REFRESH_SECRET).update(raw).digest('hex')` (DB bị lộ cũng không thể replay nếu thiếu `JWT_REFRESH_SECRET`). Ghi nhận `now = new Date()` và gọi `consumeActiveByHashLean(hash, now)`. | `hash: string` |
-| 3.2 | Refresh Token Repository (1-RTT DB) | [`refresh-tokens.repository.ts`](../../../backend_rag/src/modules/auth/repositories/refresh-tokens.repository.ts#L30-L40) (`consumeActiveByHashLean`), [`refresh-token.schema.ts`](../../../backend_rag/src/modules/auth/schemas/refresh-token.schema.ts#L9-L27) | `tokenHash`, `now` | Thực thi **1-RTT atomic `findOneAndUpdate`**: lọc `{ token_hash: tokenHash, revoked_at: null, expires_at: { $gt: now } }` và đặt `{ $set: { revoked_at: now } }` với `.lean()`. Chỉ tối đa 1 request đồng thời thắng được cập nhật nguyên tử này (`D-021`). | `LeanRefreshToken` (nếu thắng) hoặc `null` |
-| 3.3 | Token Service (Replay & Failure Branch) | [`token.service.ts`](../../../backend_rag/src/modules/auth/token.service.ts#L117-L125), [`refresh-tokens.repository.ts`](../../../backend_rag/src/modules/auth/repositories/refresh-tokens.repository.ts#L42-L62) (`findByHashLean`, `revokeFamily`) | `won === null` | Khi atomic update trả `null`, truy vấn `findByHashLean(hash)` để phân loại lý do: 1) Không có bản ghi → `{ ok: false, reason: 'invalid' }`; 2) `expires_at <= now` → `{ ok: false, reason: 'expired' }`; 3) `revoked_at` đã có giá trị → **Phát hiện Reuse / Replay**, gọi ngay `revokeFamily(rec.family_id)` (`updateMany({ family_id, revoked_at: null }, { $set: { revoked_at: now } })`) để hủy toàn bộ cây phiên và trả `{ ok: false, reason: 'reused' }`; 4) Khác → `'race'`. | `ConsumeResult` (`ok: true` hoặc `ok: false`) |
-| 3.4 | Auth Service (Result & User Verification) | [`auth.service.ts`](../../../backend_rag/src/modules/auth/auth.service.ts#L186-L202), [`users.repository.ts`](../../../backend_rag/src/modules/auth/repositories/users.repository.ts#L33-L35) | `ConsumeResult` | Nếu `!r.ok`: ghi log `logEvent(r.reason === 'reused' ? 'REFRESH_REUSED' : 'REFRESH_FAILED', { reason: r.reason })` và ném `401 UnauthorizedException('refresh token invalid or expired')`. Nếu `r.ok`: kiểm tra `userCache.get(r.userId)`; nếu có dùng `getActiveUser(r.userId)` (TTL `5s`), không có thì truy vấn `users.findByIdLean(r.userId)`. Nếu `!user \|\| !user.is_active`, gọi `tokens.revokeFamily(r.familyId)`, log `REFRESH_FAILED` (`user_gone`) và ném `401`. | `user: LeanUser` còn hoạt động hoặc `401` |
-| 3.5 | Token Service (Issue New Pair) | [`auth.service.ts`](../../../backend_rag/src/modules/auth/auth.service.ts#L203-L213), [`token.service.ts`](../../../backend_rag/src/modules/auth/token.service.ts#L53-L78) (`issue`) | `user`, `r.familyId` | Log `REFRESH_OK` (`user_id`). Gọi `tokens.issue(...)` giữ nguyên `r.familyId`: 1) Ký JWT access token mới (`sub`, `roles`, `ver: user.token_version ?? 0`, `expiresIn: 900s`); 2) Sinh `raw = randomBytes(32).toString('base64url')` và lưu hash mới qua `refreshTokens.create(...)` (`expires_at = now + 7 ngày`) song song bằng `Promise.all`. Nếu chưa có `cachedUser`, `AuthService.respond` còn nạp `userCache` (`300s`) và `tokenVersionCache` (`5s`). | `AuthResponseDto` (`access_token`, `token_type: 'Bearer'`, `expires_in: 900`, `refresh_token`, `user`) |
+| 16 | Database → BE — Repository | [`refresh-tokens.repository.ts`](../../../backend_rag/src/modules/auth/repositories/refresh-tokens.repository.ts#L30-L62) & [`users.repository.ts`](../../../backend_rag/src/modules/auth/repositories/users.repository.ts#L33-L35) | Kết quả từ MongoDB | Trả về `LeanRefreshToken` (hoặc `null` để phân loại `'invalid'` / `'expired'` / `'reused'` / `'race'`), `LeanUser \| null`, và xác nhận chèn token mới. | Kết quả `.lean()` về `TokenService` / `AuthService` |
+| 17 | BE — Service | [`auth.service.ts`](../../../backend_rag/src/modules/auth/auth.service.ts#L186-L213) & [`token.service.ts`](../../../backend_rag/src/modules/auth/token.service.ts#L53-L78) | `ConsumeResult`, `user`, `IssuedTokens` | Nếu `!r.ok` hoặc `!user.is_active`: ghi `logEvent('REFRESH_REUSED' / 'REFRESH_FAILED')` và ném `401 UnauthorizedException('refresh token invalid or expired')`. Nếu hợp lệ: log `REFRESH_OK`, cập nhật `userCache` & `tokenVersionCache` qua `respond()` và đóng gói `AuthResponseDto` (loại `password_hash`). | `AuthResponseDto` hoặc `UnauthorizedException` `401` |
+| 18 | BE — Controller | [`auth.controller.ts`](../../../backend_rag/src/modules/auth/auth.controller.ts#L44-L51) (`AuthController.refresh`) | `Promise<AuthResponseDto>` | Trả về `AuthResponseDto` với HTTP status mặc định của `@Post` là `201 Created`. | Payload đi qua Interceptor chiều ra |
+| 19 | BE — Interceptor chiều ra | [`hateoas.ts`](../../../backend_rag/src/common/http/hateoas.ts#L133-L177) (`LinksInterceptor`) & [`xml.ts`](../../../backend_rag/src/common/http/xml.ts#L119-L127) (`ContentNegotiationInterceptor`) | `AuthResponseDto` | `LinksInterceptor` sao chép nông object và gắn `_links: accountLinks()`; `ContentNegotiationInterceptor` giữ JSON hoặc chuyển `application/xml` qua `toXml(body)`. | Response body hoàn chỉnh có `_links` |
+| 20 | BE — NestJS/Express gửi response | [`app.setup.ts`](../../../backend_rag/src/app.setup.ts#L52-L63), [`prometheus-metrics.ts`](../../../backend_rag/src/common/metrics/prometheus-metrics.ts#L57-L76), [`http-exception.filter.ts`](../../../backend_rag/src/common/http/http-exception.filter.ts#L69-L97) | Body `201` hoặc `HttpException` (`401`/`429`) | Express gửi HTTP `201 Created` kèm `X-Request-Id`, hoặc `HttpExceptionFilter` chuẩn hóa ngoại lệ `401`/`429` thành `{ statusCode, error, message, request_id }`; sự kiện `finish` ghi histogram metrics. | HTTP Response rời server |
 
 ---
 
-### Giai đoạn 4 — Response Serialization, Store Hydration, Request Retry & UI Reconciliation
+### Giai đoạn 4 — Chiều về Frontend: HTTP Response → FE → Client
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 4.1 | Backend Interceptors | [`hateoas.ts`](../../../backend_rag/src/common/http/hateoas.ts#L31-L38), [`hateoas.ts`](../../../backend_rag/src/common/http/hateoas.ts#L133-L177) (`LinksInterceptor`), [`xml.ts`](../../../backend_rag/src/common/http/xml.ts#L119-L125) (`ContentNegotiationInterceptor`) | `AuthResponseDto` | Do `ContentNegotiationInterceptor` bọc ngoài `LinksInterceptor` ([`app.setup.ts`](../../../backend_rag/src/app.setup.ts#L78-L81)), `LinksInterceptor` chạy trước: gọi `addLinks` gắn `_links: accountLinks()` (gồm `self`, `update`, `password`, `chat-sessions`, `token-rotations`, `token-revocations`). Sau đó `ContentNegotiationInterceptor` giữ JSON mặc định hoặc chuyển thành XML (`toXml`, `application/xml`) nếu `Accept` ưu tiên XML. HTTP status mặc định của `@Post` là `201 Created`. | HTTP `201 Created` (JSON hoặc XML) kèm `X-Request-Id` |
-| 4.2 | FE API Parser | [`authApi.ts`](../../../frontend_rag/src/features/auth/api/authApi.ts#L30-L43) (`readJsonOrThrow`) | `Response` | Nếu `res.ok`, parse JSON thành `AuthTokenResponse`. Nếu `!res.ok` (như `401` hoặc `429`), đọc `body.message` và ném `AuthApiError` (kế thừa `HttpError` với `status` nguyên bản). | `AuthTokenResponse` hoặc ném `AuthApiError` |
-| 4.3 | FE Auth Service & Store | [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L70-L82), [`authStore.ts`](../../../frontend_rag/src/features/auth/authStore.ts#L73-L81) | `AuthTokenResponse` hoặc `Error` | **Nhánh thành công**: gọi `hooks.onRotated(data)` ghi đè `{ user, accessToken, refreshToken, isAuthenticated: true }` vào Zustand và persist xuống `localStorage` (`rag-auth-storage`), trả `true`. **Nhánh lỗi**: nếu `err instanceof HttpError && err.status === 401`, gọi `hooks.onRevoked()` xóa sạch `user`, `accessToken`, `refreshToken`, đặt `isAuthenticated: false`; nếu là lỗi mạng (`TypeError` / timeout) hoặc `429`/`5xx`, **không** gọi `onRevoked()` để bảo toàn phiên. Trả `false`. | `true` hoặc `false` về cho `apiFetch` |
-| 4.4 | FE HTTP Client Retry & UI Sync | [`http.ts`](../../../frontend_rag/src/shared/api/http.ts#L32-L33), [`ChatPanel.tsx`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L27-L29), [`ChatPanel.tsx`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L110-L118) | `rotated: boolean` | Nếu `rotated === true`, `apiFetch` gọi lại `send(useAuth.getState().accessToken)` để thực thi lại request gốc với access token mới và trả `200 OK` cho caller (`chatApi` / `authApi`) hoàn toàn trong suốt. Nếu `rotated === false` và `onRevoked()` đã đặt `isAuthenticated: false`, [`ChatPanel`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L110-L118) tự động chuyển từ `MessageList` + `ChatInput` sang [`AuthOverlay`](../../../frontend_rag/src/features/auth/AuthOverlay.tsx#L6-L37) yêu cầu đăng nhập lại (và `useEffect` kích hoạt `initSessions()`). | Request gốc thành công (`200 OK`) hoặc UI quay về `AuthOverlay` |
+| 21 | FE — HTTP Client (kiểm tra status & đọc body) | [`http.ts`](../../../frontend_rag/src/shared/api/http.ts#L15-L34) (`publicFetch`, `apiFetch`) | `Response` từ `POST /auth/token-rotations` | `publicFetch` trả `Response` về `authApi`; sau khi xoay vòng kết thúc, `apiFetch` nhận kết quả `rotated: boolean` (`http.ts#L32-L33`) để **tự động gửi lại request gốc** với `accessToken` mới nếu `rotated === true` (hoặc trả nguyên `401` gốc nếu `false`). | `Response` xoay vòng và replay request gốc |
+| 22 | FE — API (xử lý dữ liệu) | [`authApi.ts`](../../../frontend_rag/src/features/auth/api/authApi.ts#L30-L43) (`readJsonOrThrow`) | `Response` từ `refreshAuthTokens` | Nếu `res.ok` (`201`): parse JSON thành `AuthTokenResponse`. Nếu `!res.ok` (`401`, `429`): đọc `body.message` và ném `AuthApiError(res.status, ...)`. | `AuthTokenResponse` hoặc `AuthApiError` |
+| 23 | FE — Service | [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L70-L82) (`rotateSessionTokens`) | `AuthTokenResponse` hoặc lỗi | **Thành công**: gọi `hooks.onRotated(data)` và trả `true`. **Lỗi**: chỉ khi `err instanceof HttpError && err.status === 401` mới gọi `hooks.onRevoked()` xóa phiên; nếu là lỗi mạng/`429`/`5xx`, giữ nguyên phiên cục bộ (Offline-First) và trả `false`. | Boolean `true` / `false` & cập nhật hooks |
+| 24 | FE — Hook (cập nhật state) | [`authStore.ts`](../../../frontend_rag/src/features/auth/authStore.ts#L73-L81) & [`useAuth.ts`](../../../frontend_rag/src/features/auth/hooks/useAuth.ts#L4-L22) | Callbacks `onRotated` / `onRevoked` | `onRotated` ghi đè `{ user, accessToken, refreshToken, isAuthenticated: true }` vào Zustand và persist `localStorage` (`'rag-auth-storage'`); `onRevoked` đặt `isAuthenticated: false`. | State `useAuthSession()` được cập nhật |
+| 25 | FE — Component (hiển thị lại) | [`ChatPanel.tsx`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L27-L118) & [`AuthOverlay.tsx`](../../../frontend_rag/src/features/auth/AuthOverlay.tsx#L6-L37) | `isAuthenticated`, dữ liệu từ request retry | Nếu xoay vòng thành công: request gốc trả `200 OK`, UI hiển thị dữ liệu bình thường không gián đoạn. Nếu bị thu hồi (`isAuthenticated: false`): `ChatPanel` unmount khung chat và hiển thị lại `AuthOverlay`. | UI đồng bộ dữ liệu hoặc màn hình đăng nhập lại |
+| 26 | Client | [`ChatPanel.tsx`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L58-L118) | Giao diện sau re-render | Người dùng tiếp tục làm việc liền mạch mà không phải đăng nhập lại thủ công (hoặc thấy yêu cầu đăng nhập lại nếu refresh token đã hết hạn/bị replay). | Trải nghiệm người dùng nhất quán và an toàn |
 
 ---
 

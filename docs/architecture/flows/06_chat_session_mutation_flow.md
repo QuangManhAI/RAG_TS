@@ -6,7 +6,7 @@
 - **Detailed Plan**: §1 Tổng quan kiến trúc luồng đột biến phiên chat; §2 Sơ đồ khối kiến trúc (Flowchart); §3 Sơ đồ tuần tự End-to-End (Sequence Diagram); §4 Phân rã 4 giai đoạn Request–Response & Wire Examples; §5 Các nhánh lỗi, ràng buộc Idempotency & Bất biến hệ thống.
 - **References**: React 19, Zustand, Dexie.js (IndexedDB), NestJS 11, Mongoose/MongoDB (TTL Index), `lru-cache`, `class-validator`, `AGENTS.md`, `agents/rules/MD_CONVENTION.md`, `docs/api/API_DESIGN.md`.
 - **Created**: 2026-11-26T10:12:00+07:00
-- **Last Updated**: 2026-11-26T10:12:00+07:00
+- **Last Updated**: 2026-11-26T12:00:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -27,55 +27,53 @@ Luồng 06 kết hợp triết lý **Offline-First** ở tầng Frontend với t
 
 ---
 
-## 2. Sơ đồ Kiến trúc Tổng thể (Flowchart)
+## 2. Sơ đồ Kiến trúc Tổng thể Chuẩn 26 Bước (Flowchart)
 
 ```mermaid
 flowchart TB
-  subgraph FE["Frontend (React 19 + Zustand + Dexie IndexedDB)"]
-    UI["HistoryDrawer: 2-Step Inline Delete ('Xoa?' -> Check)"]
-    SSE["useRag.send: SSE done -> confirmBackendSession"]
-    STORE["useSessionStore: deleteSession / confirmBackendSession"]
-    SVC_FE["chatSessionService: deleteSessionLocallyAndRemotely / reconcileBackendSession"]
-    DEXIE["Dexie chatDb: sessions & messages (Offline-First)"]
-    API_FE["chatApi + apiFetch: Bearer Token & 401 Single Rotate"]
-
-    UI --> STORE
-    SSE --> STORE
-    STORE --> SVC_FE
-    SVC_FE --> DEXIE
-    SVC_FE --> API_FE
+  subgraph FE_IN["Giai đoạn 1 — Frontend Chiều đi (Client -> HTTP Request)"]
+    CLI_IN["1. Client (Bấm Trash2 -> Check trên HistoryDrawer / SSE done -> confirmBackendSession)"]
+    UI_IN["2. FE Component (HistoryDrawer 2-step confirm / ChatPanel)"]
+    HK_IN["3. FE Hook & Store (useHistoryDrawerState -> useSessionStore.deleteSession / confirmBackendSession)"]
+    SVC_IN["4. FE Service (chatSessionService: xoa/di tru Dexie chatDb truoc 0ms -> quyet dinh goi mang)"]
+    DEXIE["IndexedDB chatDb: sessions & messages (Offline-First)"]
+    API_IN["5. FE API (chatApi: deleteRemoteSession / renameRemoteSession)"]
+    HTTP_IN["6. FE HTTP Client (http.ts: apiFetch DELETE / PATCH + Bearer)"]
+    CLI_IN --> UI_IN --> HK_IN --> SVC_IN --> API_IN --> HTTP_IN
+    SVC_IN <--> DEXIE
   end
 
-  subgraph BE["Backend (NestJS 11 HTTP Pipeline)"]
-    MW["Express Middleware: requestId, securityHeaders, metrics, xmlBody"]
-    GUARD["JwtAuthGuard: Bearer Verify + is_active + token_version"]
-    PIPE["ValidationPipe: whitelist + forbidNonWhitelisted + transform"]
-    CTRL["ChatSessionsController: DELETE :id (204) & PATCH :id (200)"]
-    INT["LinksInterceptor (_links) + ContentNegotiationInterceptor (JSON/XML)"]
-    FLT["HttpExceptionFilter: ErrorBody + request_id"]
-
-    MW --> GUARD --> PIPE --> CTRL --> INT
-    GUARD -.-> FLT
-    PIPE -.-> FLT
-    CTRL -.-> FLT
+  subgraph BE_IN["Giai đoạn 2 — Backend Chiều vào (HTTP Request -> Database)"]
+    NODE["7. BE Node.js HTTP Server (main.ts: keepAliveTimeout=65s, headersTimeout=66s)"]
+    MW["8. BE NestJS/Express Middleware (app.setup.ts: requestId, helmet, metrics, XML/JSON)"]
+    GUARD["9. BE Guard (ThrottlerGuard 120/min + JwtAuthGuard token_version)"]
+    INT_IN["10. BE Interceptor chiều vào (ContentNegotiation Accept 406 + LinksInterceptor metadata)"]
+    PIPE["11. BE Pipe (ValidationPipe -> RenameSessionDto cho PATCH)"]
+    CTRL_IN["12. BE Controller (ChatSessionsController: DELETE :id / PATCH :id)"]
+    SVC_BE_IN["13. BE Service (ChatSessionsService: remove / rename, validTitle, invalidate O1 userGen)"]
+    REPO_IN["14. BE Repository (ChatSessionsRepo.softDeleteOwned/renameOwnedLean + ChatMessagesRepo)"]
+    MONGO["15. Database (MongoDB: chat_sessions & chat_messages TTL 3 ngay deleted_at)"]
+    HTTP_IN -->|"DELETE / PATCH /api/v1/chat-sessions/:id"| NODE --> MW --> GUARD --> INT_IN --> PIPE --> CTRL_IN --> SVC_BE_IN --> REPO_IN --> MONGO
   end
 
-  subgraph CORE["Service, Cache O(1) & Persistence"]
-    SVC_BE["ChatSessionsService: remove() / rename()"]
-    CACHE["O(1) Cache Invalidation: bumpUserGen(userId) + sessionDetailCache.delete"]
-    REPO_S["ChatSessionsRepository: softDeleteOwned / renameOwnedLean"]
-    REPO_M["ChatMessagesRepository: softDeleteBySession"]
-    MONGO["MongoDB: chat_sessions & chat_messages (TTL 3 ngay tren deleted_at)"]
-
-    SVC_BE --> CACHE
-    SVC_BE --> REPO_S
-    SVC_BE --> REPO_M
-    REPO_S --> MONGO
-    REPO_M --> MONGO
+  subgraph BE_OUT["Giai đoạn 3 — Backend Chiều về (Database -> HTTP Response)"]
+    REPO_OUT["16. Database -> BE Repository (modifiedCount 0/1 hoac LeanChatSession)"]
+    SVC_BE_OUT["17. BE Service (DELETE im lang void / PATCH 404 neu null hoac toSummary + invalidate)"]
+    CTRL_OUT["18. BE Controller (tra 204 No Content hoac 200 SessionSummaryDto)"]
+    INT_OUT["19. BE Interceptor chiều ra (LinksInterceptor +_links cho PATCH -> ContentNegotiation JSON/XML)"]
+    EXP_OUT["20. BE NestJS/Express gửi response (HTTP 204 / 200 / HttpExceptionFilter + X-Request-Id)"]
+    MONGO --> REPO_OUT --> SVC_BE_OUT --> CTRL_OUT --> INT_OUT --> EXP_OUT
   end
 
-  API_FE -->|"DELETE / PATCH /api/v1/chat-sessions/:id"| MW
-  CTRL --> SVC_BE
+  subgraph FE_OUT["Giai đoạn 4 — Frontend Chiều về (HTTP Response -> Client)"]
+    HTTP_OUT["21. FE HTTP Client (apiFetch kiem tra 401 auto-rotate -> tra Response)"]
+    API_OUT["22. FE API (chatApi: res.ok void hoac parseJson RemoteSessionSummary / HttpError)"]
+    SVC_OUT["23. FE Service (chatSessionService xac nhan dong bo nen khong rollback Dexie)"]
+    HK_OUT["24. FE Hook & Store (useSessionStore cap nhat remaining[0] / backendId -> useHistoryDrawerState)"]
+    UI_OUT["25. FE Component (HistoryDrawer go bo phien / ChatPanel cap nhat tieu de moi)"]
+    CLI_OUT["26. Client (Giao dien phan hoi 0ms nhat quan ca online lan offline)"]
+    EXP_OUT -->|"HTTP 204 No Content / 200 OK"| HTTP_OUT --> API_OUT --> SVC_OUT --> HK_OUT --> UI_OUT --> CLI_OUT
+  end
 ```
 
 ---
@@ -165,11 +163,12 @@ sequenceDiagram
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1.1 | UI Component (`DELETE`) | [`HistoryDrawer`](../../../frontend_rag/src/features/chat/components/HistoryDrawer.tsx#L112-L147) | Click icon `Trash2` rồi click icon `Check` | Cơ chế xác nhận 2 bước tại chỗ (`confirmDeleteId`): click lần 1 mở badge `"Xóa?"` (`e.stopPropagation()` ngăn kích hoạt `switchSession`); click `Check` đặt `confirmDeleteId(null)` và gọi `void deleteSession(session.id)`. | Gọi `deleteSession(session.id)` bất đồng bộ. |
-| 1.2 | SSE Trigger (`PATCH`) | [`useRag.send`](../../../frontend_rag/src/features/chat/store/ragStore.ts#L171-L175) | Sự kiện SSE `done` chứa `ev.session_id` | Khi stream trả lời hoàn tất và Backend cấp `ev.session_id`, `ragStore` gọi `await useSessionStore.getState().confirmBackendSession(sessionId, ev.session_id)`. | Kích hoạt đối soát ID và đồng bộ tiêu đề. |
-| 1.3 | Hook & Zustand Store | [`useHistoryDrawerState`](../../../frontend_rag/src/features/chat/hooks/useChatWorkspace.ts#L61-L79), [`useSessionStore.deleteSession`](../../../frontend_rag/src/features/chat/store/sessionStore.ts#L148-L162), [`useSessionStore.confirmBackendSession`](../../../frontend_rag/src/features/chat/store/sessionStore.ts#L174-L187) | `sessionId` (hoặc `localId`, `backendId`) | `deleteSession` gọi `deleteSessionLocallyAndRemotely`, cập nhật `sessions: remaining`; nếu xóa đúng `currentSessionId` thì chuyển ngay sang `remaining[0].id` hoặc gọi `startNewChat()`. `confirmBackendSession` gọi `reconcileBackendSession` và cập nhật `currentSessionId` sang `backendId` nếu vừa di trú từ ID cục bộ. | State Zustand cập nhật tức thì trên UI. |
-| 1.4 | Offline-First Service & IndexedDB | [`deleteSessionLocallyAndRemotely`](../../../frontend_rag/src/features/chat/services/chatSessionService.ts#L144-L160), [`reconcileBackendSession`](../../../frontend_rag/src/features/chat/services/chatSessionService.ts#L105-L141), [`chatDb`](../../../frontend_rag/src/features/chat/db/chatDb.ts#L30-L46) | `sessionId`, `{ isOffline, hasToken }` / `{ userId, hasToken }` | **Luồng DELETE**: Xóa sạch `chatDb.messages` theo `sessionId` và xóa `chatDb.sessions` trước; trả `remaining` qua `listLocalSessions()`. Nếu `hasToken && !USE_MOCK && !opts.isOffline`, gọi nền `void deleteRemoteSession(sessionId)`. **Luồng PATCH**: Di trú bản ghi Dexie từ `localId` sang `backendId` (đặt `synced: true`); nếu `hasToken && !USE_MOCK && session.title`, gọi nền `void renameRemoteSession(backendId, session.title)`. | Dexie nhất quán; gọi HTTP ở nền (*fire-and-forget* có `.catch(console.warn)`). |
-| 1.5 | Feature API & HTTP Client | [`deleteRemoteSession`](../../../frontend_rag/src/features/chat/api/chatApi.ts#L96-L100), [`renameRemoteSession`](../../../frontend_rag/src/features/chat/api/chatApi.ts#L83-L93), [`apiFetch`](../../../frontend_rag/src/shared/api/http.ts#L23-L34) | `sessionId`, `title` (cho `PATCH`) | `deleteRemoteSession` gửi `DELETE /chat-sessions/:id` không body; `renameRemoteSession` gửi `PATCH /chat-sessions/:id` với `Content-Type: application/json` và `JSON.stringify({ title })`. `apiFetch` gắn `Authorization: Bearer <accessToken>`, tự động `rotateTokens` một lần nếu gặp `401` rồi gửi lại request. | HTTP Request gửi tới `${API_BASE}/chat-sessions/:id`. |
+| 1 | Client | [`HistoryDrawer`](../../../frontend_rag/src/features/chat/components/HistoryDrawer.tsx#L112-L147) / [`ragStore`](../../../frontend_rag/src/features/chat/store/ragStore.ts#L171-L175) | Click icon `Trash2` rồi `Check` (luồng xóa) hoặc hoàn tất câu trả lời đầu tiên (luồng đổi tên) | Người dùng xác nhận xóa 2 bước ngay trên danh sách phiên, hoặc trình duyệt nhận event `done` kèm `ev.session_id` sau lượt hỏi đầu tiên. | Sự kiện UI click hoặc callback SSE `done` |
+| 2 | FE — Component | [`HistoryDrawer`](../../../frontend_rag/src/features/chat/components/HistoryDrawer.tsx#L112-L147) (`DELETE`) & [`ChatPanel`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L58-L73) (`PATCH`) | Click `Trash2` → `confirmDeleteId` → click `Check` | Click lần 1 mở badge `"Xóa?"` (`e.stopPropagation()` ngăn `switchSession`); click `Check` đặt `confirmDeleteId(null)` và gọi `void deleteSession(session.id)`. | Gọi action từ Selector Hook / Store |
+| 3 | FE — Hook (+ Store) | [`useHistoryDrawerState`](../../../frontend_rag/src/features/chat/hooks/useChatWorkspace.ts#L61-L79), [`useSessionStore.deleteSession`](../../../frontend_rag/src/features/chat/store/sessionStore.ts#L148-L162), [`confirmBackendSession`](../../../frontend_rag/src/features/chat/store/sessionStore.ts#L174-L187) | `sessionId` (hoặc `localId`, `backendId`) | `useHistoryDrawerState` cung cấp `deleteSession` cho UI. `deleteSession` ủy quyền `deleteSessionLocallyAndRemotely`, cập nhật ngay `sessions: remaining` và chuyển sang `remaining[0].id` / `startNewChat()`. `confirmBackendSession` gọi `reconcileBackendSession` di trú ID. | Lời gọi xử lý Offline-First xuống `chatSessionService` |
+| 4 | FE — Service | [`deleteSessionLocallyAndRemotely`](../../../frontend_rag/src/features/chat/services/chatSessionService.ts#L144-L160), [`reconcileBackendSession`](../../../frontend_rag/src/features/chat/services/chatSessionService.ts#L105-L141), [`chatDb`](../../../frontend_rag/src/features/chat/db/chatDb.ts#L30-L46) | `sessionId`, `{ isOffline, hasToken }` / `{ userId, hasToken }` | **DELETE**: xóa sạch `chatDb.messages` & `chatDb.sessions` trước; chỉ khi `hasToken && !USE_MOCK && !opts.isOffline` mới gọi nền `deleteRemoteSession(sessionId)`. **PATCH**: di trú bản ghi Dexie `localId -> backendId` (`synced: true`) rồi gọi nền `renameRemoteSession(backendId, session.title)`. | Dexie nhất quán 0ms; ủy quyền API nền |
+| 5 | FE — API | [`deleteRemoteSession`](../../../frontend_rag/src/features/chat/api/chatApi.ts#L96-L100), [`renameRemoteSession`](../../../frontend_rag/src/features/chat/api/chatApi.ts#L83-L93) | `sessionId`, `title` (cho `PATCH`) | Định nghĩa `DELETE /chat-sessions/${encodeURIComponent(id)}` không body; hoặc `PATCH /chat-sessions/${encodeURIComponent(id)}` kèm `Content-Type: application/json` và `{ title }`. | Lời gọi tới `apiFetch` |
+| 6 | FE — HTTP Client (gọi fetch) | [`apiFetch`](../../../frontend_rag/src/shared/api/http.ts#L23-L34) & [`config.ts#L1`](../../../frontend_rag/src/shared/api/config.ts#L1) | Path `/chat-sessions/:id`, `accessToken` | `apiFetch` ghép `API_BASE` (`/api/v1`), gắn `Authorization: Bearer <accessToken>`, gọi `fetch()` gửi request qua mạng. | HTTP `DELETE` / `PATCH` rời trình duyệt |
 
 #### Ví dụ HTTP Request trên dây mạng
 
@@ -194,27 +193,31 @@ Accept: application/json
 
 ---
 
-### Giai đoạn 2 — Chiều vào Backend: HTTP Request → BE → Repository → Database
+### Giai đoạn 2 — Chiều vào Backend: HTTP Request → BE → Database
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 2.1 | Express Middleware Stack | [`configureApp`](../../../backend_rag/src/app.setup.ts#L40-L85), [`unsupportedBody` / `xmlBodyMiddleware`](../../../backend_rag/src/common/http/xml.ts#L70-L105) | Raw HTTP Request | Thiết lập `trust proxy`, gắn `requestIdMiddleware`, `securityHeaders`, ghi nhận `PrometheusMetricsRegistry`, kiểm tra `unsupportedBody` (`415` nếu có body khác JSON/XML), giải mã XML (`textBody` max `100kb` → `xmlBodyMiddleware` chống XXE), áp dụng global prefix `/api/v1`. | `req` đã có `request_id` và `req.body` chuẩn hóa. |
-| 2.2 | Authentication Guard | [`JwtAuthGuard.canActivate`](../../../backend_rag/src/modules/auth/guards/jwt-auth.guard.ts#L22-L47), [`CurrentUser`](../../../backend_rag/src/modules/auth/decorators/current-user.decorator.ts#L6-L9) | Header `Authorization: Bearer <token>` | `bearerToken(req)` tách JWT; `tokens.verifyAccess(token)` xác thực chữ ký & hạn; `auth.getActiveUser(claims.id)` kiểm tra `user.is_active` và khớp `user.token_version === claims.tokenVersion`. Nếu lỗi ném `401 Unauthorized`. | Gắn `req.user = { id, roles, email }`. |
-| 2.3 | Global Validation Pipe | [`createValidationPipe`](../../../backend_rag/src/common/http/validation.ts#L18-L26), [`RenameSessionDto`](../../../backend_rag/src/modules/chat-sessions/dto/chat-session.dto.ts#L69-L73) | `:id` param & JSON/XML body | `ValidationPipe` (`whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`). Với `DELETE`, không có DTO body. Với `PATCH`, xác thực `RenameSessionDto.title` là chuỗi (`@IsString({ message: 'invalid title' })`), loại bỏ field thừa; lỗi ném `400 Bad Request`. | Tham số `id` và `dto` sạch. |
-| 2.4 | Controller | [`ChatSessionsController.remove`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.controller.ts#L103-L108), [`ChatSessionsController.rename`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.controller.ts#L80-L90) | `id: string`, `me: AuthUser`, `dto?: RenameSessionDto` | `@UseGuards(JwtAuthGuard)` bảo vệ cả class. `remove` được gắn `@Delete(':id')` + `@HttpCode(HttpStatus.NO_CONTENT)` gọi `this.sessions.remove(me.id, id)`. `rename` được gắn `@Patch(':id')` + `@WithLinks(...)` gọi `this.sessions.rename(me.id, id, dto.title)`. | Ủy quyền xuống `ChatSessionsService`. |
-| 2.5 | Service & `O(1)` Cache Invalidation | [`ChatSessionsService.remove`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.service.ts#L231-L240), [`ChatSessionsService.rename`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.service.ts#L215-L228), [`ChatSessionsService.invalidate`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.service.ts#L101-L112) | `userId`, `id`, `title` (cho `PATCH`) | **DELETE**: Nếu `!isUuid(id)` return ngay (vẫn `204`). Gọi `invalidate(userId, id)` (tăng `userGen` của `userId` thêm `1` và xóa `sessionDetailCache` theo key `${userId}:${id}`) trước khi gọi repo. **PATCH**: `validTitle(title)` cắt khoảng trắng đầu/cuối (`trim()`) và kiểm tra `1..120` Unicode codepoints (`Array.from(t).length`), kiểm tra `isUuid(id)`, gọi repo đổi tên; nếu cập nhật thành công mới ghi log `SESSION_RENAMED` và gọi `invalidate(userId, id)`. | Thực thi lệnh ghi xuống MongoDB và làm mới cache `O(1)`. |
-| 2.6 | Repository & MongoDB | [`ChatSessionsRepository`](../../../backend_rag/src/modules/chat-sessions/repositories/chat-sessions.repository.ts#L20-L84), [`ChatMessagesRepository`](../../../backend_rag/src/modules/chat-sessions/repositories/chat-messages.repository.ts#L72-L77), [`ChatSessionSchema`](../../../backend_rag/src/modules/chat-sessions/schemas/chat-session.schema.ts#L36-L45), [`ChatMessageSchema`](../../../backend_rag/src/modules/chat-sessions/schemas/chat-message.schema.ts#L45-L54) | `ownedSessionFilter(userId, id)` (`{ _id: id, user_id: ObjectId(userId), deleted_at: null }`) | **DELETE**: `softDeleteOwned` chạy `updateOne` đặt `deleted_at: now`. Nếu `modifiedCount > 0`, gọi tiếp `messages.softDeleteBySession(id, now)` (`updateMany` trên `chat_messages` có `deleted_at: null`) và ghi event `SESSION_DELETED`. Cả hai collection đều có TTL index `{ deleted_at: 1 }` với `expireAfterSeconds: 259200` (3 ngày). **PATCH**: `renameOwnedLean` chạy `findOneAndUpdate(ownedSessionFilter, { $set: { title } }, { new: true }).lean()`. | `modifiedCount` (`0`/`1`) hoặc `LeanChatSession \| null`. |
+| 7 | BE — Node.js HTTP Server | [`main.ts`](../../../backend_rag/src/main.ts#L1-L26) (`bootstrap`) | HTTP socket cổng `3000` | Node `http.Server` tiếp nhận kết nối (`keepAliveTimeout = 65_000`, `headersTimeout = 66_000`) và đưa vào Express/NestJS pipeline. | Request đi vào Express Middleware |
+| 8 | BE — NestJS/Express Middleware | [`configureApp`](../../../backend_rag/src/app.setup.ts#L40-L85), [`unsupportedBody` / `xmlBodyMiddleware`](../../../backend_rag/src/common/http/xml.ts#L70-L105) | Raw HTTP Request | Thiết lập `trust proxy`, gắn `requestIdMiddleware`, `securityHeaders` (Helmet), `PrometheusMetricsRegistry.middleware`, kiểm tra `unsupportedBody` (`415`), parse JSON hoặc XML (`100kb`, chống XXE), áp prefix `/api/v1` và CORS. | `req` có `request_id` và `req.body` chuẩn hóa |
+| 9 | BE — Guard | [`throttler.ts`](../../../backend_rag/src/common/security/throttler.ts#L16-L46) (`ThrottlerGuard`) & [`JwtAuthGuard.canActivate`](../../../backend_rag/src/modules/auth/guards/jwt-auth.guard.ts#L22-L47) | `req.ip`, header `Authorization: Bearer <token>` | `ThrottlerGuard` áp ngưỡng mặc định `120 req/60s/IP`. `JwtAuthGuard` xác thực JWT qua `tokens.verifyAccess` và `auth.getActiveUser` (cache `5s` kiểm tra `is_active` và `token_version`); sai/hết hạn ném `401`. | `req.user = { id, roles, email }` |
+| 10 | BE — Interceptor chiều vào | [`ContentNegotiationInterceptor`](../../../backend_rag/src/common/http/xml.ts#L109-L119) & [`LinksInterceptor`](../../../backend_rag/src/common/http/hateoas.ts#L157-L166) | Header `Accept`, `@WithLinks` | `ContentNegotiationInterceptor` kiểm tra `req.accepts(OFFERED)` (ném `406` nếu không hợp lệ); `LinksInterceptor` đọc metadata `@WithLinks` của `rename` (`PATCH`). | Request vượt qua tiền kiểm tra |
+| 11 | BE — Pipe | [`createValidationPipe`](../../../backend_rag/src/common/http/validation.ts#L18-L26), [`RenameSessionDto`](../../../backend_rag/src/modules/chat-sessions/dto/chat-session.dto.ts#L69-L73) | `:id` param & JSON/XML body | `ValidationPipe` (`whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`). Với `DELETE`, không có body DTO. Với `PATCH`, xác thực `RenameSessionDto.title` là chuỗi (`'invalid title'`), từ chối field thừa (`400`). | `id` & `RenameSessionDto` sạch |
+| 12 | BE — Controller | [`ChatSessionsController.remove`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.controller.ts#L103-L108), [`ChatSessionsController.rename`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.controller.ts#L80-L90) | `id: string`, `me: AuthUser`, `dto?: RenameSessionDto` | `@Delete(':id')` gắn `@HttpCode(HttpStatus.NO_CONTENT)` gọi `this.sessions.remove(me.id, id)`; `@Patch(':id')` gọi `this.sessions.rename(me.id, id, dto.title)`. | Ủy quyền xuống `ChatSessionsService` |
+| 13 | BE — Service | [`ChatSessionsService.remove`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.service.ts#L231-L240), [`rename`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.service.ts#L215-L228), [`invalidate`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.service.ts#L101-L112) | `userId`, `id`, `title` | **DELETE**: nếu `!isUuid(id)` return ngay (vẫn `204`); gọi `invalidate(userId, id)` (tăng `userGen` `O(1)` + xóa `sessionDetailCache`) và gọi soft-delete. **PATCH**: `validTitle(title)` trim và kiểm tra `1..120` Unicode codepoints (`400` nếu sai), gọi đổi tên theo sở hữu. | Lời gọi Repository MongoDB |
+| 14 | BE — Repository | [`ChatSessionsRepository`](../../../backend_rag/src/modules/chat-sessions/repositories/chat-sessions.repository.ts#L20-L84) & [`ChatMessagesRepository`](../../../backend_rag/src/modules/chat-sessions/repositories/chat-messages.repository.ts#L72-L77) | `ownedSessionFilter(userId, id)` | **DELETE**: `softDeleteOwned` chạy `updateOne({ _id: id, user_id, deleted_at: null }, { $set: { deleted_at: now } })`; nếu `modifiedCount > 0`, gọi `softDeleteBySession(id, now)`. **PATCH**: `renameOwnedLean` chạy `findOneAndUpdate(..., { $set: { title } }, { new: true }).lean()`. | Lệnh cập nhật Mongoose xuống MongoDB |
+| 15 | Database | [`ChatSessionSchema`](../../../backend_rag/src/modules/chat-sessions/schemas/chat-session.schema.ts#L36-L45) & [`ChatMessageSchema`](../../../backend_rag/src/modules/chat-sessions/schemas/chat-message.schema.ts#L45-L54) | Lệnh ghi Mongoose qua Cloudflare TCP Tunnel | MongoDB cập nhật `deleted_at` trên `chat_sessions` & `chat_messages` (kích hoạt TTL index tự xóa sau `259200s` = `3 ngày`) hoặc cập nhật `title` mới trên `chat_sessions`. | Kết quả cập nhật & bản ghi mới |
 
 ---
 
-### Giai đoạn 3 — Chiều về Backend: Database → Repository → Service → Controller → Interceptor → HTTP Response
+### Giai đoạn 3 — Chiều về Backend: Database → BE → HTTP Response
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 3.1 | Repository → Service | [`ChatSessionsService.remove`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.service.ts#L235-L240), [`ChatSessionsService.rename`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.service.ts#L222-L228), [`toSummary`](../../../backend_rag/src/modules/chat-sessions/chat-session.mapper.ts#L33-L45) | `modifiedCount` (`DELETE`) hoặc `LeanChatSession \| null` (`PATCH`) | **DELETE**: Không ném lỗi dù `modifiedCount === 0` (đã xóa hoặc không thuộc quyền sở hữu), kết thúc trả `Promise<void>`. **PATCH**: Nếu `s === null`, ném `NotFoundException('session not found')` (`404`); nếu có bản ghi, chuyển đổi qua `toSummary(s)` thành `SessionSummaryDto` (chuẩn hóa timestamp ISO 8601). | `undefined` (`DELETE`) hoặc `SessionSummaryDto` (`PATCH`). |
-| 3.2 | HATEOAS Interceptor | [`LinksInterceptor`](../../../backend_rag/src/common/http/hateoas.ts#L157-L177), [`sessionLinks`](../../../backend_rag/src/common/http/hateoas.ts#L40-L46) | Metadata `@WithLinks` & response body | **DELETE**: Handler không có `@WithLinks` và body là `undefined` → đi qua không thay đổi. **PATCH**: Đọc metadata `@WithLinks({ resource: (s) => sessionLinks(s.id) })`, gọi `addLinks` tạo bản sao object và gắn `_links` (`self`, `messages`, `rename`, `delete`, `chat`). | Body không đổi (`undefined`) hoặc có `_links`. |
-| 3.3 | Content Negotiation Interceptor | [`ContentNegotiationInterceptor`](../../../backend_rag/src/common/http/xml.ts#L109-L127) | Header `Accept` & body từ `LinksInterceptor` | Kiểm tra `req.accepts(OFFERED)` (nếu không khớp trả `406 Not Acceptable`). Nếu `body === undefined` (`204 No Content` của `DELETE`) hoặc client không ưu tiên XML → giữ nguyên. Nếu client yêu cầu `application/xml` trên `PATCH` → chuyển sang XML bằng `toXml(body)` với root `<response>`. | JSON / XML hoặc rỗng (`204`). |
-| 3.4 | Exception Filter (nếu có lỗi) | [`HttpExceptionFilter`](../../../backend_rag/src/common/http/http-exception.filter.ts#L69-L97) | `HttpException` hoặc lỗi hệ thống | Chuyển mọi ngoại lệ (`400`, `401`, `404`, `405`, `406`, `415`, `500`) về chuẩn `ErrorBody` (`{ statusCode, error, message, request_id }`) và serialize JSON/XML theo `Accept`. | HTTP Error Response đồng nhất. |
+| 16 | Database → BE — Repository | [`ChatSessionsRepository`](../../../backend_rag/src/modules/chat-sessions/repositories/chat-sessions.repository.ts#L71-L84) & [`ChatMessagesRepository`](../../../backend_rag/src/modules/chat-sessions/repositories/chat-messages.repository.ts#L72-L77) | Kết quả từ MongoDB | Trả `modifiedCount` (`0` hoặc `1`) cho lệnh xóa mềm, hoặc `LeanChatSession \| null` cho lệnh đổi tên. | Kết quả từ Repository về `ChatSessionsService` |
+| 17 | BE — Service | [`ChatSessionsService.remove`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.service.ts#L235-L240), [`rename`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.service.ts#L222-L228), [`toSummary`](../../../backend_rag/src/modules/chat-sessions/chat-session.mapper.ts#L33-L45) | `modifiedCount` / `LeanChatSession \| null` | **DELETE**: kể cả khi `modifiedCount === 0` (đã xóa hoặc thuộc user khác), trả `void` im lặng (đảm bảo idempotent). **PATCH**: nếu `null` → `404 NotFoundException('session not found')`; ngược lại log `SESSION_RENAMED`, gọi `invalidate(userId, id)` và map qua `toSummary(s)`. | `undefined` (`DELETE`) hoặc `SessionSummaryDto` (`PATCH`) |
+| 18 | BE — Controller | [`ChatSessionsController.remove`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.controller.ts#L103-L108) & [`rename`](../../../backend_rag/src/modules/chat-sessions/chat-sessions.controller.ts#L80-L90) | `Promise<void>` / `Promise<SessionSummaryDto>` | Trả `undefined` với `@HttpCode(204)` cho `DELETE`, hoặc trả `SessionSummaryDto` (`200 OK`) cho `PATCH`. | Giá trị trả về đi qua Interceptor chiều ra |
+| 19 | BE — Interceptor chiều ra | [`LinksInterceptor`](../../../backend_rag/src/common/http/hateoas.ts#L157-L177) & [`ContentNegotiationInterceptor`](../../../backend_rag/src/common/http/xml.ts#L109-L127) | Body (`undefined` hoặc `SessionSummaryDto`) | **DELETE**: `body === undefined` nên đi qua giữ nguyên rỗng (`204`). **PATCH**: `LinksInterceptor` gắn `_links` (`self`, `messages`, `rename`, `delete`, `chat`) trên bản sao; `ContentNegotiationInterceptor` giữ JSON hoặc chuyển `application/xml` (`toXml`). | Body không đổi (`undefined`) hoặc JSON/XML có `_links` |
+| 20 | BE — NestJS/Express gửi response | [`app.setup.ts`](../../../backend_rag/src/app.setup.ts#L52-L63), [`prometheus-metrics.ts`](../../../backend_rag/src/common/metrics/prometheus-metrics.ts#L57-L76), [`HttpExceptionFilter`](../../../backend_rag/src/common/http/http-exception.filter.ts#L69-L97) | Status `204` / `200` hoặc `HttpException` | Express gửi HTTP `204 No Content` (hoặc `200 OK`) kèm `X-Request-Id`, hoặc `HttpExceptionFilter` chuẩn hóa lỗi `400`/`401`/`404` thành `ErrorBody`; chốt metrics khi `finish`. | HTTP Response rời Backend về Frontend |
 
 #### Ví dụ HTTP Response trên dây mạng
 
@@ -253,10 +256,12 @@ X-Request-Id: req_0193678b11227abc8def0123456789ab
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 4.1 | HTTP Client | [`apiFetch`](../../../frontend_rag/src/shared/api/http.ts#L23-L34) | `Response` từ Backend | Nếu nhận `401` khi đã có token, thực thi `rotateTokens(token)` một lần và gửi lại request với access token mới. Trả `Response` về `chatApi`. | `Response` (`204`, `200`, hoặc lỗi). |
-| 4.2 | Feature API | [`deleteRemoteSession`](../../../frontend_rag/src/features/chat/api/chatApi.ts#L96-L100), [`renameRemoteSession`](../../../frontend_rag/src/features/chat/api/chatApi.ts#L83-L93) | `Response` | `deleteRemoteSession` kiểm tra `res.ok` (`204` thỏa mãn `res.ok`), trả `Promise<void>`; nếu `!res.ok` ném `HttpError`. `renameRemoteSession` gọi `parseJson<RemoteSessionSummary>` đọc JSON trả về; nếu `!res.ok` ném `HttpError`. | `void` hoặc `RemoteSessionSummary`. |
-| 4.3 | Background Reconciliation | [`deleteSessionLocallyAndRemotely`](../../../frontend_rag/src/features/chat/services/chatSessionService.ts#L153-L157), [`reconcileBackendSession`](../../../frontend_rag/src/features/chat/services/chatSessionService.ts#L134-L138) | `Promise<void>` / `Promise<RemoteSessionSummary>` | Do cả hai lệnh gọi mạng đều chạy ở nền (*fire-and-forget* gắn `.catch((err) => console.warn(...))`), giao diện không bị chặn bởi độ trễ mạng hay đường hầm MongoDB và không rollback dữ liệu IndexedDB khi offline. | Hoàn tất đồng bộ nền không block UI. |
-| 4.4 | Zustand & React UI | [`useSessionStore`](../../../frontend_rag/src/features/chat/store/sessionStore.ts#L153-L186), [`HistoryDrawer`](../../../frontend_rag/src/features/chat/components/HistoryDrawer.tsx#L83-L149) | Danh sách `sessions` & `currentSessionId` đã cập nhật | Trong luồng xóa, người dùng đã thấy phiên biến mất ngay khỏi danh sách `HistoryDrawer` và khung chat chuyển sang phiên kế tiếp (`switchSession(remaining[0].id)`) hoặc màn hình trắng mới (`startNewChat()`) ngay từ Bước 1.3–1.4. | Trải nghiệm phản hồi 0ms, nhất quán offline-first. |
+| 21 | FE — HTTP Client (kiểm tra status & đọc body) | [`apiFetch`](../../../frontend_rag/src/shared/api/http.ts#L23-L34) | `Response` từ Backend | Nếu nhận `401` khi đã có token, tự thực thi `rotateTokens(token)` một lần và gửi lại request với token mới; chuyển `Response` (`204`, `200`, `4xx`) về `chatApi`. | `res: Response` |
+| 22 | FE — API (xử lý dữ liệu) | [`deleteRemoteSession`](../../../frontend_rag/src/features/chat/api/chatApi.ts#L96-L100), [`renameRemoteSession`](../../../frontend_rag/src/features/chat/api/chatApi.ts#L83-L93) | `res: Response` | `deleteRemoteSession` kiểm tra `res.ok` (`204` hợp lệ) rồi trả `Promise<void>`. `renameRemoteSession` gọi `parseJson<RemoteSessionSummary>` đọc JSON (hoặc ném `HttpError`). | `void` hoặc `RemoteSessionSummary` |
+| 23 | FE — Service | [`deleteSessionLocallyAndRemotely`](../../../frontend_rag/src/features/chat/services/chatSessionService.ts#L153-L157), [`reconcileBackendSession`](../../../frontend_rag/src/features/chat/services/chatSessionService.ts#L134-L138) | `Promise<void>` / `Promise<RemoteSessionSummary>` | Do thao tác đã được cập nhật lạc quan vào `Dexie` ngay từ Bước 4, lời gọi mạng chạy ở nền (*fire-and-forget* kèm `.catch(console.warn)`) xác nhận đồng bộ thành công mà **không rollback** dữ liệu cục bộ nếu mạng rớt. | Đồng bộ nền hoàn tất an toàn |
+| 24 | FE — Hook (cập nhật state) | [`useSessionStore`](../../../frontend_rag/src/features/chat/store/sessionStore.ts#L153-L186) & [`useHistoryDrawerState`](../../../frontend_rag/src/features/chat/hooks/useChatWorkspace.ts#L61-L79) | `remaining` sessions / `backendId` | Store đã cập nhật `sessions: remaining`, chuyển `currentSessionId` sang phiên kế tiếp (hoặc `startNewChat()`), hoặc cập nhật `currentSessionId = backendId`; selector hooks cung cấp state mới cho UI. | State Zustand nhất quán |
+| 25 | FE — Component (hiển thị lại) | [`HistoryDrawer`](../../../frontend_rag/src/features/chat/components/HistoryDrawer.tsx#L83-L149) & [`ChatPanel`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L58-L73) | `sessions`, `currentSessionId` | `HistoryDrawer` gỡ bỏ ngay mục đã xóa (0ms không chờ round-trip tunnel MongoDB) hoặc hiển thị tiêu đề đã đồng bộ trên thanh tiêu đề `ChatPanel`. | DOM React cập nhật tức thì |
+| 26 | Client | [`HistoryDrawer`](../../../frontend_rag/src/features/chat/components/HistoryDrawer.tsx#L83-L149) | Giao diện sau re-render | Người dùng trải nghiệm thao tác xóa / đổi tên mượt mà tức thì kể cả khi mạng chậm hoặc offline. | Trải nghiệm Offline-First hoàn chỉnh |
 
 ---
 

@@ -6,7 +6,7 @@
 - **Detailed Plan**: §1 Chuẩn hóa luồng Request–Response mục tiêu; §2 Danh sách 7 luồng trọng yếu; §3 Ma trận phân chia 7 subagent; §4 Khuôn mẫu `.md` bắt buộc (bảng 4 giai đoạn + 2 sơ đồ Mermaid); §5 Quy trình tổng hợp & kiểm chứng.
 - **References**: [AGENTS.md](../../AGENTS.md), [backend_rag/AGENTS.md](../../backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](../../frontend_rag/AGENTS.md), [agents/rules/MD_CONVENTION.md](../../agents/rules/MD_CONVENTION.md), [docs/api/API_DESIGN.md](../api/API_DESIGN.md), [docs/architecture/ARCHITECTURE_OVERVIEW.md](../architecture/ARCHITECTURE_OVERVIEW.md).
 - **Created**: 2026-11-26T10:11:00+07:00
-- **Last Updated**: 2026-11-26T10:11:00+07:00
+- **Last Updated**: 2026-11-26T12:00:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -14,38 +14,37 @@
 
 ## 1. Bối Cảnh & Luồng Kiến Trúc Mục Tiêu
 
-Mỗi luồng trong `RAG_TS` được ánh xạ trực tiếp vào xương sống Request–Response nhiều tầng sau (trong đó các AI/Vector Engine ở `backend_rag/src/engines/` đứng ngang hàng với tầng `Repository`, chịu sự điều phối của `Service`):
+Mỗi luồng trong `RAG_TS` được ánh xạ trực tiếp vào xương sống Request–Response **26 bước** chuẩn hóa dưới đây (trong đó các AI/Vector Engine ở `backend_rag/src/engines/` đứng ngang hàng với tầng `Repository`, chịu sự điều phối của `Service`):
 
 ```mermaid
 flowchart TB
-    CLI["Client (Trình duyệt / Người dùng)"] -->|"Thao tác UI"| CMP["FE Component (React 19)"]
-    CMP -->|"Gọi action / đọc slice"| HK["FE Hook & Zustand Store"]
-    HK -->|"Ủy quyền nghiệp vụ"| FSVC["FE Service (features/*/services/)"]
-    FSVC -->|"Chuẩn bị endpoint & payload"| FAPI["FE API Wrapper (features/*/api/)"]
-    FAPI -->|"Gọi fetch"| HTTP["FE HTTP Client (shared/api/http.ts & client.ts)"]
-    HTTP -->|"HTTP Request / SSE"| NODE["BE Node.js HTTP Server (main.ts)"]
-    NODE --> MW["Express/NestJS Middleware (app.setup.ts)"]
-    MW --> GRD["Guard (ThrottlerGuard, JwtAuthGuard)"]
-    GRD --> INTI["Interceptor chiều vào (ContentNegotiation, Links)"]
-    INTI --> PIP["Pipe (ValidationPipe -> DTO)"]
-    PIP --> CTL["Controller (HTTP/SSE Entrypoint)"]
-    CTL --> BSVC["BE Service (Business & Cache Orchestrator)"]
-    BSVC -->|"Truy vấn dữ liệu"| REPO["BE Repository (repositories/*.repository.ts)"]
-    BSVC -->|"Suy luận & Truy xuất AI"| ENG["AI & Vector Engines (engines/*)"]
-    REPO --> DB["MongoDB (rag_ts)"]
-    ENG --> VDB["Qdrant + rag_ts_corpus + Local LLM/ONNX"]
-    DB -->|"Lean Document"| REPO
-    VDB -->|"Vectors / Passages / Tokens"| ENG
-    REPO --> BSVC
-    ENG --> BSVC
-    BSVC --> CTL
-    CTL --> INTO["Interceptor chiều ra (_links + JSON/XML) hoặc SseWriter"]
-    INTO -->|"HTTP Response / SSE Events"| HTTP
-    HTTP -->|"Kiểm tra status & parse JSON/SSE"| FAPI
-    FAPI --> FSVC
-    FSVC --> HK
-    HK -->|"Cập nhật state"| CMP
-    CMP -->|"Re-render giao diện"| CLI
+    CLI_IN["1. Client (Trình duyệt / Người dùng)"] -->|"Thao tác UI"| CMP_IN["2. FE Component (React 19)"]
+    CMP_IN -->|"Gọi action / đọc slice"| HK_IN["3. FE Hook & Zustand Store"]
+    HK_IN -->|"Ủy quyền nghiệp vụ"| FSVC_IN["4. FE Service (features/*/services/)"]
+    FSVC_IN -->|"Chuẩn bị endpoint & payload"| FAPI_IN["5. FE API Wrapper (features/*/api/)"]
+    FAPI_IN -->|"Gọi fetch"| HTTP_IN["6. FE HTTP Client (shared/api/http.ts & client.ts)"]
+    HTTP_IN -->|"HTTP Request / SSE"| NODE["7. BE Node.js HTTP Server (main.ts)"]
+    NODE --> MW["8. BE NestJS/Express Middleware (app.setup.ts)"]
+    MW --> GRD["9. BE Guard (ThrottlerGuard, JwtAuthGuard)"]
+    GRD --> INTI["10. BE Interceptor chiều vào (ContentNegotiation, Links)"]
+    INTI --> PIP["11. BE Pipe (ValidationPipe -> DTO)"]
+    PIP --> CTL_IN["12. BE Controller (HTTP/SSE Entrypoint)"]
+    CTL_IN --> BSVC_IN["13. BE Service (Business & Cache Orchestrator)"]
+    BSVC_IN -->|"Truy vấn dữ liệu"| REPO_IN["14. BE Repository (repositories/*.repository.ts)"]
+    BSVC_IN -->|"Suy luận & Truy xuất AI"| ENG_IN["14b. AI & Vector Engines (engines/*)"]
+    REPO_IN --> DB["15. Database (MongoDB rag_ts / Qdrant / rag_ts_corpus / Local LLM)"]
+    ENG_IN --> DB
+    DB -->|"16. Lean Document / Vectors / Tokens"| REPO_OUT["16. Database -> BE Repository (+ Engines)"]
+    REPO_OUT --> BSVC_OUT["17. BE Service (Map DTO, Cache Update/Invalidate)"]
+    BSVC_OUT --> CTL_OUT["18. BE Controller (Trả DTO / Status / SseWriter)"]
+    CTL_OUT --> INTO["19. BE Interceptor chiều ra (LinksInterceptor _links + ContentNegotiation JSON/XML)"]
+    INTO --> EXPRESS["20. BE NestJS/Express gửi response (Headers, Metrics, HttpExceptionFilter)"]
+    EXPRESS -->|"HTTP Response / SSE Events"| HTTP_OUT["21. FE HTTP Client (Kiểm tra status, 401 auto-rotate & đọc body)"]
+    HTTP_OUT --> FAPI_OUT["22. FE API (Xử lý dữ liệu / JSON / SSE / Error)"]
+    FAPI_OUT --> FSVC_OUT["23. FE Service (Nghiệp vụ chiều về: map lỗi, Dexie, phân loại)"]
+    FSVC_OUT --> HK_OUT["24. FE Hook (Cập nhật Zustand/React state)"]
+    HK_OUT --> CMP_OUT["25. FE Component (Hiển thị lại UI)"]
+    CMP_OUT --> CLI_OUT["26. Client (Người dùng nhận kết quả)"]
 ```
 
 ---

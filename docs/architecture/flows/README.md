@@ -5,44 +5,61 @@
 - **Overview Pipeline**: Lập kế hoạch tại [plan_7_request_response_flows.md](../../prompts/plan_7_request_response_flows.md) → Sinh song song 7 file đặc tả `01`–`07` bám sát mã nguồn thực tế → Tổng hợp chỉ mục tại đây và đăng ký vào [docs/INDEX.md](../../INDEX.md).
 - **Detailed Plan**: §1 Tổng quan Kiến trúc Request–Response Toàn hệ thống (`flowchart TB`); §2 Danh mục 7 Luồng Trọng yếu & Liên kết Chi tiết; §3 Bảng Đối chiếu Đặc tính Kỹ thuật & Bất biến; §4 Quy ước & Kiểm chứng.
 - **References**: [AGENTS.md](../../../AGENTS.md), [backend_rag/AGENTS.md](../../../backend_rag/AGENTS.md), [frontend_rag/AGENTS.md](../../../frontend_rag/AGENTS.md), [ARCHITECTURE_OVERVIEW.md](../ARCHITECTURE_OVERVIEW.md), [API_DESIGN.md](../../api/API_DESIGN.md), [plan_7_request_response_flows.md](../../prompts/plan_7_request_response_flows.md).
-- **Created**: 2026-11-26T10:15:00+07:00
-- **Last Updated**: 2026-11-26T10:15:00+07:00
+- **Created**: 2026-10-29T10:15:00+07:00
+- **Last Updated**: 2026-11-26T12:00:00+07:00
 
 [STATUS: ACTIVE]
 
 ---
 
-## 1. Tổng Quan Kiến Trúc Request–Response Toàn Hệ Thống
+## 1. Tổng Quan Kiến Trúc Request–Response Toàn Hệ Thống (Chuẩn 26 Bước)
 
-Tất cả 7 luồng nghiệp vụ trong `RAG_TS` cùng vận hành trên xương sống phân tầng nhất quán dưới đây. Riêng tầng hạ tầng Backend tách rõ **Repositories** (MongoDB `rag_ts`) và **AI & Vector Engines** (`src/engines/*`, đứng ngang hàng với `Repository` dưới sự điều phối của `Service`):
+Tất cả 7 luồng nghiệp vụ trong `RAG_TS` cùng vận hành trên xương sống 26 bước nhất quán dưới đây theo đúng chuẩn:
+`Client → FE (Component → Hook → Service → API → HTTP Client gọi fetch) → HTTP Request → BE (Node.js HTTP Server → NestJS/Express Middleware → Guard → Interceptor chiều vào → Pipe → Controller → Service → Repository [+ AI Engines] → Database) → BE Return (Repository → Service → Controller → Interceptor chiều ra → NestJS/Express gửi response) → HTTP Response → FE Return (HTTP Client kiểm tra status & đọc body → API xử lý dữ liệu → Service → Hook cập nhật state → Component hiển thị lại) → Client`.
 
 ```mermaid
 flowchart TB
-    U["Client (Người dùng / Trình duyệt)"] -->|"Tương tác UI"| CMP["FE Component (React 19)"]
-    CMP -->|"Gọi action / state"| HK["FE Hook & Zustand Store"]
-    HK -->|"Nghiệp vụ & Offline-First"| FSVC["FE Service (auth / chatSession / ragChat / result)"]
-    FSVC -->|"Endpoint & Payload"| FAPI["FE API Wrapper (*Api.ts)"]
-    FAPI -->|"fetch / SSE / Batch"| HTTP["FE HTTP Client (publicFetch / apiFetch / readSse / getPaper)"]
-    HTTP -->|"HTTP Request"| BE_IN["BE Entry: main.ts -> app.setup.ts Middleware -> Guards -> Interceptor (In) -> ValidationPipe"]
-    BE_IN --> CTL["BE Controller (Users / Auth / Rag / ChatSessions / Papers)"]
-    CTL --> BSVC["BE Service (Auth / Token / Rag / ChatSessions / Papers)"]
-    BSVC -->|"Truy vấn .lean()"| REPO["Repositories (Users / RefreshTokens / LoginAttempts / ChatSessions / ChatMessages / ChatRequests)"]
-    BSVC -->|"Điều phối AI (Luồng 04, 07)"| ENG["AI & Vector Engines (Mining / Nomic Embed / TreeRouter / Qdrant / Corpus / Laya / Qwen2.5-7B)"]
-    REPO --> MDB["MongoDB (rag_ts)"]
-    ENG --> QDR["Qdrant + rag_ts_corpus + Local ONNX/GGUF"]
-    MDB --> REPO
-    QDR --> ENG
-    REPO --> BSVC
-    ENG --> BSVC
-    BSVC --> CTL
-    CTL --> BE_OUT["Interceptor (Out: Links + JSON/XML) hoặc SseWriter / HttpExceptionFilter"]
-    BE_OUT -->|"HTTP Response / SSE"| HTTP
-    HTTP --> FAPI
-    FAPI --> FSVC
-    FSVC -->|"Dexie IndexedDB + State"| HK
-    HK -->|"Re-render / Deferred KaTeX + 3D"| CMP
-    CMP --> U
+    CLI_IN["1. Client (Người dùng / Trình duyệt)"] -->|"Tương tác UI"| CMP_IN["2. FE Component (React 19)"]
+    CMP_IN -->|"Gọi action / selector"| HK_IN["3. FE Hook & Zustand Store"]
+    HK_IN -->|"Nghiệp vụ & Offline-First"| FSVC_IN["4. FE Service (features/*/services/*.ts)"]
+    FSVC_IN -->|"Endpoint, Method & Payload"| FAPI_IN["5. FE API (*Api.ts / client.ts)"]
+    FAPI_IN -->|"fetch / SSE / Batch"| HTTP_IN["6. FE HTTP Client (publicFetch / apiFetch / fetchAllPages)"]
+    HTTP_IN -->|"HTTP Request"| NODE["7. BE Node.js HTTP Server (main.ts: keepAliveTimeout 65s, UV_THREADPOOL_SIZE=4)"]
+    NODE --> MW["8. BE NestJS/Express Middleware (app.setup.ts: requestId, helmet, metrics, XML/JSON, /api/v1)"]
+    MW --> GRD["9. BE Guard (ThrottlerGuard + JwtAuthGuard / OptionalJwtAuthGuard)"]
+    GRD --> INT_IN["10. BE Interceptor chiều vào (ContentNegotiation Accept 406 + LinksInterceptor metadata)"]
+    INT_IN --> PIP["11. BE Pipe (ValidationPipe whitelist/transform -> DTO)"]
+    PIP --> CTL_IN["12. BE Controller (Users / Auth / Rag / ChatSessions / Papers)"]
+    CTL_IN --> BSVC_IN["13. BE Service (Business, LRUCache, Argon2id, Dual Orchestrator)"]
+    BSVC_IN -->|"Truy vấn .lean() / Transaction"| REPO_IN["14. BE Repository (repositories/*.repository.ts)"]
+    BSVC_IN -->|"Điều phối AI (Luồng 04, 07)"| ENG_IN["14b. AI & Vector Engines (Mining / Embed / TreeRouter / VectorStore / Corpus / Laya / LLM)"]
+    REPO_IN --> DB["15. Database (MongoDB rag_ts / Qdrant / rag_ts_corpus / Local GGUF & ONNX)"]
+    ENG_IN --> DB
+    DB -->|"16. Kết quả .lean() / vectors / tokens"| REPO_OUT["16. Database -> BE Repository (+ Engines)"]
+    REPO_OUT --> BSVC_OUT["17. BE Service (Lọc field nhạy cảm, cache update/invalidate, DTO)"]
+    BSVC_OUT --> CTL_OUT["18. BE Controller (DTO / 201 / 204 / SseWriter stream)"]
+    CTL_OUT --> INT_OUT["19. BE Interceptor chiều ra (LinksInterceptor _links + ContentNegotiation JSON/XML)"]
+    INT_OUT --> EXPRESS_OUT["20. BE NestJS/Express gửi response (Headers, X-Request-Id, Metrics, HttpExceptionFilter)"]
+    EXPRESS_OUT -->|"HTTP Response / SSE"| HTTP_OUT["21. FE HTTP Client (Kiểm tra status, 401 auto-rotate, đọc body/stream)"]
+    HTTP_OUT --> FAPI_OUT["22. FE API (Parse JSON / SSE / PaperBatch hoặc ném HttpError)"]
+    FAPI_OUT --> FSVC_OUT["23. FE Service (Map lỗi tiếng Việt, Dexie LWW/persist, phân loại trích dẫn)"]
+    FSVC_OUT --> HK_OUT["24. FE Hook & Zustand Store (Cập nhật state)"]
+    HK_OUT --> CMP_OUT["25. FE Component (Re-render UI / Deferred KaTeX + 3D)"]
+    CMP_OUT -->|"Phản hồi trực quan"| CLI_OUT["26. Client (Giao diện cập nhật hoàn chỉnh)"]
 ```
+
+### 1.1. Nghiệp Vụ Thực Tế Của Tầng `FE Service` (`features/*/services/*.ts`)
+
+Nhằm làm rõ câu hỏi *"Service ở Frontend có xử lý nghiệp vụ gì hay chỉ gọi API thuần?"*, bảng dưới đây tóm tắt các nghiệp vụ thực tế mà tầng `FE Service` đang gánh trước khi gọi `FE API` (chiều đi) và sau khi nhận dữ liệu từ `FE API` (chiều về):
+
+| Luồng | FE Service & File | Nghiệp vụ Chiều đi (`Hook → Service → API`) | Nghiệp vụ Chiều về (`API → Service → Hook`) |
+| :--- | :--- | :--- | :--- |
+| **01 & 02** | [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts) | Chuẩn hóa payload (`display_name` snake_case) và bọc thực thi đăng ký / đăng nhập. | `mapAuthError` dịch mã lỗi `401`, `409`, `429` và validation backend sang thông báo tiếng Việt thân thiện. |
+| **03** | [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts) | `withTabLock` (`navigator.locks`) + single-flight `rotation` + rehydrate `localStorage` để bỏ qua HTTP refresh nếu tab khác đã xoay vòng xong. | Phân biệt `HttpError 401` (gọi `onRevoked` xóa phiên) với lỗi mạng/`429`/`5xx` (giữ phiên cục bộ để không mất truy cập offline). |
+| **04** | [`ragChatService.ts`](../../../frontend_rag/src/features/chat/services/ragChatService.ts) & [`chatSessionService.ts`](../../../frontend_rag/src/features/chat/services/chatSessionService.ts) | Kiểm tra `chatDb.sessions` (`session.synced === true`) để quyết định có gửi `session_id` lên BE; gắn `bridgeStream` nếu bật `MOCK_WORLD`. | Di trú ID phiên local `UUIDv7` sang `backendId` (`reconcileBackendSession`), bảo toàn thứ tự thời gian tin nhắn và lưu vào IndexedDB (`saveExchangeLocally`). |
+| **05** | [`chatSessionService.ts`](../../../frontend_rag/src/features/chat/services/chatSessionService.ts) | Kiểm tra `Dexie` Cache-First cho `loadSessionMessages`, quản lý `AbortSignal.timeout(4000)` cho đồng bộ nền. | Hợp nhất danh sách phiên từ BE vào `RagChatDB` theo quy tắc Last-Write-Wins (`updated_at`), chuyển đổi `citations` sang `citationChecks`. |
+| **06** | [`chatSessionService.ts`](../../../frontend_rag/src/features/chat/services/chatSessionService.ts) | Xóa `chatDb.messages` & `chatDb.sessions` trước (0ms Offline-First) rồi mới quyết định gọi `DELETE` / `PATCH` nền theo `hasToken && !isOffline`. | Chốt hoàn tất đồng bộ nền (*fire-and-forget* kèm `console.warn`) mà không rollback trạng thái cục bộ khi rớt mạng. |
+| **07** | [`resultService.ts`](../../../frontend_rag/src/features/result/services/resultService.ts) | Ủy quyền tải đơn/lô qua `resultApi` và kiểm định ngữ cảnh trích dẫn (`inspectPaperContext`) trước/sau khi gọi mạng. | Phân loại 3 trạng thái `grounded` / `browse` / `unverified`, gom chunk theo điểm `final_score` và chuẩn hóa URL arXiv (`toArxivUrl`). |
 
 ---
 

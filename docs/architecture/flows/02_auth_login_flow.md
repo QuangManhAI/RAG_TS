@@ -6,7 +6,7 @@
 - **Detailed Plan**: §1 Kiến trúc Tổng thể qua các Tầng; §2 Biểu đồ Tuần tự End-to-End (Sequence Diagram); §3 Chi tiết 4 Giai đoạn Request–Response & Wire Examples; §4 Xử lý Lỗi & Các Bất biến Hệ thống (Error Paths & System Invariants).
 - **References**: [AGENTS.md](../../../AGENTS.md), [MD_CONVENTION.md](../../../agents/rules/MD_CONVENTION.md), [AUTH_AND_SECURITY_ARCHITECTURE.md](../../../backend_rag/docs/AUTH_AND_SECURITY_ARCHITECTURE.md), [API_DESIGN.md](../../api/API_DESIGN.md), [AuthOverlay.tsx](../../../frontend_rag/src/features/auth/AuthOverlay.tsx), [auth.controller.ts](../../../backend_rag/src/modules/auth/auth.controller.ts), [auth.service.ts](../../../backend_rag/src/modules/auth/auth.service.ts), [token.service.ts](../../../backend_rag/src/modules/auth/token.service.ts).
 - **Created**: 2026-11-26T10:12:00+07:00
-- **Last Updated**: 2026-11-26T10:12:00+07:00
+- **Last Updated**: 2026-11-26T12:00:00+07:00
 
 [STATUS: ACTIVE]
 
@@ -14,44 +14,51 @@
 
 ## 1. Kiến trúc Tổng thể qua các Tầng
 
-Sơ đồ dưới đây ánh xạ từng tầng xử lý trong pipeline tổng thể vào đúng các module, file mã nguồn và ký hiệu thực tế của `frontend_rag` và `backend_rag` cho endpoint `POST /api/v1/auth/tokens`.
+Sơ đồ dưới đây ánh xạ đầy đủ **26 bước** trong pipeline chuẩn (`Client → FE [Component → Hook → Service → API → HTTP Client] → HTTP Request → BE [Node.js HTTP Server → Middleware → Guard → Interceptor In → Pipe → Controller → Service → Repository → Database] → BE Return [Repository → Service → Controller → Interceptor Out → NestJS/Express gửi response] → HTTP Response → FE Return [HTTP Client → API → Service → Hook → Component] → Client`) vào đúng các file mã nguồn thực tế cho endpoint `POST /api/v1/auth/tokens`.
 
 ```mermaid
-flowchart LR
-  subgraph FE["Frontend (frontend_rag)"]
-    direction TB
-    UI["UI Component: ChatPanel & AuthOverlay"]
-    HK["Hook: useAuthSession"]
-    ST["Store: useAuth (Zustand + persist)"]
-    FESVC["Service: authenticate & mapAuthError"]
-    FEAPI["API & HTTP Client: loginWithPassword & publicFetch"]
-    UI --> HK --> ST --> FESVC --> FEAPI
+flowchart TB
+  subgraph FE_IN["Giai đoạn 1 — Frontend Chiều đi (Client -> HTTP Request)"]
+    CLI_IN["1. Client (Người dùng nhập email, password)"]
+    CMP_IN["2. FE Component (ChatPanel -> AuthOverlay.handleSubmit)"]
+    HK_IN["3. FE Hook & Store (useAuthSession -> authStore.login)"]
+    FSVC_IN["4. FE Service (authService.ts: authenticate)"]
+    FAPI_IN["5. FE API (authApi.ts: loginWithPassword)"]
+    HTTP_IN["6. FE HTTP Client (http.ts: publicFetch -> POST /api/v1/auth/tokens)"]
+    CLI_IN --> CMP_IN --> HK_IN --> FSVC_IN --> FAPI_IN --> HTTP_IN
   end
 
-  subgraph NET["HTTP Transport"]
-    REQ["POST /api/v1/auth/tokens (JSON/XML)"]
+  subgraph BE_IN["Giai đoạn 2 — Backend Chiều vào (HTTP Request -> Database)"]
+    NODE["7. BE Node.js HTTP Server (main.ts: UV_THREADPOOL_SIZE=4, keepAliveTimeout=65s)"]
+    MW["8. BE NestJS/Express Middleware (app.setup.ts: trust proxy, requestId, helmet, metrics, XML/JSON)"]
+    GD["9. BE Guard (ThrottlerGuard + @RateLimit login 10 req/60s)"]
+    INT_IN["10. BE Interceptor chiều vào (ContentNegotiation Accept 406 + LinksInterceptor metadata)"]
+    PP["11. BE Pipe (ValidationPipe whitelist/transform -> LoginDto)"]
+    CTL_IN["12. BE Controller (AuthController.login @Post tokens)"]
+    BESVC_IN["13. BE Service (AuthService.login LRUCache, lockout, Argon2id/dummyHash & TokenService.issue)"]
+    REPO_IN["14. BE Repository (LoginAttemptsRepository, UsersRepository, RefreshTokensRepository)"]
+    DB["15. Database (MongoDB: login_attempts, users, refresh_tokens)"]
+    HTTP_IN -->|"POST /api/v1/auth/tokens"| NODE --> MW --> GD --> INT_IN --> PP --> CTL_IN --> BESVC_IN --> REPO_IN --> DB
   end
 
-  subgraph BE["Backend (backend_rag)"]
-    direction TB
-    MW["Middleware Pipeline: trust proxy, requestIdMiddleware, securityHeaders, metrics, xmlBodyMiddleware"]
-    GD["Guard: ThrottlerGuard + RateLimit login (10 req/60s)"]
-    PP["Pipe: ValidationPipe (whitelist, forbidNonWhitelisted, transform)"]
-    CTL["Controller: AuthController.login (@Post tokens)"]
-    BESVC["Service: AuthService.login & TokenService.issue"]
-    CACHE["In-Memory LRUCache: attemptCountCache, userByEmailCache, userCache, tokenVersionCache"]
-    REPO["Repositories: LoginAttemptsRepository, UsersRepository, RefreshTokensRepository"]
-    DB[("MongoDB Collections: login_attempts, users, refresh_tokens")]
-    INT["Interceptors & Filter: LinksInterceptor (HATEOAS), ContentNegotiationInterceptor, HttpExceptionFilter"]
-
-    MW --> GD --> PP --> CTL --> BESVC
-    BESVC <--> CACHE
-    BESVC --> REPO --> DB
-    CTL --> INT
+  subgraph BE_OUT["Giai đoạn 3 — Backend Chiều về (Database -> HTTP Response)"]
+    REPO_OUT["16. Database -> BE Repository (LeanUser, attemptCount, insert RefreshToken)"]
+    BESVC_OUT["17. BE Service (cập nhật cache, lọc password_hash -> AuthResponseDto)"]
+    CTL_OUT["18. BE Controller (AuthController.login trả AuthResponseDto status 201)"]
+    INT_OUT["19. BE Interceptor chiều ra (LinksInterceptor +_links -> ContentNegotiation JSON/XML)"]
+    EXP_OUT["20. BE NestJS/Express gửi response (HTTP 201 / HttpExceptionFilter + X-Request-Id + Metrics)"]
+    DB --> REPO_OUT --> BESVC_OUT --> CTL_OUT --> INT_OUT --> EXP_OUT
   end
 
-  FEAPI --> REQ --> MW
-  INT -->|"201 Created / 4xx"| FEAPI
+  subgraph FE_OUT["Giai đoạn 4 — Frontend Chiều về (HTTP Response -> Client)"]
+    HTTP_OUT["21. FE HTTP Client (publicFetch nhận Response HTTP 201 / 401 / 429)"]
+    FAPI_OUT["22. FE API (authApi.ts: readJsonOrThrow -> AuthTokenResponse hoặc AuthApiError)"]
+    FSVC_OUT["23. FE Service (authService.ts: trả AuthTokenResponse hoặc mapAuthError tiếng Việt)"]
+    HK_OUT["24. FE Hook & Store (authStore set + persist localStorage -> useAuthSession)"]
+    CMP_OUT["25. FE Component (AuthOverlay tắt loading -> ChatPanel + MessageList + initSessions)"]
+    CLI_OUT["26. Client (Người dùng đăng nhập thành công / thấy thông báo lỗi tiếng Việt)"]
+    EXP_OUT -->|"HTTP 201 Created / 4xx"| HTTP_OUT --> FAPI_OUT --> FSVC_OUT --> HK_OUT --> CMP_OUT --> CLI_OUT
+  end
 ```
 
 ---
@@ -150,13 +157,12 @@ sequenceDiagram
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1.1 | UI Component | [`ChatPanel.tsx`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L14-L118) (`ChatPanel`) | `isAuthenticated = false` từ `useAuthSession()` | Kiểm tra điều kiện render: khi chưa đăng nhập, `ChatPanel` hiển thị [`AuthOverlay`](../../../frontend_rag/src/features/auth/AuthOverlay.tsx#L6) thay cho vùng hội thoại (`PipelineStatus`, `MessageList`, `ChatInput`). | Giao diện biểu mẫu đăng nhập `data-testid="chat-auth-panel"` |
-| 1.2 | UI Component | [`AuthOverlay.tsx`](../../../frontend_rag/src/features/auth/AuthOverlay.tsx#L21-L36) (`AuthOverlay.handleSubmit`) | Sự kiện submit form (`email`, `password`, `isLogin = true`) | Gọi `e.preventDefault()`, xóa lỗi cũ (`setError('')`), bật trạng thái `loading = true` (vô hiệu hóa nút submit), kiểm tra HTML constraint (`required`, `type="email"`, `minLength={8}` ở [`AuthOverlay.tsx`](../../../frontend_rag/src/features/auth/AuthOverlay.tsx#L107-L139)) và gọi `await login(email, password)`. | Lời gọi bất đồng bộ tới Hook/Store `login(email, password)` |
-| 1.3 | Hook | [`useAuth.ts`](../../../frontend_rag/src/features/auth/hooks/useAuth.ts#L4-L22) (`useAuthSession`) | Selector từ `useAuth` | Cung cấp hàm `login` gắn với action của Zustand store cho `AuthOverlay` mà không làm component đăng ký toàn bộ các trường state không cần thiết. | Tham chiếu tới `useAuth((s) => s.login)` |
-| 1.4 | State Store | [`authStore.ts`](../../../frontend_rag/src/features/auth/authStore.ts#L40-L48) (`useAuth.login`) | `email: string`, `password: string` | Ủy quyền quá trình gọi mạng và chuẩn hóa lỗi cho `authenticate(email, password)` trong [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L36-L42). | Chuỗi `Promise<void>` chờ `AuthTokenResponse` |
-| 1.5 | FE Service | [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L36-L42) (`authenticate`) | `email`, `password` | Bọc lời gọi `loginWithPassword({ email, password })` trong khối `try/catch`; nếu phát sinh lỗi sẽ đi qua `mapAuthError` để chuyển mã HTTP thành thông điệp tiếng Việt thân thiện. | Kết quả từ `loginWithPassword` hoặc `Error` đã dịch |
-| 1.6 | FE API | [`authApi.ts`](../../../frontend_rag/src/features/auth/api/authApi.ts#L46-L53) (`loginWithPassword`) | `payload: LoginPayload` (`{ email, password }`) | Gọi `publicFetch('/auth/tokens', ...)` với method `POST`, header `Content-Type: application/json` và `JSON.stringify(payload)`. Cố ý dùng `publicFetch` thay vì `apiFetch` để không gắn `Bearer` token cũ hoặc kích hoạt tự động xoay vòng refresh token khi nhận `401`. | `Promise<Response>` gửi tới `readJsonOrThrow` |
-| 1.7 | HTTP Client | [`http.ts`](../../../frontend_rag/src/shared/api/http.ts#L15-L17) (`publicFetch`) & [`config.ts`](../../../frontend_rag/src/shared/api/config.ts#L1) (`API_BASE`) | `path = '/auth/tokens'`, `RequestInit` | Ghép `API_BASE` (mặc định `/api/v1` từ `VITE_API_BASE`) với `/auth/tokens` và gọi `fetch('/api/v1/auth/tokens', init)`. | HTTP Request đi qua mạng/proxy tới `backend_rag` |
+| 1 | Client | [`ChatPanel.tsx`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L110-L118) | Người dùng chưa đăng nhập (`isAuthenticated = false`), nhập `email`, `password` | Client mở giao diện chat, thấy `<AuthOverlay />` (`data-testid="chat-auth-panel"`), điền thông tin đăng nhập và nhấn nút `Đăng nhập`. | Sự kiện submit biểu mẫu trên trình duyệt |
+| 2 | FE — Component | [`AuthOverlay.tsx`](../../../frontend_rag/src/features/auth/AuthOverlay.tsx#L21-L36) (`AuthOverlay.handleSubmit`) | Sự kiện submit form (`email`, `password`, `isLogin = true`) | Gọi `e.preventDefault()`, xóa lỗi cũ (`setError('')`), bật trạng thái `loading = true`, kiểm tra HTML constraint (`required`, `type="email"`, `minLength={8}` ở [`AuthOverlay.tsx`](../../../frontend_rag/src/features/auth/AuthOverlay.tsx#L107-L139)) và gọi `await login(email, password)`. | Lời gọi bất đồng bộ tới Hook `login(email, password)` |
+| 3 | FE — Hook (+ Store) | [`useAuth.ts`](../../../frontend_rag/src/features/auth/hooks/useAuth.ts#L4-L22) (`useAuthSession`) & [`authStore.ts`](../../../frontend_rag/src/features/auth/authStore.ts#L40-L48) (`useAuth.login`) | Selector từ `useAuth` | `useAuthSession` trích xuất hàm `login` cho UI mà không subscribe dư thừa các field khác; `authStore.login` ủy quyền xử lý đăng nhập cho `authenticate(email, password)` tại tầng service. | Lời gọi `authenticate(email, password)` |
+| 4 | FE — Service | [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L36-L42) (`authenticate`) | `email`, `password` | Bọc lời gọi `loginWithPassword({ email, password })` trong `try/catch` để ánh xạ mọi lỗi xác thực/mạng qua `mapAuthError` sang thông điệp tiếng Việt thân thiện. | Lời gọi `loginWithPassword` kèm xử lý lỗi |
+| 5 | FE — API | [`authApi.ts`](../../../frontend_rag/src/features/auth/api/authApi.ts#L46-L53) (`loginWithPassword`) | `payload: LoginPayload` (`{ email, password }`) | Gọi `publicFetch('/auth/tokens', ...)` với `method: 'POST'`, header `Content-Type: application/json` và `JSON.stringify(payload)` (cố ý không dùng `apiFetch` để không gắn Bearer token cũ). | Yêu cầu tới `publicFetch('/auth/tokens', init)` |
+| 6 | FE — HTTP Client (gọi fetch) | [`http.ts`](../../../frontend_rag/src/shared/api/http.ts#L15-L17) (`publicFetch`) & [`config.ts`](../../../frontend_rag/src/shared/api/config.ts#L1) (`API_BASE`) | `path = '/auth/tokens'`, `RequestInit` | Ghép `API_BASE` (`/api/v1`) với `/auth/tokens` và gọi `fetch('/api/v1/auth/tokens', init)`. | HTTP Request `POST /api/v1/auth/tokens` rời trình duyệt |
 
 #### Wire Example — HTTP Request (`POST /api/v1/auth/tokens`)
 
@@ -174,31 +180,31 @@ Accept: application/json
 
 ---
 
-### 3.2. Giai đoạn 2 — Chiều vào Backend: HTTP Request → BE → Repository → Database
+### 3.2. Giai đoạn 2 — Chiều vào Backend: HTTP Request → BE → Database
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 2.1 | Runtime & Bootstrap | [`main.ts`](../../../backend_rag/src/main.ts#L1-L24) (`bootstrap`) & [`app.setup.ts`](../../../backend_rag/src/app.setup.ts#L40-L53) (`configureApp`) | Biến môi trường & HTTP socket | Thiết lập `UV_THREADPOOL_SIZE = '4'` ngay dòng đầu tiên cho các tác vụ `Argon2id` bất đồng bộ trên libuv threadpool; cấu hình `express.set('trust proxy', trustProxySetting(...))` để lấy đúng IP client cho rate limiter và brute-force key; chạy `requestIdMiddleware` (đọc hoặc sinh UUIDv7 `X-Request-Id` và mở `AsyncLocalStorage`) cùng `securityHeaders` (`helmet`). | `req.ip` chính xác, `req.id` UUIDv7, security headers gắn sẵn trên `res` |
-| 2.2 | HTTP Pre-processing Middleware | [`app.setup.ts`](../../../backend_rag/src/app.setup.ts#L54-L75) & [`xml.ts`](../../../backend_rag/src/common/http/xml.ts#L70-L105) (`unsupportedBody`, `xmlBodyMiddleware`) | `Request` (headers + raw body) | Ghi nhận metrics HTTP (`PrometheusMetricsRegistry`), kiểm tra `Content-Type` qua `unsupportedBody(req)` (từ chối `415` nếu có body nhưng không phải JSON/XML), parse XML sang object nếu là `application/xml` hoặc `text/xml` (chặn XXE), áp dụng global prefix `/api/v1` và CORS (`exposedHeaders: ['X-Request-Id', 'Idempotent-Replayed', 'Retry-After']`). | `req.body` đã là JS object (JSON hoặc XML) |
-| 2.3 | Guard (IP Rate Limit) | [`app.module.ts`](../../../backend_rag/src/app.module.ts#L32-L47) (`ThrottlerGuard`) & [`throttler.ts`](../../../backend_rag/src/common/security/throttler.ts#L16-L46) (`RATE_LIMITS.login`, `@RateLimit('login')`) | `req.ip`, metadata `@RateLimit('login')` | `ThrottlerGuard` toàn cục áp dụng bộ đếm theo IP với hạn mức riêng cho route đăng nhập: tối đa **`10` request / `60_000ms` (1 phút)**. Nếu vượt ngưỡng, ném `ThrottlerException` (`429`). | Cho phép đi tiếp vào Pipe hoặc ngắt bằng `429` |
-| 2.4 | Pipe (Validation) | [`validation.ts`](../../../backend_rag/src/common/http/validation.ts#L18-L26) (`createValidationPipe`) & [`auth.dto.ts`](../../../backend_rag/src/modules/auth/dto/auth.dto.ts#L36-L47) (`LoginDto`) | `req.body` thô | `ValidationPipe` (`whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`) loại bỏ/từ chối trường lạ, trim `email` qua `@Transform(trim)`, kiểm tra `email` là string `<= 254` ký tự (`'invalid email'`) và `password` là string `<= 200` ký tự (`'invalid credentials'`). | Thực thể `dto: LoginDto` sạch sẽ |
-| 2.5 | Controller | [`auth.controller.ts`](../../../backend_rag/src/modules/auth/auth.controller.ts#L33-L41) (`AuthController.login`) | `@Body() dto: LoginDto`, `@Ip() ip: string` | Route `@Post('tokens')` gắn `@WithLinks({ resource: accountLinks })` và `@RateLimit('login')`, trích xuất IP đã qua `trust proxy` và chuyển tiếp sang `this.auth.login(dto, ip)`. | Ủy quyền `Promise<AuthResponseDto>` cho `AuthService` |
-| 2.6 | Service (Key & Cache Lookup) | [`auth.service.ts`](../../../backend_rag/src/modules/auth/auth.service.ts#L119-L125) (`AuthService.login`) | `dto: LoginDto`, `ip: string` | Chuẩn hóa `email = normalizeEmail(dto.email)` (`trim().toLowerCase()`) và băm cặp định danh `key = sha256(\`${email}\|${ip}\`)`. Đọc đồng thời bộ đệm RAM `this.attemptCountCache.get(key)` và `this.userByEmailCache.get(email)`. | `attemptCount` (hoặc `undefined`) và `user` (hoặc `null`) |
-| 2.7 | Service + Repository (Cache-Miss Read) | [`auth.service.ts`](../../../backend_rag/src/modules/auth/auth.service.ts#L126-L139), [`login-attempts.repository.ts`](../../../backend_rag/src/modules/auth/repositories/login-attempts.repository.ts#L15-L17), [`users.repository.ts`](../../../backend_rag/src/modules/auth/repositories/users.repository.ts#L29-L31) | `key`, `email` | Nếu thiếu `attemptCount` hoặc `user`, chạy song song `Promise.all([attempts.countByKey(key), users.findByEmailLean(email)])` để chỉ tốn **1 RTT** qua Cloudflare TCP tunnel tới MongoDB (`login_attempts.countDocuments({ key })` và `users.findOne({ email }).lean()`), sau đó nạp lại `attemptCountCache` và `userByEmailCache`. | `attemptCount: number`, `user: LeanUser \| null` |
-| 2.8 | Service (Lockout & Argon2id Verify) | [`auth.service.ts`](../../../backend_rag/src/modules/auth/auth.service.ts#L141-L170) & [`login-attempts.repository.ts`](../../../backend_rag/src/modules/auth/repositories/login-attempts.repository.ts#L19-L21) | `attemptCount`, `user`, `dto.password` | 1) Nếu `attemptCount >= MAX_LOGIN_FAILURES` (`5`): ghi log `LOGIN_FAILED` (`reason: 'rate_limited'`) và ném `429`. 2) Luôn chạy `argon2.verify(user ? user.password_hash : await this.dummyHash(), dto.password)` để cân bằng thời gian xử lý. 3) Nếu `!user || !ok`: tăng `attemptCountCache`, gọi `attempts.record(key)` ghi document vào `login_attempts` (TTL `15` phút) và ném `401`. 4) Nếu `!user.is_active`: ghi log `account_disabled` và ném `401`. | Xác nhận tài khoản hợp lệ, đang hoạt động và đúng mật khẩu |
-| 2.9 | Service + Repository (Token Minting & Write) | [`auth.service.ts`](../../../backend_rag/src/modules/auth/auth.service.ts#L172-L183), [`token.service.ts`](../../../backend_rag/src/modules/auth/token.service.ts#L43-L78), [`users.repository.ts`](../../../backend_rag/src/modules/auth/repositories/users.repository.ts#L37-L39), [`refresh-tokens.repository.ts`](../../../backend_rag/src/modules/auth/repositories/refresh-tokens.repository.ts#L22-L24) | `user: LeanUser`, `key`, `attemptCount` | Sinh `familyId = randomUUID()`; nếu `attemptCount > 0` đặt lại `attemptCountCache.set(key, 0)`. Cập nhật `users.updateLastLogin(user._id, now)`. Tiếp theo chạy song song `Promise.all` gồm: `respond(user, familyId)` (cập nhật `userCache` & `tokenVersionCache`, ký JWT access token `15m` chứa `{ sub, roles, ver }`, sinh raw refresh token 32 bytes `base64url` và lưu `HMAC-SHA256(raw)` vào `refresh_tokens` với `expires_at = now + 7 ngày`) và `attempts.clearByKey(key)` (nếu trước đó có lỗi). | `AuthResponseDto` và các bản ghi đã lưu tại MongoDB |
+| 7 | BE — Node.js HTTP Server | [`main.ts`](../../../backend_rag/src/main.ts#L1-L24) (`bootstrap`) | `process.env`, HTTP socket cổng `3000` | Đặt `UV_THREADPOOL_SIZE = '4'` ở dòng 1 cho các tác vụ `Argon2id` trên libuv threadpool; validate env qua `parseEnv`; mở Node HTTP Server (`keepAliveTimeout = 65_000`, `headersTimeout = 66_000`). | Kết nối HTTP đi vào ứng dụng NestJS/Express |
+| 8 | BE — NestJS/Express Middleware | [`app.setup.ts`](../../../backend_rag/src/app.setup.ts#L40-L75) & [`xml.ts`](../../../backend_rag/src/common/http/xml.ts#L70-L105) | Express `Request` | Cấu hình `trust proxy` lấy đúng IP client cho rate limiter & brute-force key; chạy `requestIdMiddleware` (`X-Request-Id` UUIDv7 + `AsyncLocalStorage`), `securityHeaders` (Helmet), `PrometheusMetricsRegistry.middleware`, `unsupportedBody` (`415`), parse JSON/XML an toàn (chặn XXE), global prefix `/api/v1` và CORS. | `req.ip` chính xác, `req.id` UUIDv7, `req.body` JS object |
+| 9 | BE — Guard | [`app.module.ts`](../../../backend_rag/src/app.module.ts#L32-L47) & [`throttler.ts`](../../../backend_rag/src/common/security/throttler.ts#L16-L46) (`RATE_LIMITS.login`) | `req.ip`, metadata `@RateLimit('login')` | `ThrottlerGuard` toàn cục áp ngưỡng IP cho route đăng nhập: tối đa **`10` request / `60_000ms`**. Vượt ngưỡng ném `429 Too Many Requests` (`Retry-After`). Route công khai không gắn `JwtAuthGuard`. | Cho phép đi tiếp hoặc ngắt `429` |
+| 10 | BE — Interceptor chiều vào | [`app.setup.ts`](../../../backend_rag/src/app.setup.ts#L78-L81), [`xml.ts`](../../../backend_rag/src/common/http/xml.ts#L109-L119), [`hateoas.ts`](../../../backend_rag/src/common/http/hateoas.ts#L157-L166) | Header `Accept`, metadata `@WithLinks` | `ContentNegotiationInterceptor` kiểm tra `req.accepts(OFFERED)` (ném `406 NotAcceptableException` nếu không chấp nhận JSON/XML/SSE); `LinksInterceptor` đọc metadata `@WithLinks({ resource: accountLinks })` chuẩn bị cho chiều ra. | Request vượt qua tiền kiểm tra định dạng |
+| 11 | BE — Pipe | [`validation.ts`](../../../backend_rag/src/common/http/validation.ts#L18-L26) (`createValidationPipe`) & [`auth.dto.ts`](../../../backend_rag/src/modules/auth/dto/auth.dto.ts#L36-L47) (`LoginDto`) | `req.body` thô | `ValidationPipe` (`whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`) từ chối field thừa, trim `email`, kiểm tra `email` (`<= 254` ký tự, `'invalid email'`) và `password` (`<= 200` ký tự, `'invalid credentials'`). | Thực thể `dto: LoginDto` sạch sẽ |
+| 12 | BE — Controller | [`auth.controller.ts`](../../../backend_rag/src/modules/auth/auth.controller.ts#L33-L41) (`AuthController.login`) | `@Body() dto: LoginDto`, `@Ip() ip: string` | Route `@Post('tokens')` trích xuất IP đã chuẩn hóa qua `trust proxy` và chuyển tiếp xuống `this.auth.login(dto, ip)`. | Ủy quyền `Promise<AuthResponseDto>` cho `AuthService` |
+| 13 | BE — Service | [`auth.service.ts`](../../../backend_rag/src/modules/auth/auth.service.ts#L119-L183) & [`token.service.ts`](../../../backend_rag/src/modules/auth/token.service.ts#L43-L78) | `dto: LoginDto`, `ip: string` | Chuẩn hóa `email` & `key = sha256(email\|ip)`; tra `attemptCountCache` & `userByEmailCache`; nếu cache miss gọi Repository song song; kiểm tra lockout (`>= 5` lần sai → `429`); luôn chạy `argon2.verify(user ? hash : dummyHash(), password)` chống timing leak; kiểm tra `is_active`; chuẩn bị `updateLastLogin`, ký JWT (`15m`), sinh raw refresh token + `HMAC-SHA256`, xóa lỗi cũ nếu cần. | Yêu cầu đọc/ghi từ các Repository tới MongoDB |
+| 14 | BE — Repository | [`login-attempts.repository.ts`](../../../backend_rag/src/modules/auth/repositories/login-attempts.repository.ts#L15-L25), [`users.repository.ts`](../../../backend_rag/src/modules/auth/repositories/users.repository.ts#L29-L39), [`refresh-tokens.repository.ts`](../../../backend_rag/src/modules/auth/repositories/refresh-tokens.repository.ts#L22-L24) | `key`, `email`, `user._id`, `CreateRefreshTokenRecord` | `LoginAttemptsRepository.countByKey` & `UsersRepository.findByEmailLean` (`.lean()`) chạy song song `Promise.all` (1 RTT khi cache miss); nếu sai mật khẩu ghi `attempts.record(key)`; nếu đúng chạy `users.updateLastLogin`, `refreshTokens.create` và `attempts.clearByKey`. | Truy vấn & ghi Mongoose gửi qua tunnel |
+| 15 | Database | [`login-attempt.schema.ts`](../../../backend_rag/src/modules/auth/schemas/login-attempt.schema.ts#L4-L17), [`user.schema.ts`](../../../backend_rag/src/modules/auth/schemas/user.schema.ts#L5-L45), [`refresh-token.schema.ts`](../../../backend_rag/src/modules/auth/schemas/refresh-token.schema.ts#L4-L27) | Lệnh đọc/ghi từ Mongoose qua Cloudflare TCP Tunnel | MongoDB thực thi truy vấn & ghi trên 3 collection: `login_attempts` (TTL 15 phút), `users`, và `refresh_tokens` (TTL 7 ngày). | Document `.lean()` & xác nhận ghi |
 
 ---
 
-### 3.3. Giai đoạn 3 — Chiều về Backend: Database → Repository → Service → Controller → Interceptor → HTTP Response
+### 3.3. Giai đoạn 3 — Chiều về Backend: Database → BE → HTTP Response
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 3.1 | Database → Repository | [`users.repository.ts`](../../../backend_rag/src/modules/auth/repositories/users.repository.ts#L37-L39), [`refresh-tokens.repository.ts`](../../../backend_rag/src/modules/auth/repositories/refresh-tokens.repository.ts#L22-L24), [`login-attempts.repository.ts`](../../../backend_rag/src/modules/auth/repositories/login-attempts.repository.ts#L23-L25) | Kết quả ghi từ MongoDB (`users`, `refresh_tokens`, `login_attempts`) | MongoDB xác nhận ghi `last_login_at`, chèn document mới vào `refresh_tokens` (chỉ chứa `token_hash`, có TTL index `expires: 0` trên `expires_at`), và xóa các bản ghi lỗi trong `login_attempts` theo `key` nếu có. | `Promise<void>` hoàn tất từ các Repository |
-| 3.2 | Token & Auth Service | [`token.service.ts`](../../../backend_rag/src/modules/auth/token.service.ts#L72-L77) (`TokenService.issue`) & [`auth.service.ts`](../../../backend_rag/src/modules/auth/auth.service.ts#L178-L183) (`AuthService.respond`, `login`) | `access_token`, raw `refresh_token`, `user: LeanUser` | Đóng gói `IssuedTokens` (`access_token`, `token_type: 'Bearer'`, `expires_in: 900`, `refresh_token`) kết hợp với `UserDto` (`id`, `email`, `display_name`, `roles`, `created_at` — loại bỏ `password_hash`). Gọi `logEvent('LOGIN_OK', { user_id })` gắn vào `RequestContext` của `pino`. | `AuthResponseDto` |
-| 3.3 | Controller | [`auth.controller.ts`](../../../backend_rag/src/modules/auth/auth.controller.ts#L33-L41) (`AuthController.login`) | `AuthResponseDto` | Trả về trực tiếp `Promise<AuthResponseDto>` với HTTP status mặc định của `@Post` là `201 Created`. | Payload thô đi qua chuỗi Interceptor |
-| 3.4 | Interceptor (HATEOAS) | [`hateoas.ts`](../../../backend_rag/src/common/http/hateoas.ts#L31-L38) (`accountLinks`), [`hateoas.ts`](../../../backend_rag/src/common/http/hateoas.ts#L133-L176) (`LinksInterceptor`, `addLinks`) | `AuthResponseDto`, metadata `@WithLinks({ resource: accountLinks })` | `LinksInterceptor` (chạy bên trong `ContentNegotiationInterceptor` theo thứ tự đăng ký ở [`app.setup.ts`](../../../backend_rag/src/app.setup.ts#L78-L81)) sao chép nông đối tượng trả về và chèn trường `_links` chứa `self`, `update`, `password`, `chat-sessions`, `token-rotations`, `token-revocations`. | Object phản hồi đã gắn `_links` |
-| 3.5 | Interceptor (Content Negotiation) & Exception Filter | [`xml.ts`](../../../backend_rag/src/common/http/xml.ts#L109-L127) (`ContentNegotiationInterceptor`), [`http-exception.filter.ts`](../../../backend_rag/src/common/http/http-exception.filter.ts#L69-L97) (`HttpExceptionFilter`) | Object từ `LinksInterceptor` hoặc `HttpException` nếu lỗi | `ContentNegotiationInterceptor` kiểm tra header `Accept` (trả `406` nếu không chấp nhận JSON/XML/SSE); mặc định trả JSON, hoặc chuyển sang `application/xml` qua `toXml(body)` nếu client ưu tiên XML. Nếu có bất kỳ ngoại lệ nào được ném từ Guard/Pipe/Service, `HttpExceptionFilter` chuẩn hóa thành `{ statusCode, error, message, request_id }` (kèm `Allow` header nếu `405` và che chi tiết lỗi `500`). | HTTP Response `201 Created` (hoặc `4xx`/`5xx`) kèm `X-Request-Id` |
+| 16 | Database → BE — Repository | [`users.repository.ts`](../../../backend_rag/src/modules/auth/repositories/users.repository.ts#L29-L39), [`refresh-tokens.repository.ts`](../../../backend_rag/src/modules/auth/repositories/refresh-tokens.repository.ts#L22-L24), [`login-attempts.repository.ts`](../../../backend_rag/src/modules/auth/repositories/login-attempts.repository.ts#L15-L25) | Kết quả đọc/ghi từ MongoDB | Trả `LeanUser`, `attemptCount`, và hoàn tất xác nhận ghi `last_login_at`, chèn `refresh_tokens` (chỉ chứa `token_hash`), dọn `login_attempts` về tầng service. | Plain objects `.lean()` & `Promise<void>` |
+| 17 | BE — Service | [`token.service.ts`](../../../backend_rag/src/modules/auth/token.service.ts#L72-L77) & [`auth.service.ts`](../../../backend_rag/src/modules/auth/auth.service.ts#L178-L183) (`AuthService.respond`) | `access_token`, raw `refresh_token`, `user: LeanUser` | Làm ấm `userCache` (`300s`) và `tokenVersionCache` (`5s`); đóng gói `IssuedTokens` (`token_type: 'Bearer'`, `expires_in: 900`) với `UserDto` (loại bỏ `password_hash`); ghi `logEvent('LOGIN_OK', { user_id })`. | `AuthResponseDto` hoàn chỉnh |
+| 18 | BE — Controller | [`auth.controller.ts`](../../../backend_rag/src/modules/auth/auth.controller.ts#L33-L41) (`AuthController.login`) | `Promise<AuthResponseDto>` | Trả trực tiếp `AuthResponseDto` ra pipeline NestJS với HTTP status mặc định của `@Post` là `201 Created`. | Payload thô đi qua Interceptor chiều ra |
+| 19 | BE — Interceptor chiều ra | [`hateoas.ts`](../../../backend_rag/src/common/http/hateoas.ts#L31-L38) (`accountLinks`, `LinksInterceptor`) & [`xml.ts`](../../../backend_rag/src/common/http/xml.ts#L119-L127) (`ContentNegotiationInterceptor`) | `AuthResponseDto` | `LinksInterceptor` chạy trước ở chiều ra, tạo bản sao nông và chèn `_links: accountLinks()` (`self`, `update`, `password`, `chat-sessions`, `token-rotations`, `token-revocations`). Tiếp theo `ContentNegotiationInterceptor` giữ JSON hoặc chuyển `application/xml` qua `toXml(body)`. | Response body đã gắn `_links` theo đúng `Accept` |
+| 20 | BE — NestJS/Express gửi response | [`app.setup.ts`](../../../backend_rag/src/app.setup.ts#L52-L63), [`prometheus-metrics.ts`](../../../backend_rag/src/common/metrics/prometheus-metrics.ts#L57-L76), [`http-exception.filter.ts`](../../../backend_rag/src/common/http/http-exception.filter.ts#L69-L97) | Body JSON/XML hoặc `HttpException` | Express ghi status `201 Created` (hoặc `HttpExceptionFilter` chuẩn hóa lỗi `400`/`401`/`429` thành `{ statusCode, error, message, request_id }`), đính `X-Request-Id`, security headers, CORS `exposedHeaders` và chốt histogram độ trễ khi `finish`. | HTTP Response gửi tới trình duyệt |
 
 #### Wire Example — HTTP `201 Created` Response
 
@@ -236,10 +242,12 @@ X-Request-Id: 019367a1-4b2e-7c00-9f12-8a4c2d1e0001
 
 | Bước | Tầng (Layer) | File & Ký hiệu | Đầu vào (Input) | Xử lý Nghiệp vụ & Kỹ thuật | Đầu ra (Output) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 4.1 | HTTP Client → FE API | [`authApi.ts`](../../../frontend_rag/src/features/auth/api/authApi.ts#L30-L53) (`readJsonOrThrow`, `loginWithPassword`) | `res: Response` | Nếu `res.ok` (`201`): parse JSON và trả về `AuthTokenResponse` (`user`, `access_token`, `refresh_token`). Nếu `!res.ok`: cố gắng đọc `body?.message` (lấy phần tử đầu nếu là mảng) và ném `AuthApiError(res.status, ..., serverMessage)`. | `AuthTokenResponse` hoặc `AuthApiError` |
-| 4.2 | FE Service | [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L20-L42) (`authenticate`, `mapAuthError`) | `AuthTokenResponse` hoặc `unknown` error | Nếu thành công: trả thẳng `AuthTokenResponse` về store. Nếu bắt lỗi: `mapAuthError` ánh xạ `401` → `'Email hoặc mật khẩu không chính xác.'`, `429` → `'Quá nhiều lần thử đăng nhập. Vui lòng thử lại sau ít phút.'` (hoặc ánh xạ `serverMessage` / `HttpError`), rồi ném `Error` mới. | `AuthTokenResponse` hoặc `Error` tiếng Việt |
-| 4.3 | State Store | [`authStore.ts`](../../../frontend_rag/src/features/auth/authStore.ts#L40-L93) (`useAuth.login`, `persist`) | `data: AuthTokenResponse` | Khi thành công, cập nhật đồng bộ state `{ user: data.user, accessToken: data.access_token, refreshToken: data.refresh_token, isAuthenticated: true }`. Middleware `persist` của Zustand tự động tuần tự hóa 4 trường trong `partialize` xuống `localStorage` dưới key `'rag-auth-storage'`. | State phiên đăng nhập được lưu bền vững trên trình duyệt |
-| 4.4 | Hook → UI Component | [`AuthOverlay.tsx`](../../../frontend_rag/src/features/auth/AuthOverlay.tsx#L25-L75), [`ChatPanel.tsx`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L27-L118) | State mới từ `useAuthSession()` | Nếu lỗi: `AuthOverlay` bắt ngoại lệ, gọi `setError(err.message)` để hiện banner `AlertTriangle` (`role="alert"`) và tắt `loading`. Nếu thành công: `isAuthenticated` chuyển thành `true`, `ChatPanel` tự động unmount `AuthOverlay`, render badge tên user + nút đăng xuất ở header, mở `<PipelineStatus />`, `<MessageList />`, `<ChatInput />` và chạy `useEffect` gọi `initSessions()` để đồng bộ lịch sử chat từ server về IndexedDB (`Dexie.js`). | Giao diện chuyển sang trạng thái đã xác thực và sẵn sàng hỏi đáp RAG |
+| 21 | FE — HTTP Client (kiểm tra status & đọc body) | [`http.ts`](../../../frontend_rag/src/shared/api/http.ts#L15-L17) (`publicFetch`) | HTTP `Response` từ Backend | Nhận `Response` nguyên vẹn từ `fetch()` (mã `201`, `401`, `429`...) và chuyển ngay về `authApi` mà không kích hoạt auto-rotate 401. | `res: Response` |
+| 22 | FE — API (xử lý dữ liệu) | [`authApi.ts`](../../../frontend_rag/src/features/auth/api/authApi.ts#L30-L53) (`readJsonOrThrow`, `loginWithPassword`) | `res: Response` | Nếu `res.ok` (`201`): parse JSON và trả `AuthTokenResponse`. Nếu `!res.ok`: đọc `body?.message` (lấy phần tử đầu nếu là mảng) và ném `AuthApiError(res.status, ..., serverMessage)`. | `AuthTokenResponse` hoặc ném `AuthApiError` |
+| 23 | FE — Service | [`authService.ts`](../../../frontend_rag/src/features/auth/services/authService.ts#L20-L42) (`authenticate`, `mapAuthError`) | `AuthTokenResponse` hoặc `unknown` error | Nếu thành công: trả `AuthTokenResponse` về store. Nếu bắt lỗi: `mapAuthError` dịch `401` → `'Email hoặc mật khẩu không chính xác.'`, `429` → `'Quá nhiều lần thử đăng nhập. Vui lòng thử lại sau ít phút.'` (hoặc ánh xạ `serverMessage` / `HttpError`), rồi ném `Error`. | `AuthTokenResponse` hoặc `Error` tiếng Việt |
+| 24 | FE — Hook (cập nhật state) | [`authStore.ts`](../../../frontend_rag/src/features/auth/authStore.ts#L40-L93) (`useAuth.login`, `persist`) & [`useAuth.ts`](../../../frontend_rag/src/features/auth/hooks/useAuth.ts#L4-L22) | `data: AuthTokenResponse` | Khi thành công, cập nhật `{ user, accessToken, refreshToken, isAuthenticated: true }` và tự động persist xuống `localStorage` (`'rag-auth-storage'`). Hook `useAuthSession()` phát state mới làm re-render các component tiêu thụ. | State phiên đăng nhập lưu bền vững & phát tới UI |
+| 25 | FE — Component (hiển thị lại) | [`AuthOverlay.tsx`](../../../frontend_rag/src/features/auth/AuthOverlay.tsx#L25-L75) & [`ChatPanel.tsx`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L27-L118) | State mới từ `useAuthSession()`, `error` | `finally` tắt `loading = false`; nếu lỗi, `AuthOverlay` gọi `setError(err.message)` hiện banner `AlertTriangle` (`role="alert"`). Nếu thành công, `ChatPanel` unmount `AuthOverlay`, render badge user + `<PipelineStatus />` + `<MessageList />` + `<ChatInput />` và chạy `useEffect` gọi `initSessions()`. | Giao diện chuyển sang trạng thái đã xác thực |
+| 26 | Client | [`ChatPanel.tsx`](../../../frontend_rag/src/features/chat/components/ChatPanel.tsx#L58-L118) | Giao diện chat đã đăng nhập hoặc banner lỗi | Người dùng nhìn thấy phiên chat và lịch sử từ IndexedDB/Backend sẵn sàng cho câu hỏi khoa học tiếp theo (hoặc thông báo lỗi cụ thể để nhập lại). | Trải nghiệm người dùng hoàn tất |
 
 ---
 
